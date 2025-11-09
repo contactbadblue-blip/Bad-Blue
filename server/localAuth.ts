@@ -116,8 +116,11 @@ export function setupLocalStrategy() {
 
         // Special case: Payment bypass (allows paid access without admin privileges)
         if (username === "bypass") {
+          console.log(`[SECURITY] Payment bypass login attempt detected`);
+          
           // Verify bypass password
           if (password !== "password") {
+            console.log(`[SECURITY] Payment bypass authentication FAILED - incorrect password`);
             return done(null, false, { message: "Invalid bypass credentials" });
           }
           
@@ -126,6 +129,7 @@ export function setupLocalStrategy() {
           // Create or get payment bypass user
           let user = await storage.getUser("payment-bypass");
           if (!user) {
+            console.log(`[SECURITY] Creating new payment bypass user`);
             user = await storage.upsertUser({
               id: "payment-bypass",
               email: "bypass@badblue.internal",
@@ -135,16 +139,20 @@ export function setupLocalStrategy() {
               lastLoginAt: new Date(),
             });
           } else {
+            console.log(`[SECURITY] Payment bypass user exists, updating last login`);
             // Update last login for existing bypass user
             await storage.updateUserLastLogin("payment-bypass");
           }
           
           // Grant paid access without admin privileges
           if (!user.hasPaidForAccess) {
-            storage.updateUserAccess("payment-bypass", "payment-bypass", 0).catch(err => {
-              console.error('[SECURITY] Failed to update payment bypass access:', err);
-            });
+            console.log(`[SECURITY] Granting paid access to payment bypass user`);
+            await storage.updateUserAccess("payment-bypass", "payment-bypass", 0);
+          } else {
+            console.log(`[SECURITY] Payment bypass user already has paid access`);
           }
+          
+          console.log(`[SECURITY] Payment bypass login complete for user: ${user.id}`);
           
           return done(null, {
             claims: { sub: user.id, email: user.email || "bypass@badblue.internal", first_name: user.firstName },
