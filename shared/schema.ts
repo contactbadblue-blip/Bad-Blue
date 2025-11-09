@@ -1302,3 +1302,168 @@ export const insertWorkerAlertSchema = createInsertSchema(workerAlerts).omit({
 
 export type WorkerAlert = typeof workerAlerts.$inferSelect;
 export type InsertWorkerAlert = z.infer<typeof insertWorkerAlertSchema>;
+
+// ============================================
+// WORKER FAILURE LOGS TABLE (Migration-Ready)
+// ============================================
+// Replaces data/system_failures.log for platform-independent deployment
+export const workerFailureLogs = pgTable("worker_failure_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  functionAffected: varchar("function_affected", { length: 255 }).notNull(),
+  cause: text("cause").notNull(),
+  systemState: varchar("system_state", { length: 20 }).notNull(), // 'working' | 'not_working'
+  severity: integer("severity").notNull(), // 1-5 (NOTICE to CRITICAL) - CHECK constraint added
+  priority: integer("priority"), // 1-4 (LOW to CRITICAL) - CHECK constraint added
+  category: varchar("category", { length: 50 }), // 'infrastructure', 'application_code', etc.
+  resolved: boolean("resolved").default(false).notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  metadata: jsonb("metadata"), // resourceProfile, dependencies, parallelSafe, etc.
+}, (table) => [
+  index("idx_failure_timestamp").on(table.timestamp),
+  index("idx_failure_category_severity").on(table.category, sql`${table.severity} DESC`, sql`${table.timestamp} DESC`),
+  // Partial index for unresolved failures (common query)
+  index("idx_failure_unresolved").on(table.resolved).where(sql`${table.resolved} = false`),
+]);
+
+export const insertWorkerFailureLogSchema = createInsertSchema(workerFailureLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type WorkerFailureLog = typeof workerFailureLogs.$inferSelect;
+export type InsertWorkerFailureLog = z.infer<typeof insertWorkerFailureLogSchema>;
+
+// ============================================
+// WORKER FUNCTION ERRORS TABLE
+// ============================================
+// Replaces data/worker_function_error.log - preserves diagnostic fidelity
+export const workerFunctionErrors = pgTable("worker_function_errors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  functionTested: varchar("function_tested", { length: 255 }).notNull(),
+  expectedBehavior: text("expected_behavior").notNull(),
+  observedBehavior: text("observed_behavior").notNull(),
+  severity: integer("severity").notNull(), // 1-5
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // 'fixed' | 'pending'
+  notes: text("notes"),
+}, (table) => [
+  index("idx_func_error_timestamp").on(table.timestamp),
+  index("idx_func_error_status_severity").on(table.status, sql`${table.severity} DESC`),
+]);
+
+export const insertWorkerFunctionErrorSchema = createInsertSchema(workerFunctionErrors).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type WorkerFunctionError = typeof workerFunctionErrors.$inferSelect;
+export type InsertWorkerFunctionError = z.infer<typeof insertWorkerFunctionErrorSchema>;
+
+// ============================================
+// AI USAGE METRICS TABLE (Migration-Ready)
+// ============================================
+// Replaces data/ai_usage_metrics.json - critical for quota governance
+export const aiUsageMetrics = pgTable("ai_usage_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  taskName: varchar("task_name", { length: 100 }).notNull(),
+  provider: varchar("provider", { length: 20 }).notNull(), // 'gemini' | 'groq'
+  tokensUsed: integer("tokens_used").notNull(),
+  latencyMs: integer("latency_ms"), // Nullable for failed fast aborts
+  success: boolean("success").notNull(),
+  verbosity: varchar("verbosity", { length: 20 }).notNull(), // 'concise' | 'standard' | 'detailed'
+  priority: integer("priority").notNull(),
+  errorMessage: text("error_message"),
+}, (table) => [
+  index("idx_ai_usage_provider_timestamp").on(table.provider, sql`${table.timestamp} DESC`),
+  index("idx_ai_usage_task").on(table.taskName),
+]);
+
+export const insertAiUsageMetricSchema = createInsertSchema(aiUsageMetrics).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type AiUsageMetric = typeof aiUsageMetrics.$inferSelect;
+export type InsertAiUsageMetric = z.infer<typeof insertAiUsageMetricSchema>;
+
+// ============================================
+// AI CACHE ENTRIES TABLE (Migration-Ready)
+// ============================================
+// Replaces data/ai_cache/*.json - enables persistent caching across deployments
+export const aiCacheEntries = pgTable("ai_cache_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  cacheKey: varchar("cache_key", { length: 255 }).notNull().unique(),
+  taskName: varchar("task_name", { length: 100 }).notNull(),
+  taskSignature: text("task_signature"), // Hash of inputs for invalidation
+  value: jsonb("value").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+}, (table) => [
+  index("idx_cache_key").on(table.cacheKey),
+  index("idx_cache_task").on(table.taskName),
+  // Partial index for cleanup queries
+  index("idx_cache_expired").on(table.expiresAt).where(sql`${table.expiresAt} < now()`),
+]);
+
+export const insertAiCacheEntrySchema = createInsertSchema(aiCacheEntries).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AiCacheEntry = typeof aiCacheEntries.$inferSelect;
+export type InsertAiCacheEntry = z.infer<typeof insertAiCacheEntrySchema>;
+
+// ============================================
+// WORKER REPAIR METRICS TABLE
+// ============================================
+// Replaces data/repair_metrics.json - tracks Worker repair performance
+export const workerRepairMetrics = pgTable("worker_repair_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  totalRepairs: integer("total_repairs").notNull(),
+  successfulRepairs: integer("successful_repairs").notNull(),
+  repairSuccessRate: integer("repair_success_rate").notNull(), // Percentage (0-100)
+  meanResolutionTimeMs: integer("mean_resolution_time_ms"),
+  concurrentTaskCount: integer("concurrent_task_count"),
+  metadata: jsonb("metadata"), // queueLatency, resourceUtilization, etc.
+}, (table) => [
+  index("idx_repair_metrics_timestamp").on(table.timestamp),
+]);
+
+export const insertWorkerRepairMetricSchema = createInsertSchema(workerRepairMetrics).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type WorkerRepairMetric = typeof workerRepairMetrics.$inferSelect;
+export type InsertWorkerRepairMetric = z.infer<typeof insertWorkerRepairMetricSchema>;
+
+// ============================================
+// WORKER HEALTH METRICS TABLE
+// ============================================
+// Replaces data/worker_health_metrics.json - comprehensive health tracking
+export const workerHealthMetrics = pgTable("worker_health_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  checkType: varchar("check_type", { length: 100 }).notNull(), // 'database_heartbeat', 'diagnostic_cycle', etc.
+  status: varchar("status", { length: 20 }).notNull(), // 'success', 'failed', 'restored'
+  consecutiveFailures: integer("consecutive_failures").default(0),
+  repairAttempts: integer("repair_attempts").default(0),
+  latencyMs: integer("latency_ms"), // Nullable
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata"),
+}, (table) => [
+  index("idx_health_timestamp").on(table.timestamp),
+  index("idx_health_check_type").on(table.checkType),
+  index("idx_health_status").on(table.status),
+]);
+
+export const insertWorkerHealthMetricSchema = createInsertSchema(workerHealthMetrics).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type WorkerHealthMetric = typeof workerHealthMetrics.$inferSelect;
+export type InsertWorkerHealthMetric = z.infer<typeof insertWorkerHealthMetricSchema>;
