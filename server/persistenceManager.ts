@@ -61,7 +61,7 @@ export class PersistenceManager {
         version: '1.0',
       };
 
-      // Save to persistent storage
+      // Save to persistent storage (no-op if unavailable)
       await persistentStorage.save('latest_backup', backupData);
       
       // Also save timestamped backup
@@ -95,8 +95,9 @@ export class PersistenceManager {
       // State is already in database, just log the info
       return backup;
     } catch (error) {
-      console.error('Restore failed:', error);
-      throw error;
+      console.error('⚠️ Restore failed (non-critical):', error);
+      // Don't throw - this is non-critical metadata
+      return null;
     }
   }
 

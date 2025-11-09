@@ -5,10 +5,66 @@ import { objectStorageClient } from './objectStorage';
 const objectStorage = new ObjectStorageService();
 
 /**
+ * Interface for persistent storage implementations
+ */
+export interface IPersistentStorage {
+  save(key: string, data: any): Promise<void>;
+  load<T>(key: string): Promise<T | null>;
+  delete(key: string): Promise<void>;
+  listKeys(): Promise<string[]>;
+  exists(key: string): Promise<boolean>;
+  saveAppConfig(config: any): Promise<void>;
+  loadAppConfig<T>(): Promise<T | null>;
+  saveWorkerState(state: any): Promise<void>;
+  loadWorkerState<T>(): Promise<T | null>;
+}
+
+/**
+ * Null implementation - no-op for environments without object storage
+ */
+class NullPersistentStorage implements IPersistentStorage {
+  async save(key: string, data: any): Promise<void> {
+    console.log(`ℹ️ Persistent storage not available - skipping save: ${key}`);
+  }
+
+  async load<T>(key: string): Promise<T | null> {
+    return null;
+  }
+
+  async delete(key: string): Promise<void> {
+    console.log(`ℹ️ Persistent storage not available - skipping delete: ${key}`);
+  }
+
+  async listKeys(): Promise<string[]> {
+    return [];
+  }
+
+  async exists(key: string): Promise<boolean> {
+    return false;
+  }
+
+  async saveAppConfig(config: any): Promise<void> {
+    console.log('ℹ️ Persistent storage not available - skipping app config save');
+  }
+
+  async loadAppConfig<T>(): Promise<T | null> {
+    return null;
+  }
+
+  async saveWorkerState(state: any): Promise<void> {
+    console.log('ℹ️ Persistent storage not available - skipping worker state save');
+  }
+
+  async loadWorkerState<T>(): Promise<T | null> {
+    return null;
+  }
+}
+
+/**
  * Persistent storage service that survives deployments and republishing
  * Uses Replit Object Storage for durable data persistence
  */
-export class PersistentStorage {
+export class PersistentStorage implements IPersistentStorage {
   private bucketName: string;
   private basePath: string;
 
@@ -162,4 +218,27 @@ export class PersistentStorage {
   }
 }
 
-export const persistentStorage = new PersistentStorage();
+/**
+ * Factory function to create appropriate persistent storage implementation
+ * Returns real implementation when PRIVATE_OBJECT_DIR is set (Replit),
+ * returns null implementation otherwise (Railway, other platforms)
+ */
+function createPersistentStorage(): IPersistentStorage {
+  const privateDir = process.env.PRIVATE_OBJECT_DIR;
+  
+  if (privateDir) {
+    try {
+      console.log('✓ Object storage configured - using persistent storage');
+      return new PersistentStorage();
+    } catch (error) {
+      console.warn('⚠️ Failed to initialize object storage, using null implementation:', error);
+      return new NullPersistentStorage();
+    }
+  } else {
+    console.log('ℹ️ Object storage not configured - persistent storage disabled');
+    console.log('   (Data will be stored in PostgreSQL only)');
+    return new NullPersistentStorage();
+  }
+}
+
+export const persistentStorage: IPersistentStorage = createPersistentStorage();
