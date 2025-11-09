@@ -1255,6 +1255,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get upload URL for evidence files
   app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
     try {
+      // Check if object storage is available (Replit-specific feature)
+      if (!process.env.PRIVATE_OBJECT_DIR) {
+        return res.status(503).json({ 
+          error: "File upload feature is not available on this deployment platform. " +
+                 "Evidence files can only be uploaded when running on Replit with object storage configured."
+        });
+      }
+      
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       res.json({ uploadURL });
@@ -1269,6 +1277,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set ACL policy for uploaded evidence file
   app.put("/api/evidence-files", isAuthenticated, async (req: any, res) => {
     try {
+      // Check if object storage is available (Replit-specific feature)
+      if (!process.env.PRIVATE_OBJECT_DIR) {
+        return res.status(503).json({ 
+          error: "File upload feature is not available on this deployment platform. " +
+                 "Evidence files can only be uploaded when running on Replit with object storage configured."
+        });
+      }
+      
       if (!req.body.fileURL) {
         return res.status(400).json({ error: "fileURL is required" });
       }
@@ -1297,6 +1313,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve protected evidence files - with ownership verification
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
     try {
+      // Check if object storage is available (Replit-specific feature)
+      if (!process.env.PRIVATE_OBJECT_DIR) {
+        return res.status(503).json({ 
+          error: "File download feature is not available on this deployment platform. " +
+                 "Evidence files can only be accessed when running on Replit with object storage configured."
+        });
+      }
+      
       const userId = req.user?.claims?.sub;
 
       if (!userId) {
