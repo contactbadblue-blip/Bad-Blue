@@ -626,16 +626,20 @@ class BadBlueWorker {
       }
       await fs.writeFile(this.ALERTS_LOG, JSON.stringify(alerts, null, 2));
 
-      const { db } = await import('./db');
-      const { workerAlerts } = await import('@shared/schema');
-      await db.insert(workerAlerts).values({
-        alertType: alert.alertType,
-        severity: alert.severity,
-        title: alert.title,
-        message: alert.message,
-        metadata: alert.metadata || null,
-        resolved: false,
-      });
+      try {
+        const { db } = await import('./db');
+        const { workerAlerts } = await import('@shared/schema');
+        await db.insert(workerAlerts).values({
+          alertType: alert.alertType,
+          severity: alert.severity,
+          title: alert.title,
+          message: alert.message,
+          metadata: alert.metadata || null,
+          resolved: false,
+        });
+      } catch (dbError) {
+        console.warn('[BadBlue Worker] Database alert logging unavailable (table may not exist yet)');
+      }
     } catch (error) {
       console.error('[BadBlue Worker] Error recording alert:', error);
     }
