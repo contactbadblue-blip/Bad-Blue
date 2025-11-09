@@ -209,7 +209,7 @@ PROBLEMS WE SOLVE:
 
 Whether you're seeking accountability for police misconduct, pursuing justice for civil rights violations, or simply exploring your legal options, Bad Blue provides the tools and guidance you need.
 
-Log in to your account at any time to access our services: https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'badblue.com'}
+Log in to your account at any time to access our services: ${process.env.BASE_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://badblue.com')}
 
 If you have any questions or need assistance, our support team is here to help.
 
@@ -320,7 +320,7 @@ WHAT YOU CAN DO:
 - Assess the viability of various legal remedies
 - Generate preliminary legal documents
 
-Log in to your account to access LegalAI: https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'badblue.com'}
+Log in to your account to access LegalAI: ${process.env.BASE_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://badblue.com')}
 
 Your access will expire on ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}.
 

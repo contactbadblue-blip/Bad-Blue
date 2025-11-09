@@ -19,10 +19,12 @@ export function SEOHead({
   ogTitle,
   ogDescription,
   ogType = "website",
-  ogImage = "https://badblue.replit.app/preview.png",
+  ogImage,
   canonicalUrl,
   structuredData,
 }: SEOHeadProps) {
+  const defaultOgImage = `${import.meta.env.VITE_BASE_URL || window.location.origin}/preview.png`;
+  const finalOgImage = ogImage || defaultOgImage;
   useEffect(() => {
     // Set page title
     document.title = title;
@@ -68,7 +70,7 @@ export function SEOHead({
     setMetaTag("og:title", ogTitle || title, true);
     setMetaTag("og:description", ogDescription || description, true);
     setMetaTag("og:type", ogType, true);
-    setMetaTag("og:image", ogImage, true);
+    setMetaTag("og:image", finalOgImage, true);
     if (canonicalUrl) {
       setMetaTag("og:url", canonicalUrl, true);
     }
@@ -77,7 +79,7 @@ export function SEOHead({
     setMetaTag("twitter:card", "summary_large_image");
     setMetaTag("twitter:title", ogTitle || title);
     setMetaTag("twitter:description", ogDescription || description);
-    setMetaTag("twitter:image", ogImage);
+    setMetaTag("twitter:image", finalOgImage);
 
     // Set canonical URL
     if (canonicalUrl) {
