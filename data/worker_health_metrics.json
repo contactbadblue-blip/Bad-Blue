@@ -1060,5 +1060,52 @@
     "check": "database_heartbeat",
     "status": "success",
     "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T07:26:46.244Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "read ECONNRESET",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-09T07:26:46.603Z",
+    "check": "database_repair",
+    "status": "success",
+    "repairAttempts": 0
+  },
+  {
+    "timestamp": "2025-11-09T07:41:46.209Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-09T07:41:46.213Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 1
+  },
+  {
+    "timestamp": "2025-11-09T07:56:46.209Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 2
+  },
+  {
+    "timestamp": "2025-11-09T07:56:46.211Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 2
+  },
+  {
+    "timestamp": "2025-11-09T15:53:36.476Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
   }
 ]
