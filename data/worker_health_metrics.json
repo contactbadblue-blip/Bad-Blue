@@ -1179,5 +1179,19 @@
     "status": "failed",
     "error": "Called end on pool more than once",
     "repairAttempts": 2
+  },
+  {
+    "timestamp": "2025-11-09T17:38:45.714Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 3
+  },
+  {
+    "timestamp": "2025-11-09T17:38:45.716Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 3
   }
 ]
