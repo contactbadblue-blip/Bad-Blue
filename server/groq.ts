@@ -24,6 +24,11 @@ interface GroqChatCompletionResponse {
       content: string;
     };
   }>;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
 }
 
 /**
@@ -47,7 +52,11 @@ async function callGroqAPI(request: GroqChatCompletionRequest): Promise<string> 
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Groq API error (${response.status}): ${errorText}`);
+    // Track Groq rate limit errors
+    const { rateLimitTracker } = await import('./rateLimitTracker');
+    const error = new Error(`Groq API error (${response.status}): ${errorText}`);
+    rateLimitTracker.recordGroqError(error);
+    throw error;
   }
 
   const data: GroqChatCompletionResponse = await response.json();
@@ -56,6 +65,11 @@ async function callGroqAPI(request: GroqChatCompletionRequest): Promise<string> 
   if (!text) {
     throw new Error('Empty response from Groq');
   }
+
+  // Track Groq success with token usage
+  const { rateLimitTracker } = await import('./rateLimitTracker');
+  const tokensUsed = data.usage?.total_tokens || 0;
+  rateLimitTracker.recordGroqSuccess(tokensUsed);
 
   return text;
 }

@@ -207,12 +207,53 @@ class FilesystemEvidenceStorage implements IEvidenceStorage {
     }
   }
 
+  /**
+   * Sanitize fileId to prevent path traversal attacks
+   * Only allows alphanumeric, hyphens, underscores (UUID-safe)
+   */
+  private sanitizeFileId(fileId: string): string {
+    // Remove any path separators and whitelist safe characters
+    const sanitized = fileId.replace(/[^a-zA-Z0-9_-]/g, '');
+    
+    if (!sanitized || sanitized.length === 0) {
+      throw new Error('Invalid file ID');
+    }
+    
+    if (sanitized.length > 255) {
+      throw new Error('File ID too long');
+    }
+    
+    return sanitized;
+  }
+
   private getFilePath(fileId: string): string {
-    return path.join(this.storageDir, fileId);
+    const safe = this.sanitizeFileId(fileId);
+    const fullPath = path.join(this.storageDir, safe);
+    
+    // Verify path is within storage directory (prevent escaping via symlinks)
+    const resolvedPath = path.resolve(fullPath);
+    const resolvedStorageDir = path.resolve(this.storageDir);
+    
+    if (!resolvedPath.startsWith(resolvedStorageDir)) {
+      throw new Error('Invalid file path - security violation');
+    }
+    
+    return fullPath;
   }
 
   private getMetadataPath(fileId: string): string {
-    return path.join(this.storageDir, `${fileId}.meta.json`);
+    const safe = this.sanitizeFileId(fileId);
+    const fullPath = path.join(this.storageDir, `${safe}.meta.json`);
+    
+    // Verify path is within storage directory
+    const resolvedPath = path.resolve(fullPath);
+    const resolvedStorageDir = path.resolve(this.storageDir);
+    
+    if (!resolvedPath.startsWith(resolvedStorageDir)) {
+      throw new Error('Invalid file path - security violation');
+    }
+    
+    return fullPath;
   }
 
   async getUploadURL(): Promise<string> {
