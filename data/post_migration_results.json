@@ -1,0 +1,245 @@
+{
+  "part1": {
+    "tablesVerified": [
+      "officer_profiles",
+      "department_urls",
+      "sub_agent_search_cycles",
+      "subagent_capabilities",
+      "subagent_learning_patterns",
+      "subagent_performance_metrics",
+      "subagent_self_improvement_actions"
+    ],
+    "insertTests": [
+      {
+        "table": "officer_profiles",
+        "status": "SUCCESS"
+      },
+      {
+        "table": "department_urls",
+        "status": "FAILED",
+        "error": "null value in column \"url\" of relation \"department_urls\" violates not-null constraint"
+      }
+    ],
+    "officerSearches": [
+      {
+        "name": "Derek Chauvin",
+        "sources": 120,
+        "quality": 97,
+        "status": "SUCCESS"
+      }
+    ]
+  },
+  "part2": {
+    "systemDiagnostics": {
+      "summary": {
+        "total": 15,
+        "passed": 13,
+        "failed": 2,
+        "skipped": 0
+      },
+      "results": [
+        {
+          "category": "ENVIRONMENT",
+          "test": "Environment Variables",
+          "status": "FAIL",
+          "message": "Missing 1 required variables",
+          "details": {
+            "missing": [
+              "OPENAI_API_KEY"
+            ],
+            "present": [
+              "DATABASE_URL",
+              "SESSION_SECRET",
+              "STRIPE_SECRET_KEY",
+              "GEMINI_API_KEY",
+              "GROQ_API_KEY",
+              "GWSMTP_USER",
+              "GWSMTP_PASS",
+              "DEFAULT_OBJECT_STORAGE_BUCKET_ID",
+              "PUBLIC_OBJECT_SEARCH_PATHS",
+              "PRIVATE_OBJECT_DIR"
+            ]
+          }
+        },
+        {
+          "category": "DATABASE",
+          "test": "Table Existence",
+          "status": "PASS",
+          "message": "All 24 tables exist",
+          "details": {
+            "tables": [
+              "admin_access_logs",
+              "admin_settings_audit",
+              "ai_subagent_logs",
+              "app_settings",
+              "auth_accounts",
+              "badge_lookups",
+              "case_patterns",
+              "complaint_patterns",
+              "complaints",
+              "contact_messages",
+              "department_urls",
+              "document_formats",
+              "foia_requests",
+              "foia_state_statutes",
+              "jurisdictions",
+              "lawsuit_filings",
+              "legal_strategies",
+              "officer_profiles",
+              "petition_signatures",
+              "petitions",
+              "public_evidence",
+              "saved_progress",
+              "sessions",
+              "sub_agent_capabilities",
+              "sub_agent_learning_patterns",
+              "sub_agent_performance_metrics",
+              "sub_agent_search_cycles",
+              "sub_agent_self_improvement_actions",
+              "subagent_capabilities",
+              "subagent_learning_patterns",
+              "subagent_performance_metrics",
+              "subagent_self_improvement_actions",
+              "subscription_tiers",
+              "trial_consultations",
+              "user_subscriptions",
+              "users"
+            ]
+          }
+        },
+        {
+          "category": "DATABASE",
+          "test": "Table Queries",
+          "status": "PASS",
+          "message": "All critical tables can be queried",
+          "details": {
+            "users": "1",
+            "complaints": "0",
+            "lawsuits": "0",
+            "petitions": "0",
+            "foia": "0"
+          }
+        },
+        {
+          "category": "DATABASE",
+          "test": "Indexes",
+          "status": "PASS",
+          "message": "Found 69 indexes",
+          "details": {
+            "count": 69
+          }
+        },
+        {
+          "category": "DATABASE",
+          "test": "Foreign Keys",
+          "status": "PASS",
+          "message": "Found 14 foreign key constraints",
+          "details": {
+            "count": 14
+          }
+        },
+        {
+          "category": "AI_SERVICES",
+          "test": "Gemini API Key",
+          "status": "PASS",
+          "message": "GEMINI_API_KEY is configured"
+        },
+        {
+          "category": "AI_SERVICES",
+          "test": "Groq API Key",
+          "status": "PASS",
+          "message": "GROQ_API_KEY is configured"
+        },
+        {
+          "category": "AI_SERVICES",
+          "test": "OpenAI API Key",
+          "status": "FAIL",
+          "message": "OPENAI_API_KEY not found in environment"
+        },
+        {
+          "category": "STRIPE_PAYMENT",
+          "test": "Stripe Connection",
+          "status": "PASS",
+          "message": "Successfully connected to Stripe",
+          "details": {
+            "available": [
+              {
+                "amount": 0,
+                "currency": "usd",
+                "source_types": {
+                  "card": 0
+                }
+              }
+            ],
+            "pending": [
+              {
+                "amount": 0,
+                "currency": "usd",
+                "source_types": {
+                  "card": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "category": "STRIPE_PAYMENT",
+          "test": "Stripe Products",
+          "status": "PASS",
+          "message": "Found 0 products and 0 prices",
+          "details": {
+            "products": 0,
+            "prices": 0
+          }
+        },
+        {
+          "category": "EMAIL_SERVICE",
+          "test": "SMTP Credentials",
+          "status": "PASS",
+          "message": "SMTP credentials are configured"
+        },
+        {
+          "category": "OBJECT_STORAGE",
+          "test": "Object Storage",
+          "status": "PASS",
+          "message": "Object storage is configured",
+          "details": {
+            "bucketId": "replit-objstore-74de...",
+            "publicPaths": "/replit-objstore-74de9d93-694c-483e-8160-f7d4556cd48b/public",
+            "privateDir": "/replit-objstore-74de9d93-694c-483e-8160-f7d4556cd48b/.private"
+          }
+        },
+        {
+          "category": "AUTHENTICATION",
+          "test": "Session Secret",
+          "status": "PASS",
+          "message": "SESSION_SECRET is configured"
+        },
+        {
+          "category": "AUTHENTICATION",
+          "test": "Admin Accounts",
+          "status": "PASS",
+          "message": "Found 0 local auth accounts",
+          "details": {
+            "count": "0"
+          }
+        },
+        {
+          "category": "AUTHENTICATION",
+          "test": "Sessions",
+          "status": "PASS",
+          "message": "Found 10 active sessions",
+          "details": {
+            "count": "10"
+          }
+        }
+      ],
+      "timestamp": "2025-11-08T06:18:13.941Z"
+    },
+    "passRate": "86.7%",
+    "criticalIssues": [
+      "ENVIRONMENT: Environment Variables",
+      "AI_SERVICES: OpenAI API Key"
+    ]
+  }
+}

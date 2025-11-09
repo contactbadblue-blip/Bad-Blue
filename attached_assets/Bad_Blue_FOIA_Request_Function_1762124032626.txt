@@ -1,0 +1,34 @@
+The function should be called New FOIA Records Request, that the user can select to access the FOIA tool.
+The user will be prompted upon clicking the New FOIA Records Request to enter in their physical mailing address for certified mail return.
+
+The interface will present a drop-down selection of the state, and then, another drop-down box to input whether it is:
+- State Police
+- County Sheriff Offices
+- Municipal Police Departments
+- Other
+
+If user selects Other, they should be provided with a text prompt to enter law enforcement agency manually.
+
+The user will then enter into a text prompt the name of the department it is requesting FOIA information for.
+AI will then search for the correct department address, utilizing users selected information, and display the address for user.
+
+User will be required to enter officer's name, and the approximate date/time/location of the incident, into a text prompt.
+
+The user will then provide a description of the records being requested through text prompt.
+A ghost text or placeholder will show in the text prompt, where the description is being input, a sample of the type of record sought, EG body cam, arrest report, CAD log, etc etc etc.
+
+The App will create a template for that specific FOIA request and reference the users selected state jurisdiction-specific statute table containing: the controlling open record statute for that state, statutory deadline for agency response, and then the app will then produce a compliant FOIA letter, based on user selected state in order to ensure compliance, which will contain the user's full name and contact information, a precise description of the requested materials, legal citation established right of access, deadline for response for statute, e-signature block that will be pre-filled with username.
+
+A plain text copy is generated, time stamped and stored in the admin control panel, in a section called FOIA Requests.
+The admin control panel will contain an admin-only accessible selection for the New FOIA Records Requests, and will store, descending from date of newest to oldest, each user's FOIA Records Requests, and will label each one with the user's name and email address.
+The admin can click on this section, and it will display a list of FOIA requests with the user’s name and email displayed for admin as a label, descending in order from newest to oldest.
+
+Before dispatch, the user reviews the finalized letter on screen, and receives a notification that their payment will cover document preparation and administrative handling, clerical services, printing, packaging, and certified mail postage.
+Prior to payment submission, the user will required to accept, via checkbox, the concise authorization statement:
+"I authorize Bad Blue to print, and mail this open records request to the designated agency. I remained illegal requester of record."
+Then the user will submit payment of $24.65.
+
+In the welcome page a section called "FOIA Records Requests" will be an option to be selected, this option will be between start a petition and below officer search.
+The price of $24.65 will be displayed on the selection on the welcome page.
+A brief description of the services in regards to the FOIA request will be displayed on the selection.
+Admin will manually email certified tracking number to users email, as provided in users sign up information.

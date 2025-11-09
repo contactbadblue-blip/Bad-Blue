@@ -1,0 +1,108 @@
+Okay, I need to see the existing `petition_form.html` or equivalent file to provide the exact code changes. Since I don't have that file, I will provide an example solution based on two common scenarios:
+
+**Scenario 1: Static HTML form**
+
+In this scenario, the `petition_form.html` file directly contains the HTML for the form, including the police department email field.
+
+**Scenario 2: Dynamic Form Generation (e.g., using a JavaScript framework)**
+
+In this scenario, a JavaScript data structure or configuration defines the form fields, and the HTML is generated dynamically. I'll provide an example using a TypeScript-like structure.
+
+**Scenario 1: Static HTML form (petition_form.html)**
+
+```
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Petition Form</title>
+</head>
+<body>
+  <h1>Sign the Petition</h1>
+  <form>
+    <label for="name">Your Name:</label><br>
+    <input type="text" id="name" name="name"><br><br>
+
+    <label for="address">Your Address:</label><br>
+    <input type="text" id="address" name="address"><br><br>
+
+    <label for="email">Your Email:</label><br>
+    <input type="email" id="email" name="email"><br><br>
+
+    <label for="police_dept">Police Department:</label><br>
+    <input type="text" id="police_dept" name="police_dept"><br><br>
+
+    <!-- REMOVE THIS BLOCK -->
+    <!-- <label for="police_email">Police Department Email:</label><br>
+    <input type="email" id="police_email" name="police_email"><br><br> -->
+
+    <label for="reason">Reason for Petition:</label><br>
+    <textarea id="reason" name="reason" rows="4" cols="50"></textarea><br><br>
+
+    <input type="submit" value="Submit">
+  </form>
+</body>
+</html>
+```
+
+**Scenario 2: Dynamic Form Generation (petition_form.ts or similar)**
+
+In this example, let's assume the form is generated based on a TypeScript interface or similar data structure.  I'll assume we are generating the fields using some kind of loop, and we can identify fields by their `name` property.
+
+```typescript
+FILE: petition_form.ts
+```typescript
+interface FormField {
+  label: string;
+  type: string;
+  name: string;
+  id: string;
+}
+
+const formFields: FormField[] = [
+  { label: "Your Name:", type: "text", name: "name", id: "name" },
+  { label: "Your Address:", type: "text", name: "address", id: "address" },
+  { label: "Your Email:", type: "email", name: "email", id: "email" },
+  { label: "Police Department:", type: "text", name: "police_dept", id: "police_dept" },
+  // REMOVE THIS OBJECT FROM THE ARRAY
+  // { label: "Police Department Email:", type: "email", name: "police_email", id: "police_email" },
+  { label: "Reason for Petition:", type: "textarea", name: "reason", id: "reason" },
+];
+
+// Function to generate the form HTML (example - may vary based on your framework)
+function generateFormHtml(fields: FormField[]): string {
+  let html = "<form>";
+  fields.forEach(field => {
+    html += `<label for="${field.id}">${field.label}</label><br>`;
+    if (field.type === "textarea") {
+      html += `<textarea id="${field.id}" name="${field.name}" rows="4" cols="50"></textarea><br><br>`;
+    } else {
+      html += `<input type="${field.type}" id="${field.id}" name="${field.name}"><br><br>`;
+    }
+  });
+  html += '<input type="submit" value="Submit"></form>';
+  return html;
+}
+
+// Example usage (assuming you have a div with id="formContainer")
+const formContainer = document.getElementById("formContainer");
+
+if (formContainer) {
+  formContainer.innerHTML = generateFormHtml(formFields);
+} else {
+    console.error("Form container not found!");
+}
+```
+
+**Explanation:**
+
+*   **Scenario 1 (Static HTML):**  The code simply comments out (or removes) the entire block of HTML related to the "Police Department Email" field, including the label and the input element.
+*   **Scenario 2 (Dynamic Generation):** The code removes the `FormField` object that defines the "Police Department Email" field from the `formFields` array. This ensures that the field is not included when the form HTML is generated dynamically. In this case I have shown the code for a TypeScript file that might be used to generate the HTML form.  You would need to compile the TypeScript to JavaScript using `tsc petition_form.ts` to get the actual JavaScript file.
+
+**Important Notes:**
+
+*   **Adapt the code:**  These are examples. You *must* adapt the solution to match the specific structure and code of your `petition_form.html` file or the corresponding form definition.
+*   **Testing:** Always test the modified form after making changes to ensure that the field is correctly removed and that the rest of the form functions as expected.
+*   **Backend Changes:**  If your backend code also expects the `police_email` field, you'll need to update your backend to handle the removal of this field as well.
+*   **Framework-Specifics:** If you're using a specific JavaScript framework (React, Angular, Vue, etc.), the form generation and data binding mechanisms will be different. Provide more details if you need a framework-specific solution.

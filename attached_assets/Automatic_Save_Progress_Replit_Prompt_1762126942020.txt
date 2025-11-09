@@ -1,0 +1,32 @@
+Prompt for Replit:
+
+Create an automatic Save Progress system that continuously saves each signed-in user’s work and restores it exactly as it was when they return.
+
+The system must work automatically — users do not click anything or manually save.
+As the user enters data or moves through the app, all progress should be automatically stored in the background every few seconds or whenever they make changes.
+
+When the user signs back in, the app should automatically detect existing saved progress and restore:
+- The last page or step they were on.
+- All data they previously entered.
+
+When existing saved progress is detected, the app should retrieve the user’s stored information and give them the option to restore their last session or start a new one. If they choose to restore, the app should load the most recently saved data and resume from where they left off.
+
+If no saved progress exists for the user, the app should automatically start from the beginning of the process with a new, empty record created for them.
+
+The saved progress must include:
+- user_id
+- flow_key (identifier for what part of the app they were using)
+- step_index (where they left off)
+- form_data_json (all user input data)
+- updated_at timestamp
+
+Store progress records in the same storage location or database where user data is normally saved in the app (for example, a persistent backend database, user data file, or hosted storage system). Use whatever method is most standard and secure for the app’s environment.
+
+Each signed-in user can have one active saved progress record per module (e.g., FOIA tool, petition tool, etc.).
+The system should use debounced autosave, meaning it saves automatically after a few seconds of inactivity or after major input changes.
+When the user returns, the app automatically restores progress without requiring any clicks.
+If the user switches devices, the most recently saved version should always load.
+Ensure that only the logged-in user can access or overwrite their saved progress.
+All data must persist securely across sessions.
+If the user logs out, autosave data will be retained and automatically restored when they sign back in again.
+Write modular code so this automatic save/resume feature can be reused across all sections of the app.

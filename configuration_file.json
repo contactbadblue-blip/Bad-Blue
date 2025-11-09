@@ -1,0 +1,44 @@
+```json
+{
+  "agentName": "SelfImprovingAgent",
+  "description": "An agent that iteratively improves its performance over time.",
+  "initialGoal": "Solve world hunger.",
+  "llmProvider": "OpenAI",
+  "modelName": "gpt-4",
+  "temperature": 0.7,
+  "maxTokens": 1000,
+  "apiKey": "YOUR_OPENAI_API_KEY",
+  "dataStoragePath": "./data",
+  "loggingLevel": "INFO",
+  "selfImprovement": {
+    "enabled": true,
+    "selfModificationEnabled": false,
+    "resourceLimits": {
+      "cpuPercentage": 50,
+      "memoryMB": 512,
+      "apiCallLimitPerMinute": 10
+    },
+    "acceptableErrorThresholds": {
+      "taskCompletionRate": 0.95,
+      "costIncreasePercentage": 0.10
+    }
+  },
+  "plugins": [
+    {
+      "name": "WebSearchPlugin",
+      "enabled": true,
+      "config": {
+        "searchEngine": "Google",
+        "apiKey": "YOUR_GOOGLE_API_KEY"
+      }
+    },
+    {
+      "name": "DataAnalysisPlugin",
+      "enabled": true,
+      "config": {
+        "library": "pandas"
+      }
+    }
+  ]
+}
+```

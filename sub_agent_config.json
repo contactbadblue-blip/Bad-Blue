@@ -1,0 +1,71 @@
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sub Agent Configuration",
+  "type": "object",
+  "properties": {
+    "autocorrect": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "delay_autocorrect": {"type": "integer", "description": "Delay in milliseconds before autocorrect is applied"}
+      },
+      "required": ["enabled"]
+    },
+    "other_config": {"type": "object"}
+  }
+}
+```
+
+However, if you want the code in TypeScript for a class that represents the sub agent configuration, here's how you can define it:
+
+```typescript
+// sub_agent_config.ts
+interface AutocorrectConfig {
+  enabled: boolean;
+  delay_autocorrect?: number;
+}
+
+interface SubAgentConfig {
+  autocorrect: AutocorrectConfig;
+  otherConfig?: any;
+}
+
+class SubAgentConfiguration {
+  private config: SubAgentConfig;
+
+  constructor(config: SubAgentConfig) {
+    this.config = config;
+  }
+
+  public getAutocorrectConfig(): AutocorrectConfig {
+    return this.config.autocorrect;
+  }
+
+  public setAutocorrectConfig(autocorrectConfig: AutocorrectConfig): void {
+    this.config.autocorrect = autocorrectConfig;
+  }
+
+  public getOtherConfig(): any {
+    return this.config.otherConfig;
+  }
+
+  public setOtherConfig(otherConfig: any): void {
+    this.config.otherConfig = otherConfig;
+  }
+}
+
+// Example usage:
+const config: SubAgentConfig = {
+  autocorrect: {
+    enabled: true,
+    delay_autocorrect: 500
+  },
+  otherConfig: {}
+};
+
+const subAgentConfig = new SubAgentConfiguration(config);
+console.log(subAgentConfig.getAutocorrectConfig());
+```
+
+Note: In the above TypeScript code, we define an interface `SubAgentConfig` to represent the configuration of the sub agent. The `AutocorrectConfig` interface represents the autocorrect configuration, which includes a `delay_autocorrect` property. The `SubAgentConfiguration` class encapsulates the configuration and provides methods to get and set the autocorrect configuration.

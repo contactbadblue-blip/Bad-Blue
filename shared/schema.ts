@@ -1,0 +1,1277 @@
+// BadBlue - Database Schema
+// Following javascript_log_in_with_replit and javascript_stripe blueprints
+
+import { sql } from 'drizzle-orm';
+import { relations } from 'drizzle-orm';
+import {
+  index,
+  uniqueIndex,
+  jsonb,
+  pgTable,
+  timestamp,
+  varchar,
+  text,
+  integer,
+  boolean,
+} from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+// ============================================
+// SESSIONS TABLE (Required for Replit Auth)
+// ============================================
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// ============================================
+// USERS TABLE (Replit Auth + Stripe)
+// ============================================
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+
+  // Stripe customer tracking
+  stripeCustomerId: varchar("stripe_customer_id"),
+
+  // Full access payment tracking ($9.75 for 7-day access including LegalAI Consultation and Officer Search)
+  hasPaidForAccess: boolean("has_paid_for_access").default(false).notNull(),
+  accessPaymentId: varchar("access_payment_id"), // Stripe payment intent ID for access payment
+  accessPaidAt: timestamp("access_paid_at"), // When user paid for access
+
+  // Login tracking for admin panel
+  lastLoginAt: timestamp("last_login_at"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type UpsertUser = typeof users.$inferInsert;
+export type User = typeof users.$inferSelect;
+
+// ============================================
+// AUTH ACCOUNTS TABLE (Username/Password Auth)
+// ============================================
+export const authAccounts = pgTable("auth_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  authType: varchar("auth_type", { length: 20 }).notNull(), // 'replit' | 'local'
+  username: varchar("username").unique(), // For local auth only
+  passwordHash: text("password_hash"), // For local auth only
+  passwordSalt: text("password_salt"), // For local auth only
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const authAccountsRelations = relations(authAccounts, ({ one }) => ({
+  user: one(users, {
+    fields: [authAccounts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertAuthAccountSchema = createInsertSchema(authAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAuthAccount = z.infer<typeof insertAuthAccountSchema>;
+export type AuthAccount = typeof authAccounts.$inferSelect;
+
+// ============================================
+// ADMIN ACCESS LOGS TABLE (Security Audit Trail)
+// ============================================
+export const adminAccessLogs = pgTable("admin_access_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").notNull(), // The bypass ID used
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  sessionId: varchar("session_id"),
+  accessedAt: timestamp("accessed_at").defaultNow(),
+});
+
+export const insertAdminAccessLogSchema = createInsertSchema(adminAccessLogs).omit({
+  id: true,
+  accessedAt: true,
+});
+
+export type InsertAdminAccessLog = z.infer<typeof insertAdminAccessLogSchema>;
+export type AdminAccessLog = typeof adminAccessLogs.$inferSelect;
+
+// ============================================
+// AI SUB-AGENT LOGS TABLE
+// ============================================
+export const aiSubAgentLogs = pgTable("ai_subagent_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").notNull(), // The admin who issued the command
+  command: text("command").notNull(), // The command/instruction given
+  category: varchar("category"), // code_analysis, debugging, data_ops, api_integration, etc.
+  status: varchar("status").notNull().default('processing'), // processing, completed, failed
+  response: text("response"), // AI response/result
+  executionTimeMs: integer("execution_time_ms"), // How long it took
+  errorMessage: text("error_message"), // If failed
+  metadata: jsonb("metadata"), // Additional context (files analyzed, operations performed, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertAiSubAgentLogSchema = createInsertSchema(aiSubAgentLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAiSubAgentLog = z.infer<typeof insertAiSubAgentLogSchema>;
+export type AiSubAgentLog = typeof aiSubAgentLogs.$inferSelect;
+
+// ============================================
+// TRIAL CONSULTATIONS TABLE (One-time Free Legal Consultation)
+// ============================================
+export const trialConsultations = pgTable("trial_consultations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ipAddress: varchar("ip_address").notNull(),
+  deviceFingerprint: text("device_fingerprint"),
+  userAgent: text("user_agent"),
+  question: text("question").notNull(),
+  response: text("response"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("trial_consultations_ip_idx").on(table.ipAddress),
+  index("trial_consultations_fingerprint_idx").on(table.deviceFingerprint),
+]);
+
+export const insertTrialConsultationSchema = createInsertSchema(trialConsultations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTrialConsultation = z.infer<typeof insertTrialConsultationSchema>;
+export type TrialConsultation = typeof trialConsultations.$inferSelect;
+
+// ============================================
+// SAVED PROGRESS TABLE (Autosave System)
+// ============================================
+export const savedProgress = pgTable("saved_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  flowKey: varchar("flow_key", { length: 50 }).notNull(), // 'foia', 'complaint', 'petition', 'lawsuit_diy', 'lawsuit_full'
+  stepIndex: integer("step_index").notNull().default(0), // Current step/page index
+  formDataJson: jsonb("form_data_json").notNull().default(sql`'{}'::jsonb`), // All form data
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("saved_progress_user_flow_unique").on(table.userId, table.flowKey),
+]);
+
+export const savedProgressRelations = relations(savedProgress, ({ one }) => ({
+  user: one(users, {
+    fields: [savedProgress.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertSavedProgressSchema = createInsertSchema(savedProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSavedProgress = z.infer<typeof insertSavedProgressSchema>;
+export type SavedProgress = typeof savedProgress.$inferSelect;
+
+// ============================================
+// BADGE LOOKUPS TABLE
+// ============================================
+export const badgeLookups = pgTable("badge_lookups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Image data
+  imageUrl: text("image_url"), // Stored image path or base64
+
+  // AI extracted data
+  badgeNumber: varchar("badge_number"),
+  department: text("department"),
+
+  // Officer information (from public records)
+  officerName: text("officer_name"),
+  officerRank: text("officer_rank"),
+  officerYears: integer("officer_years"),
+  departmentLocation: text("department_location"),
+  jurisdiction: text("jurisdiction"),
+
+  // AI analysis metadata
+  analysisConfidence: text("analysis_confidence"),
+  rawAiResponse: text("raw_ai_response"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const badgeLookupsRelations = relations(badgeLookups, ({ one }) => ({
+  user: one(users, {
+    fields: [badgeLookups.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertBadgeLookupSchema = createInsertSchema(badgeLookups).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertBadgeLookup = z.infer<typeof insertBadgeLookupSchema>;
+export type BadgeLookup = typeof badgeLookups.$inferSelect;
+
+// ============================================
+// OFFICER PROFILES TABLE (Compiled Public Data)
+// ============================================
+export const officerProfiles = pgTable("officer_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Basic officer information
+  officerName: text("officer_name").notNull(),
+  badgeNumber: varchar("badge_number"),
+  department: text("department"),
+  rank: text("rank"),
+  location: text("location"), // City, State format
+  
+  // Comprehensive data (JSONB for flexible schema)
+  careerData: jsonb("career_data"), // Career history, training, certifications
+  incidents: jsonb("incidents"), // Disciplinary records, incidents, complaints
+  courtCases: jsonb("court_cases"), // Lawsuits, court cases involving the officer
+  newsMentions: jsonb("news_mentions"), // News articles, media coverage
+  communityComplaints: jsonb("community_complaints"), // Community feedback, complaints
+  
+  // Source tracking
+  sources: text("sources").array(), // URLs to source documents
+  
+  // Data quality and freshness
+  dataQualityScore: integer("data_quality_score"), // 0-100 score based on source reliability
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  
+  // Search metadata
+  searchCount: integer("search_count").default(0), // How many times this officer has been searched
+  lastSearchedAt: timestamp("last_searched_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("officer_profiles_name_idx").on(table.officerName),
+  index("officer_profiles_badge_idx").on(table.badgeNumber),
+  index("officer_profiles_department_idx").on(table.department),
+  index("officer_profiles_location_idx").on(table.location),
+]);
+
+export const insertOfficerProfileSchema = createInsertSchema(officerProfiles).omit({
+  id: true,
+  createdAt: true,
+  searchCount: true,
+  lastSearchedAt: true,
+});
+
+export type InsertOfficerProfile = z.infer<typeof insertOfficerProfileSchema>;
+export type OfficerProfile = typeof officerProfiles.$inferSelect;
+
+// ============================================
+// COMPLAINTS TABLE
+// ============================================
+export const complaints = pgTable("complaints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  badgeLookupId: varchar("badge_lookup_id").references(() => badgeLookups.id, { onDelete: 'set null' }),
+
+  // Officer information
+  officerName: text("officer_name").notNull(),
+  officerBadge: varchar("officer_badge"),
+  officerDepartment: text("officer_department").notNull(),
+
+  // Jurisdiction
+  state: varchar("state", { length: 2 }).notNull(), // US state code (e.g., "IA", "CA")
+  city: text("city").notNull(),
+
+  // Complaint type
+  complaintType: varchar("complaint_type").notNull(), // 'assault', 'negligence', 'harassment', 'excessive-force', 'misconduct', 'discrimination', 'other'
+
+  // Incident details
+  incidentDate: timestamp("incident_date").notNull(),
+  incidentTime: varchar("incident_time"),
+  description: text("description").notNull(),
+
+  // Evidence
+  evidenceUrls: text("evidence_urls").array(),
+
+  // Submission routing (auto-determined)
+  submissionVenue: varchar("submission_venue"), // 'internal_affairs', 'police_chief', 'sheriff', 'city_attorney'
+  submissionEmail: text("submission_email"),
+  submissionAddress: text("submission_address"),
+
+  // Status tracking
+  status: varchar("status").notNull().default('pending'), // 'pending', 'paid', 'submitted', 'under_review', 'resolved', 'closed'
+  statusUpdatedAt: timestamp("status_updated_at").defaultNow(),
+  submittedAt: timestamp("submitted_at"),
+
+  // Payment tracking
+  paymentId: varchar("payment_id"), // Stripe payment intent ID
+  paymentStatus: varchar("payment_status").default('pending'), // 'pending', 'completed', 'failed'
+  amountPaid: integer("amount_paid"), // Amount in cents
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const complaintsRelations = relations(complaints, ({ one }) => ({
+  user: one(users, {
+    fields: [complaints.userId],
+    references: [users.id],
+  }),
+  badgeLookup: one(badgeLookups, {
+    fields: [complaints.badgeLookupId],
+    references: [badgeLookups.id],
+  }),
+}));
+
+export const insertComplaintSchema = createInsertSchema(complaints).omit({
+  id: true,
+  userId: true, // Added by server from authenticated session
+  badgeLookupId: true, // Optional, added by server if applicable
+  createdAt: true,
+  updatedAt: true,
+  statusUpdatedAt: true,
+  submittedAt: true,
+  submissionVenue: true,
+  submissionEmail: true,
+  submissionAddress: true,
+  paymentId: true,
+  paymentStatus: true,
+  amountPaid: true,
+  status: true, // Has default value, no need to require in request
+}).extend({
+  incidentDate: z.string().or(z.date()), // Accept ISO string or Date
+});
+
+export type InsertComplaint = z.infer<typeof insertComplaintSchema>;
+export type Complaint = typeof complaints.$inferSelect;
+
+// ============================================
+// PRICING (Per-feature pricing model)
+// ============================================
+// $9.75 one-time for 7-day app access (includes LegalAI Consultation + Officer Search with comprehensive reports)
+// Then pay-per-use for complaints and lawsuits
+export const APP_ACCESS_PRICING = 9.75;
+export const APP_ACCESS_PRICING_CENTS = 975;
+
+// Per-complaint filing fee (includes certified mail service and clerical services)
+export const COMPLAINT_PRICING = 39.75;
+export const COMPLAINT_PRICING_CENTS = 3975;
+
+// Lawsuit pricing tiers
+export const LAWSUIT_DIY_PRICING = 306.75; // User files - includes completed JS-44 civil cover sheet and informa pauperis form (non-completed)
+export const LAWSUIT_DIY_PRICING_CENTS = 30675;
+
+export const LAWSUIT_FULL_SERVICE_PRICING = 503.75; // BadBlue files ($98.75 + $405 filing fees) - includes clerical services, civil cover sheet, informa pauperis form (non-completed)
+export const LAWSUIT_FULL_SERVICE_PRICING_CENTS = 50375;
+
+// Petition pricing
+export const PETITION_PRICING = 27.98;
+export const PETITION_PRICING_CENTS = 2798;
+
+// FOIA Request pricing
+export const FOIA_REQUEST_PRICING = 24.65;
+export const FOIA_REQUEST_PRICING_CENTS = 2465;
+
+// Main pricing export (for backwards compatibility - refers to app access)
+export const PRICING = APP_ACCESS_PRICING;
+export const PRICING_CENTS = APP_ACCESS_PRICING_CENTS;
+
+// Legacy names for backwards compatibility
+export const FULL_ACCESS_PRICING = APP_ACCESS_PRICING;
+export const FULL_ACCESS_PRICING_CENTS = APP_ACCESS_PRICING_CENTS;
+export const LAWSUIT_PRICING = LAWSUIT_DIY_PRICING;
+export const LAWSUIT_PRICING_CENTS = LAWSUIT_DIY_PRICING_CENTS;
+
+export const COMPLAINT_TYPES = [
+  'assault',
+  'excessive-force',
+  'harassment',
+  'negligence',
+  'misconduct',
+  'discrimination',
+  'other'
+] as const;
+
+export const LAWSUIT_TYPES = [
+  { value: 'excessive-force', label: 'Excessive Force' },
+  { value: 'false-arrest', label: 'False Arrest' },
+  { value: 'civil-rights-violation', label: 'Civil Rights Violation' },
+  { value: 'unlawful-search', label: 'Unlawful Search' },
+  { value: 'wrongful-imprisonment', label: 'Wrongful Imprisonment' },
+  { value: 'discrimination', label: 'Discrimination' },
+  { value: 'assault-battery', label: 'Assault & Battery' },
+  { value: 'other', label: 'Other' }
+];
+
+// ============================================
+// LAWSUIT FILINGS TABLE
+// ============================================
+export const lawsuitFilings = pgTable("lawsuit_filings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  complaintId: varchar("complaint_id").references(() => complaints.id, { onDelete: 'set null' }),
+
+  // Officer information
+  officerName: text("officer_name").notNull(),
+  officerBadge: varchar("officer_badge"),
+  officerDepartment: text("officer_department").notNull(),
+
+  // Jurisdiction
+  state: varchar("state", { length: 2 }).notNull(), // US state code
+  city: text("city").notNull(),
+  county: text("county"),
+
+  // Lawsuit type and details
+  lawsuitType: varchar("lawsuit_type").notNull(), // 'assault', 'negligence', 'harassment', 'excessive-force', 'misconduct', 'discrimination', 'other'
+  lawsuitTier: varchar("lawsuit_tier").notNull().default('diy'), // 'diy' or 'full-service'
+  incidentDate: timestamp("incident_date").notNull(),
+  incidentTime: varchar("incident_time"), // NEW: Time of incident (e.g., "2:30 PM")
+  description: text("description").notNull(),
+
+  // Plaintiff information
+  plaintiffName: text("plaintiff_name"), // NEW: Full legal name of plaintiff
+  plaintiffAddress: text("plaintiff_address"), // NEW: Mailing address of plaintiff
+  returnMailingAddress: text("return_mailing_address"), // Physical mailing address for full-service lawsuit returns
+
+  // Damages
+  damagesRequested: integer("damages_requested"), // Amount in cents
+  injuryDetails: text("injury_details"),
+  subsequentEvents: text("subsequent_events"), // NEW: What happened after the incident
+  medicalCosts: integer("medical_costs"), // Amount in cents
+
+  // Evidence
+  evidenceUrls: text("evidence_urls").array(),
+  witnessNames: text("witness_names").array(),
+
+  // Auto-generated legal document
+  generatedDocument: text("generated_document"), // Full lawsuit template with state statutes
+  stateStatutes: text("state_statutes").array(), // Relevant state codes/statutes
+
+  // Filing information
+  filingCourt: text("filing_court"), // Auto-determined court venue
+  filingAddress: text("filing_address"),
+  filingInstructions: text("filing_instructions"),
+  filingFee: integer("filing_fee"), // State filing fee in cents
+  eFilingPortalUrl: text("e_filing_portal_url"), // Clickable link to state's e-filing system
+  eFilingPortalName: text("e_filing_portal_name"), // Display name for e-filing portal
+  clerkOfCourtAddress: text("clerk_of_court_address"), // Physical address of clerk when e-filing unavailable
+
+  // Tort claim notice (required in many states before suing government entities)
+  tortNoticeRequired: boolean("tort_notice_required").default(false),
+  tortNoticeSent: boolean("tort_notice_sent").default(false),
+  tortNoticeAgency: text("tort_notice_agency"), // Agency the notice was sent to
+  tortNoticeSentAt: timestamp("tort_notice_sent_at"),
+  tortNoticeDocument: text("tort_notice_document"), // Generated tort claim notice
+
+  // Legal precedents identified by AI
+  relevantPrecedents: text("relevant_precedents").array(), // AI-identified case law
+
+  // Status tracking
+  status: varchar("status").notNull().default('pending'), // 'pending', 'paid', 'document_ready', 'filed', 'in_progress', 'settled', 'dismissed'
+  statusUpdatedAt: timestamp("status_updated_at").defaultNow(),
+
+  // Payment tracking
+  paymentId: varchar("payment_id"), // Stripe payment intent ID
+  paymentStatus: varchar("payment_status").default('pending'),
+  amountPaid: integer("amount_paid"), // Amount in cents
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const lawsuitFilingsRelations = relations(lawsuitFilings, ({ one }) => ({
+  user: one(users, {
+    fields: [lawsuitFilings.userId],
+    references: [users.id],
+  }),
+  complaint: one(complaints, {
+    fields: [lawsuitFilings.complaintId],
+    references: [complaints.id],
+  }),
+}));
+
+export const insertLawsuitFilingSchema = createInsertSchema(lawsuitFilings).omit({
+  id: true,
+  userId: true, // Added by server from authenticated session
+  complaintId: true, // Optional, added by server if applicable
+  createdAt: true,
+  updatedAt: true,
+  statusUpdatedAt: true,
+  generatedDocument: true,
+  stateStatutes: true,
+  filingCourt: true,
+  filingAddress: true,
+  filingInstructions: true,
+  paymentId: true,
+  paymentStatus: true,
+  amountPaid: true,
+  status: true, // Has default value, no need to require in request
+}).extend({
+  incidentDate: z.string().or(z.date()),
+});
+
+export type InsertLawsuitFiling = z.infer<typeof insertLawsuitFilingSchema>;
+export type LawsuitFiling = typeof lawsuitFilings.$inferSelect;
+
+// ============================================
+// JURISDICTION DIRECTORY TABLE
+// ============================================
+export const jurisdictions = pgTable("jurisdictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  // Geographic identifiers
+  state: varchar("state", { length: 2 }).notNull(), // US state code (e.g., "IA", "CA")
+  county: text("county"),
+  city: text("city"),
+
+  // Agency information
+  agencyType: varchar("agency_type").notNull(), // 'police', 'sheriff', 'trooper'
+  agencyName: text("agency_name").notNull(), // Full formatted name
+
+  // Contact information
+  contactEmail: text("contact_email"), // Internal affairs or complaint email
+  contactPhone: text("contact_phone"),
+  contactAddress: text("contact_address"),
+  websiteUrl: text("website_url"),
+
+  // Verification and confidence
+  verified: boolean("verified").default(false), // Manually verified as accurate
+  confidence: integer("confidence").default(50), // Confidence score 0-100
+  verifiedAt: timestamp("verified_at"),
+
+  // Metadata
+  source: text("source"), // Where this information came from
+  notes: text("notes"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_jurisdiction_location").on(table.state, table.city, table.agencyType),
+]);
+
+export const insertJurisdictionSchema = createInsertSchema(jurisdictions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertJurisdiction = z.infer<typeof insertJurisdictionSchema>;
+export type Jurisdiction = typeof jurisdictions.$inferSelect;
+
+// ============================================
+// CONTACT MESSAGES TABLE
+// ============================================
+export const contactMessages = pgTable("contact_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  // Contact type - support or general contact
+  type: varchar("type").notNull(), // 'support', 'contact', 'report'
+
+  // Sender information
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+
+  // Message details
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+
+  // Optional user reference (if logged in)
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+
+  // Status tracking
+  status: varchar("status").notNull().default('new'), // 'new', 'read', 'responded', 'resolved'
+  emailSent: boolean("email_sent").default(false),
+
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const contactMessagesRelations = relations(contactMessages, ({ one }) => ({
+  user: one(users, {
+    fields: [contactMessages.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({
+  id: true,
+  userId: true, // Added by server if user is authenticated
+  status: true,
+  emailSent: true,
+  createdAt: true,
+});
+
+export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
+export type ContactMessage = typeof contactMessages.$inferSelect;
+
+// ============================================
+// PETITIONS TABLE
+// ============================================
+export const petitions = pgTable('petitions', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Unique shareable link slug
+  slug: varchar("slug").unique().notNull(),
+  
+  // Officer information
+  officerName: text('officer_name').notNull(),
+  department: text('department').notNull(),
+
+  // Jurisdiction
+  state: text("state").notNull(),
+  city: text("city"),
+  county: text("county"),
+
+  // Offense details (original + AI redrafted)
+  offenseDescriptionOriginal: text("offense_description_original").notNull(),
+  offenseDescriptionRedrafted: text("offense_description_redrafted"),
+  additionalText: text("additional_text"), // "Add To" section for admin
+
+  // Configuration
+  bottomLink: text("bottom_link"), // External link of admin's choice
+
+  // Purchase tracking  
+  submitterName: text("submitter_name").notNull(), // Admin-only visible purchaser name
+  paymentId: varchar("payment_id"),
+
+  // Analytics
+  signatureCount: integer("signature_count").default(0),
+  lastCompiledAt: timestamp("last_compiled_at"),
+
+  // Share settings
+  shareableUrl: text("shareable_url"), // Full shareable URL
+  socialMediaShared: boolean("social_media_shared").default(false),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const petitionsRelations = relations(petitions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [petitions.userId],
+    references: [users.id],
+  }),
+  signatures: many(petitionSignatures),
+}));
+
+export const insertPetitionSchema = createInsertSchema(petitions).omit({
+  id: true,
+  slug: true, // Generated server-side
+  createdAt: true,
+  updatedAt: true,
+  userId: true,
+  signatureCount: true,
+  shareableUrl: true,
+  paymentId: true,
+  lastCompiledAt: true,
+  offenseDescriptionRedrafted: true, // Generated by AI
+  socialMediaShared: true,
+}).extend({
+  offenseDescriptionOriginal: z.string().min(50, "Offense description must be at least 50 characters"),
+});
+
+export type InsertPetition = z.infer<typeof insertPetitionSchema>;
+export type Petition = typeof petitions.$inferSelect;
+
+// ============================================
+// PETITION SIGNATURES TABLE
+// ============================================
+export const petitionSignatures = pgTable("petition_signatures", {
+  id: text("id").primaryKey().notNull().default(sql`gen_random_uuid()`),
+  petitionId: text("petition_id").notNull().references(() => petitions.id, { onDelete: 'cascade' }),
+  
+  // Signature data (required)
+  fullName: text("full_name").notNull(),
+  typedSignature: text("typed_signature").notNull(),
+  
+  // Drawn signature (optional) - stored as base64 data URL
+  drawnSignature: text("drawn_signature"),
+  
+  // No emails, IP tracking, or user agent per requirements
+  signedAt: timestamp("signed_at").notNull().defaultNow(),
+});
+
+// Public Evidence Hub - community-shared evidence
+export const publicEvidence = pgTable("public_evidence", {
+  id: text("id").primaryKey().notNull().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull().references(() => users.id),
+  fileUrl: text("file_url").notNull(),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type").notNull(), // image/video/document
+  officerName: text("officer_name"),
+  department: text("department"),
+  location: text("location"),
+  incidentDate: timestamp("incident_date"),
+  description: text("description"),
+  uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
+});
+
+export const petitionSignaturesRelations = relations(petitionSignatures, ({ one }) => ({
+  petition: one(petitions, {
+    fields: [petitionSignatures.petitionId],
+    references: [petitions.id],
+  }),
+}));
+
+export const insertPetitionSignatureSchema = createInsertSchema(petitionSignatures).omit({
+  id: true,
+  signedAt: true,
+}).extend({
+  fullName: z.string().min(2, "Full name is required"),
+  typedSignature: z.string().min(2, "Typed signature is required"),
+  drawnSignature: z.string().optional(),
+});
+
+export type InsertPetitionSignature = z.infer<typeof insertPetitionSignatureSchema>;
+export type PetitionSignature = typeof petitionSignatures.$inferSelect;
+
+// ============================================
+// FOIA REQUESTS TABLE
+// ============================================
+export const foiaRequests = pgTable("foia_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // User contact information
+  userFullName: text("user_full_name").notNull(),
+  userEmail: text("user_email").notNull(),
+  mailingAddress: text("mailing_address").notNull(), // Physical mailing address for certified mail return
+  
+  // Jurisdiction selection
+  state: varchar("state", { length: 2 }).notNull(), // US state code
+  agencyType: varchar("agency_type").notNull(), // 'state_police', 'county_sheriff', 'municipal_police', 'other'
+  agencyName: text("agency_name"), // Manual entry if "other" selected
+  departmentName: text("department_name").notNull(), // User-entered department name
+  
+  // AI-discovered department address
+  departmentAddress: text("department_address"), // AI-searched and verified address
+  
+  // Incident details
+  officerName: text("officer_name").notNull(),
+  incidentDate: text("incident_date"), // Approximate date
+  incidentTime: text("incident_time"), // Approximate time
+  incidentLocation: text("incident_location"), // Approximate location
+  
+  // Records requested
+  recordsDescription: text("records_description").notNull(), // Description of records being requested
+  
+  // Generated FOIA letter
+  generatedLetter: text("generated_letter"), // Complete FOIA letter with state-specific statute compliance
+  stateStatute: text("state_statute"), // State-specific open records statute citation
+  statutoryDeadline: text("statutory_deadline"), // Response deadline per state statute
+  
+  // Authorization and payment
+  authorizationAccepted: boolean("authorization_accepted").default(false), // User accepted authorization checkbox
+  paymentId: varchar("payment_id"), // Stripe payment intent ID
+  paymentStatus: varchar("payment_status").default('pending'),
+  amountPaid: integer("amount_paid"), // Amount in cents (2465 = $24.65)
+  
+  // Status tracking
+  status: varchar("status").notNull().default('draft'), // 'draft', 'pending_payment', 'paid', 'mailed', 'delivered'
+  statusUpdatedAt: timestamp("status_updated_at").defaultNow(),
+  
+  // Admin tracking
+  certifiedMailTrackingNumber: text("certified_mail_tracking_number"), // Admin adds manually
+  mailedAt: timestamp("mailed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const foiaRequestsRelations = relations(foiaRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [foiaRequests.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertFoiaRequestSchema = createInsertSchema(foiaRequests).omit({
+  id: true,
+  userId: true, // Added by server from authenticated session
+  createdAt: true,
+  updatedAt: true,
+  statusUpdatedAt: true,
+  generatedLetter: true,
+  stateStatute: true,
+  statutoryDeadline: true,
+  departmentAddress: true, // AI-generated
+  paymentId: true,
+  paymentStatus: true,
+  amountPaid: true,
+  status: true,
+  certifiedMailTrackingNumber: true,
+  mailedAt: true,
+}).extend({
+  mailingAddress: z.string().min(10, "Physical mailing address is required"),
+  departmentName: z.string().min(2, "Department name is required"),
+  officerName: z.string().min(2, "Officer name is required"),
+  recordsDescription: z.string().min(20, "Please provide a detailed description of records requested"),
+});
+
+export type InsertFoiaRequest = z.infer<typeof insertFoiaRequestSchema>;
+export type FoiaRequest = typeof foiaRequests.$inferSelect;
+
+// ============================================
+// FOIA STATE STATUTES TABLE
+// ============================================
+export const foiaStateStatutes = pgTable("foia_state_statutes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  state: varchar("state", { length: 2 }).notNull().unique(), // US state code
+  
+  // State-specific statute information
+  statuteName: text("statute_name").notNull(), // e.g., "California Public Records Act"
+  statuteCitation: text("statute_citation").notNull(), // e.g., "Cal. Gov't Code § 6250 et seq."
+  statutoryDeadline: text("statutory_deadline").notNull(), // e.g., "10 business days"
+  
+  // Template information for letter generation
+  letterTemplate: text("letter_template"), // State-specific FOIA letter template
+  additionalRequirements: text("additional_requirements"), // Any state-specific requirements
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFoiaStateStatuteSchema = createInsertSchema(foiaStateStatutes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFoiaStateStatute = z.infer<typeof insertFoiaStateStatuteSchema>;
+export type FoiaStateStatute = typeof foiaStateStatutes.$inferSelect;
+
+// ============================================
+// AI LEARNING SYSTEM TABLES
+// ============================================
+
+// Stores analyzed patterns from top law firm complaints
+export const complaintPatterns = pgTable("complaint_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Source information
+  sourceFirm: text("source_firm"), // Name of law firm
+  sourceCitation: text("source_citation"), // Case citation or reference
+  sourceUrl: text("source_url"), // URL if from web search
+  
+  // Case characteristics
+  jurisdiction: text("jurisdiction"), // State or federal district
+  violationType: text("violation_type"), // e.g., "excessive force", "false arrest"
+  claimTypes: text("claim_types").array(), // Array of claim types
+  factPattern: text("fact_pattern"), // Brief description of facts
+  
+  // Format and structure analysis
+  documentStructure: jsonb("document_structure"), // Section headings, organization
+  writingStyle: jsonb("writing_style"), // Tone, language patterns, persuasive techniques
+  legalArguments: jsonb("legal_arguments"), // Argument strategies used
+  citationStyle: text("citation_style"), // How citations are formatted
+  
+  // Effectiveness metrics
+  outcome: text("outcome"), // "won", "settled", "pending", "lost"
+  settlementAmount: integer("settlement_amount"), // If applicable
+  effectivenessScore: integer("effectiveness_score"), // 1-10 rating
+  
+  // Full text storage
+  fullText: text("full_text"), // Complete document text for analysis
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Stores successful legal strategies
+export const legalStrategies = pgTable("legal_strategies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Strategy identification
+  strategyName: text("strategy_name").notNull(),
+  strategyType: text("strategy_type"), // "argument", "framing", "evidence_presentation"
+  applicableClaims: text("applicable_claims").array(),
+  
+  // Strategy details
+  description: text("description"),
+  implementation: text("implementation"), // How to apply this strategy
+  exampleText: text("example_text"), // Example from successful case
+  
+  // Effectiveness
+  successRate: integer("success_rate"), // Percentage
+  usageCount: integer("usage_count").default(0),
+  
+  // Context
+  jurisdiction: text("jurisdiction"),
+  recommendedFor: text("recommended_for"), // When to use this strategy
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Stores case patterns for similarity matching
+export const casePatterns = pgTable("case_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Case identification
+  caseId: varchar("case_id"), // Reference to actual lawsuit if from our system
+  caseType: text("case_type"), // "complaint", "lawsuit", "petition"
+  
+  // Facts and claims
+  factPattern: text("fact_pattern").notNull(),
+  claimTypes: text("claim_types").array(),
+  violationType: text("violation_type"),
+  jurisdiction: text("jurisdiction"),
+  
+  // Key details
+  officerConduct: text("officer_conduct"), // What the officer did
+  plaintiffInjury: text("plaintiff_injury"), // What happened to plaintiff
+  evidence: text("evidence").array(), // Types of evidence
+  witnesses: boolean("witnesses"), // Whether witnesses present
+  
+  // Outcome and effectiveness
+  outcome: text("outcome"),
+  strengthRating: integer("strength_rating"), // AI-assessed case strength (1-10)
+  weaknesses: text("weaknesses").array(), // Identified weaknesses
+  strengths: text("strengths").array(), // Identified strengths
+  
+  // Document quality
+  documentQuality: integer("document_quality"), // 1-10 rating
+  formatApplied: text("format_applied"), // Which format/template was used
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Stores learned document formats and templates
+export const documentFormats = pgTable("document_formats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Format identification
+  formatName: text("format_name").notNull(),
+  formatType: text("format_type"), // "complaint", "lawsuit", "petition"
+  source: text("source"), // Where this format came from
+  
+  // Structure
+  sections: jsonb("sections"), // Array of section definitions
+  headingStyle: text("heading_style"),
+  paragraphStyle: text("paragraph_style"),
+  citationFormat: text("citation_format"),
+  
+  // Applicability
+  jurisdiction: text("jurisdiction"),
+  courtLevel: text("court_level"), // "federal_district", "state_trial", etc.
+  claimTypes: text("claim_types").array(),
+  
+  // Template
+  templateText: text("template_text"), // Full template with placeholders
+  requiredFields: text("required_fields").array(), // Fields needed to fill template
+  
+  // Effectiveness
+  usageCount: integer("usage_count").default(0),
+  successRate: integer("success_rate"), // Percentage
+  averageQualityScore: integer("average_quality_score"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ============================================
+// APP SETTINGS TABLE (Admin Configuration)
+// ============================================
+export const appSettings = pgTable("app_settings", {
+  key: varchar("key").primaryKey(), // Setting key (e.g., "support_from_name", "support_from_email")
+  value: text("value").notNull(), // Setting value
+  updatedBy: varchar("updated_by"), // Admin ID who last updated
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAppSettingSchema = createInsertSchema(appSettings).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+export type InsertAppSetting = z.infer<typeof insertAppSettingSchema>;
+
+// ============================================
+// ADMIN SETTINGS AUDIT LOG (Track Changes)
+// ============================================
+export const adminSettingsAudit = pgTable("admin_settings_audit", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  settingKey: varchar("setting_key").notNull(),
+  oldValue: text("old_value"),
+  newValue: text("new_value").notNull(),
+  adminId: varchar("admin_id").notNull(),
+  ipAddress: varchar("ip_address"),
+  changedAt: timestamp("changed_at").defaultNow(),
+});
+
+export const insertAdminSettingsAuditSchema = createInsertSchema(adminSettingsAudit).omit({
+  id: true,
+  changedAt: true,
+});
+
+export type AdminSettingsAudit = typeof adminSettingsAudit.$inferSelect;
+export type InsertAdminSettingsAudit = z.infer<typeof insertAdminSettingsAuditSchema>;
+
+export type ComplaintPattern = typeof complaintPatterns.$inferSelect;
+export type InsertComplaintPattern = typeof complaintPatterns.$inferInsert;
+
+export type LegalStrategy = typeof legalStrategies.$inferSelect;
+export type InsertLegalStrategy = typeof legalStrategies.$inferInsert;
+
+export type CasePattern = typeof casePatterns.$inferSelect;
+export type InsertCasePattern = typeof casePatterns.$inferInsert;
+
+export type DocumentFormat = typeof documentFormats.$inferSelect;
+export type InsertDocumentFormat = typeof documentFormats.$inferInsert;
+
+// ============================================
+// SUBSCRIPTION TIERS TABLE (Admin-Configurable)
+// ============================================
+export const subscriptionTiers = pgTable("subscription_tiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(), // e.g., "Basic Access", "Premium", "Professional"
+  description: text("description"), // What's included in this tier
+  priceInCents: integer("price_in_cents").notNull(), // Price in cents
+  durationDays: integer("duration_days").notNull(), // How many days of access
+  stripePriceId: varchar("stripe_price_id"), // Stripe price ID for this tier
+  stripeProductId: varchar("stripe_product_id"), // Stripe product ID
+  features: text("features").array(), // List of features (JSON array of strings)
+  isActive: boolean("is_active").notNull().default(true), // Can be toggled on/off
+  isDefault: boolean("is_default").notNull().default(false), // Default tier for new users
+  sortOrder: integer("sort_order").default(0), // Display order
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSubscriptionTierSchema = createInsertSchema(subscriptionTiers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SubscriptionTier = typeof subscriptionTiers.$inferSelect;
+export type InsertSubscriptionTier = z.infer<typeof insertSubscriptionTierSchema>;
+
+// ============================================
+// USER SUBSCRIPTIONS TABLE (Links users to their active tier)
+// ============================================
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tierId: varchar("tier_id").notNull().references(() => subscriptionTiers.id, { onDelete: 'cascade' }),
+  startDate: timestamp("start_date").notNull().defaultNow(),
+  endDate: timestamp("end_date").notNull(), // Calculated based on tier duration
+  isActive: boolean("is_active").notNull().default(true),
+  paymentId: varchar("payment_id"), // Stripe payment intent ID
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type InsertUserSubscription = z.infer<typeof insertUserSubscriptionSchema>;
+
+// ============================================
+// SUB-AGENT KNOWLEDGE SYSTEM TABLES
+// ============================================
+
+// Tracks capabilities the Sub-Agent has learned, with success/failure metrics
+export const subAgentCapabilities = pgTable("subagent_capabilities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  capabilityName: varchar("capability_name").unique().notNull(), // Unique identifier for capability
+  description: text("description").notNull(), // What this capability does
+  successCount: integer("success_count").default(0).notNull(), // Times successfully executed
+  failCount: integer("fail_count").default(0).notNull(), // Times failed
+  avgExecutionTimeMs: integer("avg_execution_time_ms"), // Average execution time in milliseconds
+  lastUsed: timestamp("last_used"), // Last time this capability was used
+  learnedAt: timestamp("learned_at").defaultNow().notNull(), // When capability was first learned
+  limitations: text("limitations").array(), // Known limitations
+  improvements: text("improvements").array(), // Suggested improvements
+  metadata: jsonb("metadata"), // Additional context about capability
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_capability_name").on(table.capabilityName),
+  index("idx_last_used").on(table.lastUsed),
+]);
+
+export const insertSubAgentCapabilitySchema = createInsertSchema(subAgentCapabilities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SubAgentCapability = typeof subAgentCapabilities.$inferSelect;
+export type InsertSubAgentCapability = z.infer<typeof insertSubAgentCapabilitySchema>;
+
+// Stores patterns the Sub-Agent has learned from operations
+export const subAgentLearningPatterns = pgTable("subagent_learning_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  patternType: varchar("pattern_type").notNull(), // 'user_behavior', 'code_pattern', 'error_pattern', 'success_pattern'
+  patternData: jsonb("pattern_data").notNull(), // Pattern details as JSON
+  confidenceScore: integer("confidence_score").default(50).notNull(), // 0-100 confidence
+  timesObserved: integer("times_observed").default(1).notNull(), // Frequency count
+  lastObserved: timestamp("last_observed").defaultNow().notNull(), // Last observation time
+  associatedCapabilities: text("associated_capabilities").array(), // Related capabilities
+  impact: varchar("impact"), // 'low', 'medium', 'high', 'critical'
+  metadata: jsonb("metadata"), // Additional context
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_pattern_type").on(table.patternType),
+  index("idx_confidence_score").on(table.confidenceScore),
+  index("idx_last_observed").on(table.lastObserved),
+]);
+
+export const insertSubAgentLearningPatternSchema = createInsertSchema(subAgentLearningPatterns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SubAgentLearningPattern = typeof subAgentLearningPatterns.$inferSelect;
+export type InsertSubAgentLearningPattern = z.infer<typeof insertSubAgentLearningPatternSchema>;
+
+// Tracks performance metrics over time to measure improvement
+export const subAgentPerformanceMetrics = pgTable("subagent_performance_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metricName: varchar("metric_name").notNull(), // e.g., 'analysis_depth', 'inference_accuracy', 'execution_success'
+  metricValue: integer("metric_value").notNull(), // Numeric value (can be 0-100 for percentages)
+  measuredAt: timestamp("measured_at").defaultNow().notNull(), // When metric was measured
+  context: jsonb("context"), // Additional context about measurement
+  taskId: varchar("task_id"), // Reference to specific task if applicable
+  capabilityName: varchar("capability_name"), // Related capability if applicable
+  metadata: jsonb("metadata"), // Additional details
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_metric_name").on(table.metricName),
+  index("idx_measured_at").on(table.measuredAt),
+  index("idx_metrics_capability_name").on(table.capabilityName),
+]);
+
+export const insertSubAgentPerformanceMetricSchema = createInsertSchema(subAgentPerformanceMetrics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type SubAgentPerformanceMetric = typeof subAgentPerformanceMetrics.$inferSelect;
+export type InsertSubAgentPerformanceMetric = z.infer<typeof insertSubAgentPerformanceMetricSchema>;
+
+// Logs self-improvement actions with before/after states and rollback capability
+export const subAgentSelfImprovementActions = pgTable("subagent_self_improvement_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actionType: varchar("action_type").notNull(), // 'capability_update', 'pattern_learn', 'strategy_change', 'rollback'
+  description: text("description").notNull(), // What was changed
+  beforeState: jsonb("before_state"), // State before change
+  afterState: jsonb("after_state"), // State after change
+  successMetrics: jsonb("success_metrics"), // Metrics measuring success of change
+  rollbackAvailable: boolean("rollback_available").default(true).notNull(), // Can this be rolled back?
+  rolledBack: boolean("rolled_back").default(false).notNull(), // Has it been rolled back?
+  rollbackReason: text("rollback_reason"), // Why it was rolled back
+  impact: varchar("impact"), // 'positive', 'negative', 'neutral'
+  capabilityAffected: varchar("capability_affected"), // Which capability was affected
+  implementedAt: timestamp("implemented_at").defaultNow().notNull(), // When change was made
+  evaluatedAt: timestamp("evaluated_at"), // When results were evaluated
+  metadata: jsonb("metadata"), // Additional context
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_action_type").on(table.actionType),
+  index("idx_implemented_at").on(table.implementedAt),
+  index("idx_impact").on(table.impact),
+  index("idx_rolled_back").on(table.rolledBack),
+]);
+
+export const insertSubAgentSelfImprovementActionSchema = createInsertSchema(subAgentSelfImprovementActions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SubAgentSelfImprovementAction = typeof subAgentSelfImprovementActions.$inferSelect;
+export type InsertSubAgentSelfImprovementAction = z.infer<typeof insertSubAgentSelfImprovementActionSchema>;
+
+// ============================================
+// SUB-AGENT SEARCH CYCLES TABLE
+// ============================================
+// Tracks autonomous data collection cycles for officer and department URL searches
+export const subAgentSearchCycles = pgTable("sub_agent_search_cycles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  currentCycle: varchar("current_cycle").notNull().default('officer'), // 'officer' | 'department'
+  lastCycleStart: timestamp("last_cycle_start"),
+  nextCycleStart: timestamp("next_cycle_start"),
+  searchState: varchar("search_state").notNull().default('not_running'), // 'not_running' | 'searching_officers' | 'searching_departments' | 'paused'
+  isPaused: boolean("is_paused").default(false).notNull(),
+  pauseContext: jsonb("pause_context"), // Stores: pausedTask, timeRemaining, progress, pausedAt
+  cycleCount: integer("cycle_count").default(0).notNull(), // Total cycles completed
+  lastOfficerSearchCount: integer("last_officer_search_count"), // Officers found in last search
+  lastDepartmentSearchCount: integer("last_department_search_count"), // URLs found in last search
+  metadata: jsonb("metadata"), // Additional tracking data
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSubAgentSearchCycleSchema = createInsertSchema(subAgentSearchCycles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SubAgentSearchCycle = typeof subAgentSearchCycles.$inferSelect;
+export type InsertSubAgentSearchCycle = z.infer<typeof insertSubAgentSearchCycleSchema>;
+
+// ============================================
+// DEPARTMENT URLS TABLE
+// ============================================
+// Stores discovered law enforcement department websites for future reference
+export const departmentUrls = pgTable("department_urls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  departmentName: text("department_name").notNull(),
+  url: text("url").notNull(),
+  location: text("location").notNull(), // City, State or County, State
+  state: varchar("state", { length: 2 }).notNull(), // Two-letter state code
+  departmentType: varchar("department_type").notNull(), // 'police' | 'sheriff' | 'state_patrol' | 'other'
+  verified: boolean("verified").default(false).notNull(), // Whether URL has been verified as working
+  lastVerified: timestamp("last_verified"), // Last time URL was checked
+  contactEmail: text("contact_email"), // Contact email if found
+  phone: varchar("phone"), // Contact phone if found
+  jurisdiction: text("jurisdiction"), // Jurisdiction details (city, county, etc.)
+  servesPopulation: integer("serves_population"), // Estimated population served
+  sources: text("sources").array(), // URLs where this was found
+  discoveredAt: timestamp("discovered_at").defaultNow().notNull(),
+  metadata: jsonb("metadata"), // Additional data
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_department_state").on(table.state),
+  index("idx_department_type").on(table.departmentType),
+  index("idx_discovered_at").on(table.discoveredAt),
+]);
+
+export const insertDepartmentUrlSchema = createInsertSchema(departmentUrls).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type DepartmentUrl = typeof departmentUrls.$inferSelect;
+export type InsertDepartmentUrl = z.infer<typeof insertDepartmentUrlSchema>;

@@ -1,0 +1,1058 @@
+[
+  {
+    "timestamp": "2025-11-08T06:27:22.684Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T06:39:25.552Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T06:42:23.277Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T06:46:16.493Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T06:55:08.200Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:02:57.806Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:03:57.962Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:18:57.682Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:23:12.024Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:25:04.425Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:38:08.452Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:38:13.861Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:41:11.639Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:42:14.089Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:42:51.451Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:44:47.638Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:49:00.988Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:51:24.757Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:52:42.905Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:56:27.921Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:58:01.156Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T07:58:41.618Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T08:05:52.925Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T08:07:05.259Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T08:08:12.484Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T08:14:02.149Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T08:17:07.497Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T08:18:38.456Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T08:57:25.414Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:01:10.186Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:05:20.248Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:07:41.857Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:09:55.588Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:10:48.030Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:12:48.110Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:14:38.131Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:19:44.123Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:21:29.091Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:28:14.597Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:29:55.731Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:34:06.179Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:37:13.718Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:38:48.525Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:42:00.535Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:44:17.124Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T09:59:16.887Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T10:14:16.889Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T10:29:16.888Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T10:33:40.063Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T10:34:05.150Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T10:36:02.058Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T10:51:01.798Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T11:06:01.798Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T11:21:01.800Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T11:36:01.802Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T11:51:01.800Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T12:06:01.800Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T12:21:01.802Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T12:36:01.800Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T12:51:01.801Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T13:06:01.796Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T13:21:01.802Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T13:36:01.804Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T13:51:01.808Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T14:06:01.803Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T14:21:01.809Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T14:36:01.810Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T14:51:01.809Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T15:06:01.811Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T15:21:01.814Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T15:36:01.818Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T15:51:01.812Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T16:06:01.808Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T16:21:01.814Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T16:36:01.813Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Connection terminated unexpectedly",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-08T16:36:02.212Z",
+    "check": "database_repair",
+    "status": "success",
+    "repairAttempts": 0
+  },
+  {
+    "timestamp": "2025-11-08T16:51:01.779Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-08T16:51:01.780Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 1
+  },
+  {
+    "timestamp": "2025-11-08T17:06:01.781Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 2
+  },
+  {
+    "timestamp": "2025-11-08T17:06:01.783Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 2
+  },
+  {
+    "timestamp": "2025-11-08T17:21:01.781Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 3
+  },
+  {
+    "timestamp": "2025-11-08T17:21:01.782Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 3
+  },
+  {
+    "timestamp": "2025-11-08T17:36:01.785Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 4
+  },
+  {
+    "timestamp": "2025-11-08T17:51:01.784Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 5
+  },
+  {
+    "timestamp": "2025-11-08T17:51:01.786Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 1
+  },
+  {
+    "timestamp": "2025-11-08T18:06:01.784Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 6
+  },
+  {
+    "timestamp": "2025-11-08T18:06:01.819Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 2
+  },
+  {
+    "timestamp": "2025-11-08T18:21:01.784Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 7
+  },
+  {
+    "timestamp": "2025-11-08T18:21:01.786Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 3
+  },
+  {
+    "timestamp": "2025-11-08T18:36:01.785Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 8
+  },
+  {
+    "timestamp": "2025-11-08T18:51:01.785Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 9
+  },
+  {
+    "timestamp": "2025-11-08T18:51:01.794Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 1
+  },
+  {
+    "timestamp": "2025-11-08T19:06:01.784Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 10
+  },
+  {
+    "timestamp": "2025-11-08T19:06:01.786Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 2
+  },
+  {
+    "timestamp": "2025-11-08T19:21:01.785Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 11
+  },
+  {
+    "timestamp": "2025-11-08T19:21:01.789Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 3
+  },
+  {
+    "timestamp": "2025-11-08T19:36:01.785Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 12
+  },
+  {
+    "timestamp": "2025-11-08T19:51:01.785Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 13
+  },
+  {
+    "timestamp": "2025-11-08T19:51:01.788Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 1
+  },
+  {
+    "timestamp": "2025-11-08T20:34:59.036Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T20:49:58.794Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T21:04:58.795Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T21:19:58.797Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T21:34:58.797Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T21:44:57.614Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T21:59:57.356Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T22:14:57.359Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T22:29:57.357Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T22:36:27.805Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T22:39:18.321Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T22:42:50.282Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T22:43:46.432Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T22:45:15.566Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T22:52:20.678Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T22:54:32.192Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T22:56:03.989Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T22:56:56.074Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T23:00:35.156Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T23:04:51.733Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T23:07:28.497Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T23:09:41.902Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T23:11:23.179Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T23:12:30.153Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T23:23:38.559Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T23:38:38.323Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-08T23:53:38.324Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T00:08:38.336Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T00:23:38.324Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T00:38:38.327Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T00:53:38.327Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T01:08:38.328Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T01:23:38.331Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T01:38:38.331Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T01:53:38.330Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T02:08:38.330Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T02:23:38.331Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T02:38:38.331Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T02:44:24.297Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T02:45:51.418Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T02:47:38.034Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T03:02:37.805Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T03:17:37.804Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T03:32:37.810Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T03:47:37.808Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T04:02:37.805Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T04:17:37.807Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T04:32:37.807Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T04:45:24.386Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T04:47:36.623Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T05:02:36.629Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "read ECONNRESET",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-09T05:02:37.023Z",
+    "check": "database_repair",
+    "status": "success",
+    "repairAttempts": 0
+  },
+  {
+    "timestamp": "2025-11-09T05:17:36.591Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-09T05:17:36.593Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 1
+  },
+  {
+    "timestamp": "2025-11-09T05:32:36.591Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 2
+  },
+  {
+    "timestamp": "2025-11-09T05:32:36.594Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 2
+  },
+  {
+    "timestamp": "2025-11-09T05:47:36.591Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 3
+  },
+  {
+    "timestamp": "2025-11-09T05:47:36.595Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 3
+  },
+  {
+    "timestamp": "2025-11-09T05:54:56.727Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T05:59:06.494Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T06:11:07.413Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T06:13:15.036Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T06:15:16.479Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T06:17:01.231Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T06:17:59.883Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-09T06:32:59.643Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "read ECONNRESET",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-09T06:32:59.998Z",
+    "check": "database_repair",
+    "status": "success",
+    "repairAttempts": 0
+  },
+  {
+    "timestamp": "2025-11-09T06:47:59.606Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-09T06:47:59.609Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 1
+  },
+  {
+    "timestamp": "2025-11-09T07:02:59.606Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 2
+  },
+  {
+    "timestamp": "2025-11-09T07:02:59.608Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 2
+  }
+]

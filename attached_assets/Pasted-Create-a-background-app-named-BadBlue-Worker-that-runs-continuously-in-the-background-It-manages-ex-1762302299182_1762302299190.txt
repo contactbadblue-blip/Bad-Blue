@@ -1,0 +1,218 @@
+Create a background app named BadBlue Worker that runs continuously in the background.
+It manages execution of the existing Officer Search and AI Consultation functions, ensures reliability through periodic diagnostics and automatic repair, and reports all failures and test results to the admin through a single, organized section titled “Worker Logs.”
+
+
+---
+
+1. Officer Search — Integrated Progress and Streaming Updates
+
+The Worker integrates with the existing Officer Search progress bar and updates it dynamically as searches execute.
+
+Displays percentage completed, tasks completed vs total, and live preview of results.
+
+Users can view progress and partial findings without waiting for full completion.
+
+All updates are merged seamlessly with existing Officer Search logic.
+
+
+
+---
+
+2. Scheduled Diagnostics
+
+Every six (6) hours, the Worker performs read-only diagnostic scans across all operational components to detect potential instability or inefficiency.
+These diagnostics do not perform repairs; they prepare data for later maintenance and store any findings with time and severity classification for internal review.
+
+
+---
+
+3. Failure Monitoring, Logging, and Auto-Repair Directive
+
+Performer — FailureMonitor Internal Process
+Operates autonomously inside the Worker, monitoring system functions, detecting issues, and executing controlled repairs.
+
+A. Non-Interference Directive + Failsafe
+
+The Worker and FailureMonitor must never interrupt or degrade unrelated system or user-facing processes.
+If any interference occurs:
+
+1. The Worker suspends the active task.
+
+
+2. Logs the event with timestamp and severity level.
+
+
+3. Monitors the affected process until it completes.
+
+
+4. Automatically resets and resumes once system stability is confirmed.
+
+
+
+System-wide pausing is permitted only during the 2:00 a.m. CST repair cycle and only for the minimal required duration.
+
+B. Six-Hour Diagnostic Cycle
+
+Every six hours, FailureMonitor scans critical system processes.
+Detected irregularities are recorded in /data/system_failures.log, each entry containing the timestamp, affected process, and severity level.
+Diagnostics remain strictly non-invasive.
+
+C. Daily 2:00 a.m. CST Repair Cycle
+
+At 2:00 a.m. CST daily, FailureMonitor processes all failures in /data/system_failures.log chronologically.
+Each item is repaired following the Three-Phase Corrective Sequence, then verified for stability before moving on.
+Resolved items are cleared, and the system is marked “working.”
+
+D. Private Failure Log (Non-Admin Visible)
+
+Each entry in /data/system_failures.log includes:
+
+Timestamp
+
+Function or process affected
+
+Cause (if identifiable)
+
+If not identifiable: file/code/process involved
+
+System state snapshot (working / not working)
+
+Severity (1–5 scale):
+
+1. Notice – Minor informational event, no impact.
+
+
+2. Warning – Slight irregularity, no functional loss.
+
+
+3. Moderate – Partial impact; localized function disruption.
+
+
+4. Serious – System function impaired; user-facing issue.
+
+
+5. Critical – Core process failure; immediate repair required.
+
+
+
+
+All entries are sortable and filterable by time and severity only.
+
+E. Three-Phase Corrective Sequence (Executed by FailureMonitor)
+
+Safeguards:
+
+Start with least-invasive fixes.
+
+No unrelated changes or deletions.
+
+Always snapshot before alteration; rollback if verification fails.
+
+Verify full stability before resuming normal activity.
+
+
+Phase 1 — Direct Resolution (Local, Non-Invasive)
+Restarts or resets the affected process; clears local locks or caches.
+Verifies that function has resumed normally.
+
+Phase 2 — Targeted Component Repair (Scoped to Culprit)
+Reloads or reconfigures a specific module, patch, or dependency.
+Verifies functionality and confirms no side effects.
+
+Phase 3 — Contained Remediation (One-Ring Scope)
+Repairs limited interdependent issues within the affected module’s immediate dependencies.
+If remediation exceeds scope, it is flagged Manual Review Required.
+
+Once complete, the system is marked “working,” verified, and restored.
+
+
+---
+
+4. Weekly System-Wide Functional Test and Sequential Repairs
+
+Every 7 days at 2:00 p.m. CST, the Worker executes a comprehensive system-wide review of all operational components.
+It validates every function, module, and dependency for full efficiency and correctness.
+
+After completion, the Worker automatically repairs all detected faults or inefficiencies, beginning with the highest severity and descending to the lowest.
+
+All results and fixes are logged in /data/worker_function_error.log with the same timestamp and severity format.
+
+The repair order strictly follows Severity 5 → 1.
+
+
+Each entry includes:
+
+Timestamp
+
+Function or Component Tested
+
+Expected vs. Observed Behavior
+
+Severity Level (1–5)
+
+Status (Fixed / Pending)
+
+Notes (optional)
+
+
+
+---
+
+5. Admin Control Panel Integration — “Worker Logs”
+
+The Admin Control Panel contains a unified section titled “Worker Logs.”
+When selected, it expands into two sub-sections:
+
+A. Worker Failure Log
+
+Displays data from /data/system_failures.log in chronological order (newest to oldest).
+Entries appear in a structured system log layout, organized into defined columns for quick review.
+Each record includes:
+
+Timestamp
+
+Function or Process Affected
+
+Cause / File-Code Reference
+
+System State (Working / Not Working)
+
+Severity (1–5) — with label and color indicators:
+
+1️⃣ Notice
+
+2️⃣ Warning
+
+3️⃣ Moderate
+
+4️⃣ Serious
+
+5️⃣ Critical
+
+
+
+Admins may sort and filter entries by time or severity only.
+
+B. Worker Function Error Log
+
+Displays data from /data/worker_function_error.log in chronological order (newest to oldest).
+Entries use the same professional structured layout, enabling focused analysis.
+Each record includes:
+
+Timestamp
+
+Function or Component Tested
+
+Expected Behavior
+
+Observed Behavior
+
+Severity Level (1–5) — using the same definitions above
+
+Status (Fixed / Pending)
+
+Notes
+
+
+Admins can sort and filter entries by time or severity only.
+Entries of Severity 4–5 are visually highlighted for immediate recognition.

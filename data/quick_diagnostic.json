@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-11-08T06:11:24.404Z",
+  "findings": [
+    "✓ Database: Connected and accessible",
+    "✓ officer_profiles table: Exists",
+    "System Diagnostics: 86.7% pass rate (13/15)",
+    "⚠ ENVIRONMENT: Environment Variables failed",
+    "⚠ AI_SERVICES: OpenAI API Key failed",
+    "AI Sub-Agent: undefined/undefined capabilities healthy",
+    "✗ AI Sub-Agent: Diagnostic failed - Cannot read properties of undefined (reading 'length')",
+    "✓ Officer Search: Functional (found 1 sources)"
+  ],
+  "summary": {
+    "success": 3,
+    "warnings": 2,
+    "critical": 0,
+    "overallHealth": "✓ HEALTHY"
+  }
+}

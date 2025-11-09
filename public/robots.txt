@@ -1,0 +1,15 @@
+
+# BadBlue Robots.txt - Police Accountability Platform
+
+# Allow all search engines to crawl the site
+User-agent: *
+Allow: /
+
+# Block admin areas from search engines
+Disallow: /admin-*
+
+# Block API endpoints from search engines
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://badblue.replit.app/sitemap.xml

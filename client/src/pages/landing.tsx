@@ -1,0 +1,702 @@
+import { useState, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Shield, Search, FileText, TrendingUp, Upload, Database, Bell, Check, Scale, ArrowRight, Users, Loader2, MessageSquare } from "lucide-react";
+import { LanguageSelectorLight } from "@/components/LanguageSelectorLight";
+import LegalConsultation from "@/components/LegalConsultation";
+import heroImage from "@assets/generated_images/Civic_accountability_hero_image_a13a823c.png";
+import { SEOHead } from "@/components/SEOHead";
+import { SupportEmailFooter } from "@/components/SupportEmailFooter";
+import { useLocation } from "wouter";
+import { FULL_ACCESS_PRICING, LAWSUIT_DIY_PRICING, LAWSUIT_FULL_SERVICE_PRICING, COMPLAINT_PRICING, PETITION_PRICING, FOIA_REQUEST_PRICING } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+// Generate a simple device fingerprint based on browser characteristics
+function generateDeviceFingerprint(): string {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillText('fingerprint', 2, 2);
+  }
+
+  const data = [
+    navigator.userAgent,
+    navigator.language,
+    new Date().getTimezoneOffset(),
+    screen.width + 'x' + screen.height,
+    screen.colorDepth,
+    canvas.toDataURL()
+  ].join('|');
+
+  let hash = 0;
+  for (let i = 0; i < data.length; i++) {
+    const char = data.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash.toString(36);
+}
+
+export default function Landing() {
+  const [, setLocation] = useLocation();
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+  const [trialDisclaimerAccepted, setTrialDisclaimerAccepted] = useState(false);
+  const [trialQuestion, setTrialQuestion] = useState("");
+  const [trialResponse, setTrialResponse] = useState("");
+  const [isLoadingTrial, setIsLoadingTrial] = useState(false);
+  const [hasUsedTrial, setHasUsedTrial] = useState(false);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [audioAttempted, setAudioAttempted] = useState(false); // Added state for tracking audio attempt
+  const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Check localStorage on mount to see if trial was used
+  useEffect(() => {
+    const usedTrial = localStorage.getItem('badblue_trial_used');
+    if (usedTrial === 'true') {
+      setHasUsedTrial(true);
+    }
+  }, []);
+
+  // Enable audio on user interaction (unmute and play)
+  const enableAudio = () => {
+    if (!audioRef.current) {
+      return;
+    }
+    
+    // If audio is muted, unmute it and restart from beginning
+    if (audioRef.current.muted) {
+      audioRef.current.muted = false;
+      audioRef.current.currentTime = 0;
+      audioRef.current.play()
+        .then(() => {
+          setAudioPlaying(true);
+        })
+        .catch((error) => {
+          console.log('Audio play prevented:', error);
+        });
+    }
+  };
+
+  // Add scroll and wheel listeners for audio unmute
+  useEffect(() => {
+    const handleInteraction = () => {
+      if (audioRef.current && audioRef.current.muted) {
+        audioRef.current.muted = false;
+        audioRef.current.currentTime = 0;
+        audioRef.current.play()
+          .then(() => {
+            setAudioPlaying(true);
+          })
+          .catch((error) => {
+            console.log('Audio play prevented:', error);
+          });
+        
+        // Remove listeners after unmuting
+        document.removeEventListener('wheel', handleInteraction);
+        document.removeEventListener('scroll', handleInteraction, true);
+      }
+    };
+    
+    document.addEventListener('wheel', handleInteraction, { passive: true });
+    document.addEventListener('scroll', handleInteraction, { passive: true, capture: true });
+    
+    return () => {
+      document.removeEventListener('wheel', handleInteraction);
+      document.removeEventListener('scroll', handleInteraction, true);
+    };
+  }, []);
+
+  // Start audio 1 second after page load (only once)
+  useEffect(() => {
+    if (audioAttempted) return; // Prevent multiple attempts
+
+    const timer = setTimeout(() => {
+      if (audioRef.current && !audioPlaying) { // Check if audio is already playing
+        setAudioAttempted(true); // Mark attempt
+        audioRef.current.play()
+          .then(() => {
+            setAudioPlaying(true);
+          })
+          .catch((error) => {
+            console.log('Audio autoplay prevented by browser:', error);
+            // Silently fail - audio will play on first scroll/interaction
+          });
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [audioAttempted, audioPlaying]); // Dependencies include new state
+
+  const handleTrialConsultation = async () => {
+    if (!trialQuestion || trialQuestion.trim().length < 10) {
+      toast({
+        title: "Please provide a detailed question",
+        description: "Your legal question should be at least 10 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoadingTrial(true);
+    try {
+      const deviceFingerprint = generateDeviceFingerprint();
+
+      const res = await apiRequest('/api/trial-consultation', 'POST', {
+        question: trialQuestion,
+        deviceFingerprint
+      });
+
+      const response = await res.json();
+
+      if (response.alreadyUsed) {
+        setHasUsedTrial(true);
+        localStorage.setItem('badblue_trial_used', 'true');
+        toast({
+          title: "Trial Already Used",
+          description: response.message,
+          variant: "destructive",
+        });
+      } else {
+        setTrialResponse(response.response);
+        localStorage.setItem('badblue_trial_used', 'true');
+        setHasUsedTrial(true);
+      }
+    } catch (error: any) {
+      if (error.message?.includes("already used")) {
+        setHasUsedTrial(true);
+        localStorage.setItem('badblue_trial_used', 'true');
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process your consultation. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingTrial(false);
+    }
+  };
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "BadBlue",
+    "alternateName": ["Bad Blue", "bad blue"],
+    "description": "Police accountability platform for filing complaints and civil rights lawsuits online",
+    "url": "https://badblue.replit.app",
+    "applicationCategory": "LegalService",
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "USD",
+      "description": "Platform access with LegalAI Consultation and Officer Search"
+    },
+    "featureList": [
+      "AI-powered officer badge identification",
+      "Automated complaint routing to proper authorities",
+      "Civil rights lawsuit document generation",
+      "State-specific legal templates",
+      "Secure evidence upload",
+      "Legal actionability analysis"
+    ]
+  };
+
+  return (
+    <div className="min-h-screen" onClick={enableAudio}>
+      {/* Background Audio from Login Video - plays once after page load */}
+      <audio
+        ref={audioRef}
+        muted
+        preload="auto"
+        style={{ position: 'fixed', top: -1000, left: -1000, visibility: 'hidden', pointerEvents: 'none' }}
+      >
+        <source src="/audio/badblue-audio.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
+
+      <SEOHead
+        title="Bad Blue - Law Enforcement Accountability Service | Officer Search, Legal Consultation, FOIA & Civil Suits"
+        description="Bad Blue is your law enforcement accountability service for convenient, and affordable in-depth officer searches, legal consultations, FOIA request submissions, detailed complaints and comprehensive civil suit filings. AI-powered platform with automated routing, state-specific templates, and professional document generation."
+        keywords="BadBlue, Bad Blue, badblue, bad blue, AI legal consultation, legal AI, officer database, case search, police accountability, civil rights, officer information, police brutality, police assault, police lawsuit, police complaint, police grievance, FOIA police, police search, police information, police legal help, police documents, officer brutality, officer assault, officer lawsuit, officer complaint, officer grievance, FOIA officer, officer search, officer information, officer legal, officer documents, department lawsuit, department complaint, department grievance, department FOIA, file police complaint, file officer complaint, lawsuit against police, lawsuit against officer, complaint against police department, grievance against police, legal advice police brutality, legal advice police assault, help with police complaint, help with officer lawsuit, search police officer, find police officer, locate police officer, police officer information, officer resignation petition, petition police officer fired, police misconduct documents, officer misconduct FOIA, police brutality lawsuit, officer assault complaint, police department grievance, legal help police case, police civil rights lawsuit, officer excessive force complaint, police false arrest lawsuit, police harassment complaint, department internal affairs complaint, police accountability legal advice, file complaint police brutality, file lawsuit police assault, FOIA request police records, search officer background, find officer information, locate police department, petition officer resignation, police brutality legal help, officer assault documents, police lawsuit information, complaint police misconduct, grievance officer conduct, legal documents police case, police records FOIA request, officer search database, department complaint process, lawsuit police department, complaint officer brutality, police legal assistance, officer information search, FOIA police documents, petition police accountability, police brutality help, officer assault lawsuit, department grievance filing, legal advice officer misconduct, search police records, find officer details, AI powered legal research, automated legal document generation, state specific legal templates, civil rights violation lawsuit, Section 1983 lawsuit, 42 USC 1983, Bivens action, qualified immunity, police misconduct attorney, civil rights attorney alternative, legal AI assistant, officer badge identification, automated complaint routing, tort notice generator, legal precedent search, filing information search, jurisdiction specific legal help, police accountability tools, officer accountability platform, legal consultation AI, smart legal research, online civil rights lawsuit, online police complaint, online FOIA request, online officer petition, police reform, law enforcement accountability, constitutional rights violation, Fourth Amendment violation, excessive force legal help, false arrest attorney, wrongful arrest lawsuit, police brutality documentation, officer misconduct evidence, legal case management, automated legal forms, police lawsuit filing assistance, civil rights case research, legal AI technology, officer database nationwide, police roster search, department directory, law enforcement information, officer background check, police history search, misconduct record search, complaint history officer, legal help affordable, budget legal assistance, DIY lawsuit, self file lawsuit, pro se legal help, legal document preparation, court filing assistance, legal research tools, case law search, statute search, legal code database, precedent database, filing fee information, court procedures, legal process help, police accountability resources, civil rights resources, legal aid alternative, online legal platform, digital legal services, legal tech platform, AI legal tools, smart legal assistance, automated legal help, police complaint online filing, lawsuit document generator, FOIA letter generator, petition template, legal letter writing, complaint letter police, grievance letter department, legal forms police case, court documents civil rights, filing instructions legal case, how to sue police, how to file police complaint, how to get police records, how to petition officer, police accountability guide, civil rights lawsuit guide, FOIA request guide, legal process guide, police complaint process, lawsuit filing process, legal document process, court filing process, legal help step by step, police case assistance, officer case guidance, department case support, legal resources comprehensive, police accountability comprehensive, civil rights comprehensive, legal platform complete, all in one legal help, complete legal solution, comprehensive police tools, full service legal platform, integrated legal services, police accountability ecosystem, legal consultation platform, officer search platform, legal research platform, complaint filing platform, lawsuit filing platform, FOIA platform, petition platform"
+        ogTitle="Bad Blue - Law Enforcement Accountability Service"
+        ogDescription="Bad Blue is your law enforcement accountability service for convenient, and affordable in-depth officer searches, legal consultations, FOIA request submissions, detailed complaints and comprehensive civil suit filings."
+        canonicalUrl="https://badblue.replit.app"
+        ogImage="https://badblue.replit.app/preview.png"
+        structuredData={structuredData}
+      />
+      {/* Hero Section */}
+      <section className="relative min-h-[100vh] flex items-center justify-center py-12">
+        {/* Background Image with Dark Wash */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${heroImage})` }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/70" />
+        </div>
+
+        {/* Language Selector - Fixed top right */}
+        <div className="absolute top-6 right-6 z-20">
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1 border border-white/20">
+            <LanguageSelectorLight />
+          </div>
+        </div>
+
+        {/* Hero Content */}
+        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
+          <h1 className="text-white text-5xl md:text-6xl font-bold leading-tight mb-6">
+            Law Enforcement Accountability Service
+          </h1>
+          <p className="text-white/90 text-xl md:text-2xl mb-8 leading-relaxed">
+            Convenient and affordable officer searches, legal consultations, FOIA requests, complaints, and civil suit filings—all powered by AI.
+          </p>
+
+          {/* Three-Tier Pricing */}
+          <div className="max-w-6xl mx-auto mb-8">
+            <div className="grid md:grid-cols-3 gap-4">
+              {/* Tier 1: Legal Consultation & Officer Search */}
+              <div className="bg-black/40 backdrop-blur-md rounded-lg p-6 border-2 border-primary/60">
+                <div className="text-white mb-4">
+                  <div className="text-sm text-white/80 leading-relaxed">Access to comprehensive legal consultation and in-depth officer search</div>
+                </div>
+                <div className="space-y-2 mb-4">
+                  <Badge className="bg-white/20 text-white border-white/30">Legal Consultation</Badge>
+                  <Badge className="bg-white/20 text-white border-white/30 ml-2">Officer Search</Badge>
+                </div>
+              </div>
+
+              {/* Tier 2: Additional Services */}
+              <div className="bg-black/40 backdrop-blur-md rounded-lg p-6 border border-white/30">
+                <div className="text-white mb-4">
+                  <div className="text-2xl font-bold mb-2">Additional Services</div>
+                </div>
+                <div className="space-y-2">
+                  <Badge className="bg-white/15 text-white border-white/20 text-xs">FOIA Request</Badge>
+                  <Badge className="bg-white/15 text-white border-white/20 ml-2 text-xs">Officer Complaint</Badge>
+                  <Badge className="bg-white/15 text-white border-white/20 ml-2 text-xs">Officer Resignation Petition</Badge>
+                </div>
+              </div>
+
+              {/* Tier 3: Civil Lawsuits */}
+              <div className="bg-black/40 backdrop-blur-md rounded-lg p-6 border border-white/30">
+                <div className="text-white mb-4">
+                  <div className="text-2xl font-bold mb-2">Civil Lawsuits</div>
+                  <div className="text-xs text-white/80 leading-relaxed">Civilsuits tailored per your state's requirements, with relevant statutes, legal codes, and precedence. Choose between two options: The first is 'You file' the civilsuit, to save money, complete with filing instructions. The second is 'BadBlue files' the civilsuit, and the filing process is done for you, complete with coversheet.</div>
+                </div>
+                <div className="space-y-2">
+                  <Badge className="bg-white/15 text-white border-white/20 text-xs">You File Civilsuit</Badge>
+                  <div className="space-y-1">
+                    <Badge className="bg-white/15 text-white border-white/20 ml-2 text-xs">BadBlue Files Civilsuit</Badge>
+                    <p className="text-xs text-red-400 font-medium ml-2">
+                      (less than the cost of a 2-hour consultation with a civil rights attorney)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Legal Disclaimer Checkbox */}
+          <div className="mt-8 flex items-start gap-3 max-w-2xl mx-auto text-left px-4 relative z-10 bg-black/70 backdrop-blur-md rounded-lg p-6 border-2 border-yellow-400/60 shadow-xl">
+            <Checkbox
+              id="disclaimer"
+              checked={disclaimerAccepted}
+              onCheckedChange={(checked) => setDisclaimerAccepted(checked as boolean)}
+              className="mt-1 border-3 border-yellow-400 bg-white data-[state=checked]:bg-yellow-400 data-[state=checked]:text-black shrink-0 w-7 h-7 min-w-[1.75rem] shadow-lg"
+              data-testid="checkbox-disclaimer"
+            />
+            <label htmlFor="disclaimer" className="text-base text-white font-semibold leading-relaxed cursor-pointer block drop-shadow-lg">
+              I understand that BadBlue provides information from public records and does not constitute legal advice.
+              I will use this platform responsibly and in accordance with applicable laws.
+            </label>
+          </div>
+
+          {/* CTA Button */}
+          <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center items-center px-4 relative z-10">
+            <Button
+              size="lg"
+              className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-primary hover:bg-primary/90 backdrop-blur-sm border-2 border-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-500 w-full sm:w-auto min-h-[3rem] font-bold"
+              onClick={() => window.location.href = "/login"}
+              disabled={!disclaimerAccepted}
+              data-testid="button-get-started"
+            >
+              Get Started
+            </Button>
+          </div>
+
+          {/* Trial Legal Consultation */}
+          {!trialResponse && (
+            <div className="mt-8 max-w-2xl mx-auto px-4 relative z-10">
+              <Card className="bg-black/60 backdrop-blur-md border-primary/40">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5" />
+                    Try a Free Legal Consultation
+                  </CardTitle>
+                  <CardDescription className="text-white/80">
+                    Get a one-time free legal consultation powered by AI. Ask any legal question related to law enforcement accountability.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {hasUsedTrial ? (
+                    <div className="text-center py-6">
+                      <p className="text-white/90 mb-4">
+                        You have already used your free trial consultation.
+                      </p>
+                      <Button
+                        onClick={() => window.location.href = "/login"}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        Sign Up for Access
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <Textarea
+                        placeholder="Describe your legal situation or question here (minimum 10 characters)..."
+                        value={trialQuestion}
+                        onChange={(e) => setTrialQuestion(e.target.value)}
+                        className="min-h-[120px] bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                        disabled={isLoadingTrial}
+                        data-testid="textarea-trial-question"
+                      />
+
+                      <div className="flex items-start gap-2 bg-white/5 border border-white/20 rounded-md p-3">
+                        <Checkbox
+                          id="trial-disclaimer"
+                          checked={trialDisclaimerAccepted}
+                          onCheckedChange={(checked) => setTrialDisclaimerAccepted(checked as boolean)}
+                          disabled={isLoadingTrial}
+                          className="mt-0.5 border-white/40 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                          data-testid="checkbox-trial-disclaimer"
+                        />
+                        <label
+                          htmlFor="trial-disclaimer"
+                          className="text-[10px] leading-tight text-white/70 cursor-pointer select-none"
+                        >
+                          I understand that this AI-powered consultation does not constitute legal representation, create an attorney-client relationship, or replace professional legal advice from a licensed attorney. This is for informational purposes only.
+                        </label>
+                      </div>
+
+                      <Button
+                        onClick={handleTrialConsultation}
+                        disabled={isLoadingTrial || !trialQuestion || trialQuestion.trim().length < 10 || !trialDisclaimerAccepted}
+                        className="w-full bg-primary hover:bg-primary/90"
+                        data-testid="button-submit-trial"
+                      >
+                        {isLoadingTrial ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Analyzing Your Question...
+                          </>
+                        ) : (
+                          "Get Free Legal Consultation"
+                        )}
+                      </Button>
+                      <p className="text-xs text-white/60 text-center">
+                        One free consultation per device. No login required.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Trial Response Display */}
+          {trialResponse && (
+            <div className="mt-8 max-w-3xl mx-auto px-4 relative z-10">
+              <Card className="bg-black/60 backdrop-blur-md border-primary/40">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Scale className="w-5 h-5" />
+                    Your Free Legal Consultation
+                  </CardTitle>
+                  <CardDescription className="text-white/80">
+                    AI-powered legal guidance based on your question
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-black/40 rounded-lg p-4 mb-4">
+                    <h4 className="text-white font-semibold mb-2">Your Question:</h4>
+                    <p className="text-white/80 text-sm">{trialQuestion}</p>
+                  </div>
+                  <div className="bg-black/40 rounded-lg p-4">
+                    <h4 className="text-white font-semibold mb-2">Legal Analysis:</h4>
+                    <div className="text-white/90 text-sm whitespace-pre-wrap leading-relaxed">
+                      {trialResponse}
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-4">
+                  <div className="w-full border-t border-white/20 pt-4">
+                    <p className="text-white/80 text-sm text-center mb-4">
+                      Want more comprehensive legal services? Sign up for access to BadBlue.
+                    </p>
+                    <Button
+                      size="lg"
+                      className="w-full text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-primary hover:bg-primary/90 backdrop-blur-sm border-2 border-white shadow-lg font-bold"
+                      onClick={() => window.location.href = "/login"}
+                      data-testid="button-get-started-after-trial"
+                    >
+                      Get Started
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            </div>
+          )}
+
+          {/* Trust Indicator */}
+          <div className="mt-12">
+            <Badge className="bg-white/15 backdrop-blur-md text-white border-white/20 px-4 py-2 text-sm">
+              <Shield className="w-4 h-4 mr-2" />
+              Powered by Public Records
+            </Badge>
+          </div>
+        </div>
+
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+          <div className="w-6 h-10 border-2 border-white/50 rounded-full flex items-start justify-center p-2">
+            <div className="w-1.5 h-3 bg-white/70 rounded-full" />
+          </div>
+        </div>
+      </section>
+
+      {/* Value Proposition */}
+      <section className="py-16 px-4 bg-card mt-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-xl font-bold mb-3">Transparency Through Technology</h2>
+            <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
+              Access the public information you have a right to know, with tools designed for accountability and transparency.
+            </p>
+          </div>
+
+          {/* Feature Overview Cards */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {/* Officer Search */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Search className="w-4 h-4 text-primary" />
+                  Officer Search
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  AI-powered search of officer public records including rank, training, incidents, cases, salary, and career history from official databases across all 50 states.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* LegalAI Consultation */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Scale className="w-4 h-4 text-primary" />
+                  LegalAI Consultation
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Free legal research and plausibility scoring powered by AI to help you understand your rights and evaluate potential legal claims.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* File Complaint */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="w-4 h-4 text-primary" />
+                  File Officer Complaint
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Document police misconduct with automated routing to the appropriate Internal Affairs office or oversight authority.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Officer Resignation Petition */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Users className="w-4 h-4 text-primary" />
+                  Officer Resignation Petition
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Create public petitions calling for officer resignation or departmental action. Petitions circulate for 90 days and are automatically delivered.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* FOIA Request */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Database className="w-4 h-4 text-primary" />
+                  FOIA Request
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Generate Freedom of Information Act requests with jurisdiction-specific templates and automatic submission to the proper authority.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Civil Rights Lawsuit */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Scale className="w-4 h-4 text-primary" />
+                  Civil Rights Lawsuit
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Generate federal civil rights lawsuits (42 USC § 1983) with state-specific legal templates, automated tort notices, and court filing instructions.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Secure Evidence Upload */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Upload className="w-4 h-4 text-primary" />
+                  Secure Evidence Upload
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Privacy-focused cloud storage for photos, videos, and documents with automated data cleanup for enhanced security.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust & Transparency */}
+      <section className="py-16 px-4 bg-card">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-bold mb-6">Our Commitment to Accuracy</h2>
+          <div className="space-y-4 text-muted-foreground leading-relaxed">
+            <p>
+              BadBlue aggregates information from publicly available records and databases maintained by law enforcement agencies. All information provided is sourced from official public records that citizens have the legal right to access.
+            </p>
+            <p>
+              We are committed to accuracy and transparency. If you believe any information is incorrect or needs updating, please{" "}
+              <a href="/contact" className="text-primary hover:underline">
+                contact us
+              </a>.
+            </p>
+            <p className="text-sm pt-4">
+              By using BadBlue, you agree to use the information responsibly and in accordance with applicable laws. This service is provided for transparency and accountability purposes.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 px-4 border-t bg-background">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                BadBlue
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Making public records accessible for everyone.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-medium mb-4">Product</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="/login" className="hover:text-foreground">How It Works</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-medium mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-foreground">Terms of Service</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-medium mb-4">Contact</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="/support" className="hover:text-foreground">Support</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-medium mb-4">Follow Us</h4>
+              <div className="flex gap-3">
+                <a href="https://facebook.com/badblue" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground" aria-label="Facebook">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </a>
+                <a href="https://twitter.com/badblue" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground" aria-label="Twitter">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
+                </a>
+                <a href="https://linkedin.com/company/badblue" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground" aria-label="LinkedIn">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Legal Disclaimer */}
+          <div className="pt-8 border-t">
+            <div className="bg-muted/30 rounded-lg p-6 mb-6">
+              <h4 className="font-semibold mb-3 text-sm">LIMITATION OF LIABILITY AND USER RESPONSIBILITY</h4>
+              <div className="space-y-3 text-xs text-muted-foreground leading-relaxed">
+                <p>
+                  <strong className="text-foreground">No Liability for User Conduct:</strong> BadBlue, its developers, owners, affiliates, and service providers are NOT liable for any fraudulent, false, misleading, or unlawful use of this platform by users. Users are solely responsible for the accuracy, truthfulness, and legality of all information they submit, including complaints, lawsuits, officer information, and evidence.
+                </p>
+                <p>
+                  <strong className="text-foreground">User-Generated Content:</strong> Pursuant to 47 U.S.C. § 230(c)(1) (Section 230 of the Communications Decency Act), BadBlue is not liable for information provided by users. We do not endorse, verify, or assume responsibility for user-submitted content. Users who submit false or fraudulent information may be subject to criminal prosecution under federal law, including but not limited to:
+                </p>
+                <ul className="ml-4 space-y-1">
+                  <li>• <strong>18 U.S.C. § 1001</strong> – False Statements to Government Agencies (up to 5 years imprisonment)</li>
+                  <li>• <strong>18 U.S.C. § 1621</strong> – Perjury (up to 5 years imprisonment)</li>
+                  <li>• <strong>18 U.S.C. § 1623</strong> – False Declarations Before Court or Grand Jury</li>
+                  <li>• State-specific laws regarding filing false police reports and perjury</li>
+                </ul>
+                <p>
+                  <strong className="text-foreground">Document Drafting Service Only:</strong> BadBlue provides document drafting and template generation services. We are NOT a law firm and do NOT provide legal advice, legal representation, or create an attorney-client relationship. All users should consult with licensed attorneys before filing complaints or lawsuits.
+                </p>
+                <p>
+                  <strong className="text-foreground">No Guarantee of Outcomes:</strong> BadBlue makes no representations or warranties regarding the outcome of any complaint or lawsuit filed using our services. Legal proceedings are complex and outcomes depend on many factors beyond our control.
+                </p>
+                <p>
+                  <strong className="text-foreground">Accuracy of Public Records:</strong> While we strive for accuracy, BadBlue cannot guarantee the completeness or accuracy of officer information obtained from public records databases. Users should independently verify all information before relying on it.
+                </p>
+                <p className="pt-2 border-t">
+                  <strong className="text-foreground">BY USING THIS SERVICE, YOU ACKNOWLEDGE AND AGREE THAT:</strong> (1) You are solely responsible for the accuracy and legality of all information you submit; (2) Submitting false information may subject you to criminal prosecution; (3) BadBlue and its affiliates are not liable for your use or misuse of this platform; (4) You will indemnify and hold harmless BadBlue from any claims arising from your use of this service.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-6 border-t text-center text-sm text-muted-foreground">
+            <p>&copy; 2025 BadBlue. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
+
+      <SupportEmailFooter />
+    </div>
+  );
+}

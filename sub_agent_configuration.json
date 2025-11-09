@@ -1,0 +1,80 @@
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sub Agent Configuration",
+  "type": "object",
+  "properties": {
+    "agentId": {
+      "type": "string",
+      "description": "Unique identifier for the sub agent"
+    },
+    "agentName": {
+      "type": "string",
+      "description": "Name of the sub agent"
+    },
+    "retryConfiguration": {
+      "type": "object",
+      "properties": {
+        "maxAttempts": {
+          "type": "integer",
+          "description": "Maximum number of retry attempts",
+          "default": 3
+        },
+        "initialTimeout": {
+          "type": "integer",
+          "description": "Initial timeout in milliseconds",
+          "default": 1000
+        },
+        "timeoutMultiplier": {
+          "type": "number",
+          "description": "Multiplier for subsequent timeouts",
+          "default": 2
+        },
+        "maxTimeout": {
+          "type": "integer",
+          "description": "Maximum timeout in milliseconds",
+          "default": 30000
+        }
+      },
+      "required": ["maxAttempts", "initialTimeout", "timeoutMultiplier", "maxTimeout"]
+    }
+  },
+  "required": ["agentId", "agentName", "retryConfiguration"]
+}
+```
+
+Note: The above code is in JSON format. If you need it in TypeScript, you would typically define an interface for the configuration:
+
+```typescript
+// sub_agent_configuration.ts
+export interface SubAgentConfiguration {
+  agentId: string;
+  agentName: string;
+  retryConfiguration: RetryConfiguration;
+}
+
+export interface RetryConfiguration {
+  maxAttempts: number;
+  initialTimeout: number;
+  timeoutMultiplier: number;
+  maxTimeout: number;
+}
+```
+
+You can then use this interface to define your configuration object:
+
+```typescript
+// example_usage.ts
+import { SubAgentConfiguration } from './sub_agent_configuration';
+
+const config: SubAgentConfiguration = {
+  agentId: 'example-agent',
+  agentName: 'Example Agent',
+  retryConfiguration: {
+    maxAttempts: 3,
+    initialTimeout: 1000,
+    timeoutMultiplier: 2,
+    maxTimeout: 30000
+  }
+};
+```
