@@ -392,29 +392,19 @@ class BadBlueWorker {
       }
       
       console.log('[BadBlue Worker] Step 2: Re-initializing connection pool...');
-      const { pool } = await import('./db');
+      const dbModule = await import('./db');
       
-      await pool.end();
+      await dbModule.resetPool();
       
-      const { Pool } = await import('pg');
-      const newPool = new Pool({
-        connectionString: databaseUrl,
-        max: 100,
-        min: 10,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
-        ssl: { rejectUnauthorized: false },
-      });
+      console.log('[BadBlue Worker] Step 3: Re-acquiring fresh database instance...');
+      // Must re-import after resetPool to get the NEW db instance
+      const { db: freshDb } = await import('./db');
       
-      console.log('[BadBlue Worker] Step 3: Testing connection...');
-      const { drizzle } = await import('drizzle-orm/node-postgres');
-      const schema = await import('@shared/schema');
-      const testDb = drizzle(newPool, { schema });
+      console.log('[BadBlue Worker] Step 4: Testing connection...');
+      await freshDb.execute('SELECT 1');
       
-      await testDb.execute('SELECT 1');
-      
-      console.log('[BadBlue Worker] Step 4: Verifying migrations...');
-      const tables = await testDb.execute(`
+      console.log('[BadBlue Worker] Step 5: Verifying migrations...');
+      const tables = await freshDb.execute(`
         SELECT tablename FROM pg_tables 
         WHERE schemaname = 'public'
         LIMIT 5
@@ -2330,6 +2320,23 @@ Implement the fix now.`;
   }
 
   private async testAIServicesComprehensive(results: FunctionErrorLogEntry[]) {
+    // CRITICAL: Check quota before AI tests
+    const { rateLimitTracker } = await import('./rateLimitTracker');
+    const rateLimitStats = rateLimitTracker.getStats();
+    
+    if (rateLimitStats.utilizationPercent > 80) {
+      console.log('[Weekly Test] ⚠️  Skipping AI Services tests - quota preservation');
+      results.push({
+        timestamp: new Date().toISOString(),
+        functionTested: 'AI Services Configuration',
+        expectedBehavior: 'AI services operational',
+        observedBehavior: 'Tests skipped to preserve quota for user requests',
+        severity: Severity.NOTICE,
+        status: 'skipped',
+      });
+      return;
+    }
+    
     const geminiKey = process.env.GEMINI_API_KEY;
     const groqKey = process.env.GROQ_API_KEY;
 
@@ -2367,7 +2374,33 @@ Implement the fix now.`;
   }
 
   private async testLegalAIAnalysis(results: FunctionErrorLogEntry[]) {
-    const testCases = [
+    // CRITICAL: Check quota before AI tests
+    const { rateLimitTracker } = await import('./rateLimitTracker');
+    const rateLimitStats = rateLimitTracker.getStats();
+    
+    if (rateLimitStats.utilizationPercent > 80) {
+      console.log('[Weekly Test] ⚠️  Skipping Legal AI tests - quota preservation');
+      results.push({
+        timestamp: new Date().toISOString(),
+        functionTested: 'Legal AI Analysis',
+        expectedBehavior: 'AI analysis operational',
+        observedBehavior: 'Tests skipped to preserve quota for user requests',
+        severity: Severity.NOTICE,
+        status: 'skipped',
+      });
+      return;
+    }
+    
+    const useReducedSuite = rateLimitStats.utilizationPercent > 50;
+    
+    const testCases = useReducedSuite
+      ? [{ // Just 1 test
+        name: 'Excessive Force Analysis',
+        query: 'Officer used taser on compliant suspect during traffic stop',
+        state: 'California',
+        details: 'Suspect was following commands'
+      }]
+      : [
       {
         name: 'Excessive Force Analysis',
         query: 'Officer used taser on compliant suspect during traffic stop',
@@ -2456,8 +2489,44 @@ Implement the fix now.`;
   }
 
   private async testDocumentGeneration(results: FunctionErrorLogEntry[]) {
-    // Test Tort Notice Generation with various scenarios
-    const tortTests = [
+    // CRITICAL: Check quota before AI tests
+    const { rateLimitTracker } = await import('./rateLimitTracker');
+    const rateLimitStats = rateLimitTracker.getStats();
+    
+    if (rateLimitStats.utilizationPercent > 80) {
+      console.log('[Weekly Test] ⚠️  Skipping Document Generation tests - quota preservation');
+      results.push({
+        timestamp: new Date().toISOString(),
+        functionTested: 'Document Generation',
+        expectedBehavior: 'Document generation operational',
+        observedBehavior: 'Tests skipped to preserve quota for user requests',
+        severity: Severity.NOTICE,
+        status: 'skipped',
+      });
+      return;
+    }
+    
+    const useReducedSuite = rateLimitStats.utilizationPercent > 50;
+    
+    // Test Tort Notice Generation - scale based on quota
+    const tortTests = useReducedSuite
+      ? [{ // Just 1 test
+        name: 'California Government Claim',
+        data: {
+          state: 'California',
+          claimantName: 'Test Claimant',
+          claimantAddress: '123 Test Street, Test City, CA 90000',
+          claimantEmail: 'test@test.com',
+          officerName: 'Officer John Doe',
+          officerBadge: 'BADGE-12345',
+          department: 'Test Police Department',
+          city: 'Test City',
+          county: 'Test County',
+          incidentDate: new Date('2024-01-15'),
+          incidentDescription: 'Excessive force during traffic stop - officer used taser without justification'
+        }
+      }]
+      : [
       {
         name: 'California Government Claim',
         data: {
@@ -2526,12 +2595,39 @@ Implement the fix now.`;
   }
 
   private async testSearchServices(results: FunctionErrorLogEntry[]) {
-    // Test Precedent Search with multiple queries
-    const precedentTests = [
-      { query: 'excessive force taser', state: 'California', jurisdiction: 'federal' as const },
-      { query: 'false arrest probable cause', state: 'Texas', jurisdiction: 'state' as const },
-      { query: 'qualified immunity denial', state: 'New York', jurisdiction: 'federal' as const }
-    ];
+    // CRITICAL: Check quota before starting expensive AI tests
+    const { rateLimitTracker } = await import('./rateLimitTracker');
+    const rateLimitStats = rateLimitTracker.getStats();
+    
+    // Skip AI tests if utilization > 80% (preserve quota for user requests)
+    if (rateLimitStats.utilizationPercent > 80) {
+      console.log('[Weekly Test] ⚠️  Skipping AI search tests - quota preservation (utilization: ' + rateLimitStats.utilizationPercent.toFixed(1) + '%)');
+      results.push({
+        timestamp: new Date().toISOString(),
+        functionTested: 'AI Search Services',
+        expectedBehavior: 'Search services operational with quota availability',
+        observedBehavior: 'Tests skipped to preserve quota for user requests',
+        severity: Severity.NOTICE,
+        status: 'skipped',
+      });
+      return;
+    }
+    
+    // Use reduced test suite if utilization > 50%
+    const useReducedSuite = rateLimitStats.utilizationPercent > 50;
+    
+    if (useReducedSuite) {
+      console.log('[Weekly Test] Using REDUCED test suite (quota utilization: ' + rateLimitStats.utilizationPercent.toFixed(1) + '%)');
+    }
+    
+    // Test Precedent Search - scale based on quota
+    const precedentTests = useReducedSuite 
+      ? [{ query: 'excessive force', state: 'California', jurisdiction: 'federal' as const }] // Just 1 test
+      : [
+          { query: 'excessive force taser', state: 'California', jurisdiction: 'federal' as const },
+          { query: 'false arrest probable cause', state: 'Texas', jurisdiction: 'state' as const },
+          { query: 'qualified immunity denial', state: 'New York', jurisdiction: 'federal' as const }
+        ];
 
     for (const test of precedentTests) {
       try {
@@ -2560,8 +2656,11 @@ Implement the fix now.`;
       }
     }
 
-    // Test Filing Info Search for multiple states
-    const states = ['California', 'Texas', 'New York', 'Florida', 'Illinois'];
+    // Test Filing Info Search - scale based on quota
+    const states = useReducedSuite 
+      ? ['California'] // Just 1 state
+      : ['California', 'Texas', 'New York', 'Florida', 'Illinois'];
+      
     for (const state of states) {
       try {
         const { searchStateFilingInfo } = await import('./filingInfoSearch');
@@ -2577,7 +2676,37 @@ Implement the fix now.`;
           severity: Severity.NOTICE,
           status: 'fixed',
         });
+        
+        // CRITICAL: Check quota after each expensive operation
+        const currentStats = rateLimitTracker.getStats();
+        if (currentStats.utilizationPercent > 90) {
+          console.log('[Weekly Test] ⚠️  Stopping tests - quota threshold exceeded mid-run');
+          results.push({
+            timestamp: new Date().toISOString(),
+            functionTested: 'Remaining AI Tests',
+            expectedBehavior: 'Complete all diagnostic tests',
+            observedBehavior: 'Tests stopped - quota preservation for user requests',
+            severity: Severity.NOTICE,
+            status: 'skipped',
+          });
+          return; // Stop testing immediately
+        }
       } catch (error: any) {
+        const isQuotaError = error.message.includes('rate limit') || error.message.includes('quota') || error.status === 429;
+        
+        if (isQuotaError) {
+          console.log('[Weekly Test] ⚠️  Quota exhausted - stopping tests');
+          results.push({
+            timestamp: new Date().toISOString(),
+            functionTested: 'Remaining AI Tests',
+            expectedBehavior: 'Complete all diagnostic tests',
+            observedBehavior: 'Tests stopped - quota exhausted',
+            severity: Severity.NOTICE,
+            status: 'skipped',
+          });
+          return; // Stop immediately on quota errors
+        }
+        
         results.push({
           timestamp: new Date().toISOString(),
           functionTested: `Filing Info Search - ${state}`,
@@ -2858,15 +2987,17 @@ Implement the fix now.`;
   private async attemptAutoRepair(issue: FunctionErrorLogEntry): Promise<boolean> {
     console.log(`[BadBlue Worker] Auto-repairing: ${issue.functionTested}`);
 
+    // Guard against missing cause field (prevents TypeError)
+    const cause = issue.cause || '';
+
     // Most configuration issues require manual intervention
-    // Mark as requiring manual review
-    if (issue.cause.includes('missing') || issue.cause.includes('not configured')) {
+    if (cause.includes('missing') || cause.includes('not configured')) {
       issue.notes = 'Manual configuration required';
       issue.status = 'pending';
       return false;
     }
 
-    // For connection issues, attempt reconnection (example)
+    // For connection issues, attempt reconnection
     if (issue.functionTested.includes('Database Connection')) {
       try {
         const { db } = await import('./db');
@@ -2877,7 +3008,7 @@ Implement the fix now.`;
       }
     }
 
-    // For other issues, assume manual review is needed for now
+    // For other issues, assume manual review is needed
     issue.notes = 'Automated repair not implemented for this issue type';
     issue.status = 'pending';
     return false;

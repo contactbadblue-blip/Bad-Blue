@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-11-09T20:32:04.938Z",
+  "averageQueueLatencyMs": 4514.125,
+  "averageResolutionTimeMs": 4480.810344827586,
+  "successRate": 100,
+  "totalRepairs": 58,
+  "successfulRepairs": 58,
+  "resourceUtilization": {
+    "cpu": 49.25743070612733,
+    "memory": 56.83780484382625
+  }
+}
