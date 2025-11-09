@@ -33,7 +33,7 @@ import {
   sendPetitionZipEmail,
   sendUserEmail,
 } from "./emailService";
-import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { evidenceStorage, EvidenceNotFoundError, AccessDeniedError } from "./evidenceStorage";
 import { ObjectPermission } from "./objectAcl";
 import { processSubAgentCommand, trackUsage, runComprehensiveDiagnostic, undoLastSubAgentChange, getLastSubAgentChange, setAutonomousExecution, getAutonomousExecutionStatus, resetRateLimiter, applyTrainingToSubAgent } from "./aiSubAgent";
 import { runAutomatedCleanup, getCleanupLogs, getCleanupStats, deleteOldErrorLogs, getErrorLogCleanupHistory, getErrorLogCleanupStats } from "./dataCleanup";
@@ -1252,19 +1252,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
   // From javascript_object_storage blueprint
 
-  // Get upload URL for evidence files
+  // Get upload URL for evidence files (Platform-agnostic: Replit object storage OR filesystem)
   app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
     try {
-      // Check if object storage is available (Replit-specific feature)
-      if (!process.env.PRIVATE_OBJECT_DIR) {
-        return res.status(503).json({ 
-          error: "File upload feature is not available on this deployment platform. " +
-                 "Evidence files can only be uploaded when running on Replit with object storage configured."
-        });
-      }
-      
-      const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      const uploadURL = await evidenceStorage.getUploadURL();
       res.json({ uploadURL });
     } catch (error: any) {
       console.error("Error getting upload URL:", error);
@@ -1274,27 +1265,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Set ACL policy for uploaded evidence file
+  // Set ACL policy for uploaded evidence file (Platform-agnostic: Replit OR filesystem)
   app.put("/api/evidence-files", isAuthenticated, async (req: any, res) => {
     try {
-      // Check if object storage is available (Replit-specific feature)
-      if (!process.env.PRIVATE_OBJECT_DIR) {
-        return res.status(503).json({ 
-          error: "File upload feature is not available on this deployment platform. " +
-                 "Evidence files can only be uploaded when running on Replit with object storage configured."
-        });
-      }
-      
       if (!req.body.fileURL) {
         return res.status(400).json({ error: "fileURL is required" });
       }
 
       const userId = req.user?.claims?.sub;
-      const objectStorageService = new ObjectStorageService();
 
       // Set ACL policy - evidence files are private (only accessible by owner)
-      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+      const objectPath = await evidenceStorage.saveFile(
         req.body.fileURL,
+        userId,
         {
           owner: userId,
           visibility: "private", // Evidence files are private
@@ -1310,49 +1293,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve protected evidence files - with ownership verification
+  // Serve protected evidence files - with ownership verification (Platform-agnostic)
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
     try {
-      // Check if object storage is available (Replit-specific feature)
-      if (!process.env.PRIVATE_OBJECT_DIR) {
-        return res.status(503).json({ 
-          error: "File download feature is not available on this deployment platform. " +
-                 "Evidence files can only be accessed when running on Replit with object storage configured."
-        });
-      }
-      
       const userId = req.user?.claims?.sub;
 
       if (!userId) {
         return res.sendStatus(401);
       }
 
-      const objectStorageService = new ObjectStorageService();
-      const objectFile = await objectStorageService.getObjectEntityFile(
-        req.path,
-      );
-
-      // Verify user has access (enforces ownership for private files)
-      const canAccess = await objectStorageService.canAccessObjectEntity({
-        objectFile,
-        userId: userId,
-        requestedPermission: ObjectPermission.READ,
-      });
-
-      if (!canAccess) {
+      // Download file with access verification
+      await evidenceStorage.downloadFile(req.path, userId, res);
+    } catch (error) {
+      console.error("Error accessing evidence file:", error);
+      if (error instanceof EvidenceNotFoundError) {
+        return res.sendStatus(404);
+      }
+      if (error instanceof AccessDeniedError || (error as Error).message === "Access denied") {
         console.warn(
           `Access denied: User ${userId} attempted to access ${req.path}`,
         );
         return res.sendStatus(403);
       }
-
-      objectStorageService.downloadObject(objectFile, res);
-    } catch (error) {
-      console.error("Error accessing object:", error);
-      if (error instanceof ObjectNotFoundError) {
-        return res.sendStatus(404);
-      }
       return res.sendStatus(500);
+    }
+  });
+
+  // Filesystem upload endpoint (for non-Replit platforms like Railway)
+  // This handles direct file uploads when Replit object storage is not available
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB limit
+  app.post("/api/evidence/filesystem-upload", isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const fileId = req.query.fileId as string;
+      
+      if (!fileId) {
+        return res.status(400).json({ error: "fileId is required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      // Only allow filesystem storage to handle uploads via this route
+      if (evidenceStorage.isFilesystemStorage && evidenceStorage.handleFileUpload) {
+        await evidenceStorage.handleFileUpload(fileId, req.file.buffer, req.file.mimetype);
+        
+        // Return the fileId URL so the client can set ACL in the next step
+        return res.json({ 
+          url: `/api/evidence/filesystem-upload?fileId=${fileId}`,
+          fileId 
+        });
+      } else {
+        // Replit storage uses signed URLs, not this endpoint
+        return res.status(400).json({ 
+          error: "This endpoint is only for filesystem storage. Replit storage uses signed URLs." 
+        });
+      }
+    } catch (error: any) {
+      console.error("Error uploading file to filesystem:", error);
+      res.status(500).json({ error: "Error uploading file: " + error.message });
     }
   });
 
