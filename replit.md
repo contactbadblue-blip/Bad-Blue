@@ -5,6 +5,49 @@ BadBlue is a privacy-focused police accountability platform designed to empower 
 
 ## Recent Changes
 
+### November 9, 2025 - Railway.com Migration & Platform Independence
+Achieved complete platform-agnostic deployment capability for Railway.com and other hosting platforms:
+
+#### Platform Independence Implementation
+- **BASE_URL Environment Variable**: Replaced all REPLIT_DOMAINS dependencies with configurable BASE_URL across backend routes, email service, and frontend
+- **URL Fallback Chain**: Implemented intelligent precedence (BASE_URL → REPLIT_DOMAINS → request host/window.location.origin)
+- **Object Storage Route Guards**: Added environment checks to gracefully degrade file upload/download features with 503 responses when object storage unavailable
+- **Frontend Environment Variables**: Updated landing page and SEO components to use VITE_BASE_URL with dynamic fallbacks
+- **Deployment Documentation**: Created comprehensive .env.example with Railway-specific deployment guidance
+
+#### Features by Platform
+**Replit (Full Feature Set)**:
+- ✓ Legal AI Consultations
+- ✓ Officer Search
+- ✓ Document Generation (complaints, lawsuits, FOIA, petitions)
+- ✓ Stripe Payments
+- ✓ Email Service
+- ✓ Evidence File Uploads (object storage)
+- ✓ Automated Backups (persistent storage)
+
+**Railway.com (Core Features)**:
+- ✓ Legal AI Consultations
+- ✓ Officer Search
+- ✓ Document Generation (complaints, lawsuits, FOIA, petitions)
+- ✓ Stripe Payments
+- ✓ Email Service
+- ✗ Evidence File Uploads (gracefully disabled with user-friendly error messages)
+- ✗ Automated Backups (operations team should implement alternative retention strategy)
+
+#### Technical Changes
+- **File**: server/routes.ts (3 object storage routes guarded with PRIVATE_OBJECT_DIR checks)
+- **File**: server/emailService.ts (2 URL constructions updated with BASE_URL fallback)
+- **File**: client/src/pages/landing.tsx (structured data and canonical URLs use VITE_BASE_URL)
+- **File**: client/src/components/SEOHead.tsx (OG image URLs use environment-based configuration)
+- **File**: .env.example (comprehensive platform-agnostic deployment documentation added)
+
+#### Migration Verification
+- ✓ App boots successfully without Replit environment variables
+- ✓ No 500 errors on object storage routes (returns 503 with clear messaging)
+- ✓ All URL construction uses platform-agnostic fallback chain
+- ✓ Replit OAuth gracefully falls back to local authentication
+- ✓ Production-ready deployment on both Replit AND Railway.com
+
 ### November 8, 2025 - Production-Ready Self-Improving Sub-Agent with Persistent Learning
 Implemented true self-improvement system with persistent knowledge store and autonomous data collection:
 
