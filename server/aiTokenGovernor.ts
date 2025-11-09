@@ -7,7 +7,6 @@
  * - Historical performance data
  */
 
-import { getCurrentUsage, areBothAPIsExhausted, type RateLimitStatus } from './rateLimitTracker';
 import * as tokenMetrics from './repositories/tokenMetricsRepository';
 
 /**
@@ -56,37 +55,55 @@ export interface TokenBudget {
 }
 
 
-/**
- * Provider selection based on task priority and quota status
- */
-async function selectProvider(task: AITaskMetadata, rateLimits: RateLimitStatus): Promise<AIProvider> {
-  // Critical user tasks prefer Gemini (higher quality)
+interface QuotaStatus {
+  gemini: { used: number; limit: number; percentUsed: number };
+  groq: { used: number; limit: number; percentUsed: number };
+}
+
+async function getQuotaStatus(): Promise<QuotaStatus> {
+  const GEMINI_DAILY_LIMIT = 50;
+  const GROQ_DAILY_TOKEN_LIMIT = 100000;
+
+  const geminiUsage = await tokenMetrics.getTodayUsage('gemini');
+  const groqUsage = await tokenMetrics.getTodayUsage('groq');
+
+  return {
+    gemini: {
+      used: geminiUsage.requests,
+      limit: GEMINI_DAILY_LIMIT,
+      percentUsed: geminiUsage.requests / GEMINI_DAILY_LIMIT,
+    },
+    groq: {
+      used: groqUsage.tokens,
+      limit: GROQ_DAILY_TOKEN_LIMIT,
+      percentUsed: groqUsage.tokens / GROQ_DAILY_TOKEN_LIMIT,
+    },
+  };
+}
+
+async function selectProvider(task: AITaskMetadata, quotaStatus: QuotaStatus): Promise<AIProvider> {
+  const geminiExhausted = quotaStatus.gemini.percentUsed >= 0.95;
+  const groqExhausted = quotaStatus.groq.percentUsed >= 0.95;
+
   if (task.priority >= TaskPriority.HIGH_USER) {
-    if (!rateLimits.gemini.isExhausted) {
+    if (!geminiExhausted) {
       return AIProvider.GEMINI;
     }
-    // Fall back to Groq if Gemini exhausted
     return AIProvider.GROQ;
   }
 
-  // Background tasks prefer Groq (larger quota)
-  if (!rateLimits.groq.isExhausted) {
+  if (!groqExhausted) {
     return AIProvider.GROQ;
   }
 
-  // Fall back to Gemini for background if Groq exhausted
   return AIProvider.GEMINI;
 }
 
-/**
- * Calculate max tokens based on complexity and remaining quota
- */
 function calculateMaxTokens(
   task: AITaskMetadata,
   provider: AIProvider,
-  rateLimits: RateLimitStatus
+  quotaStatus: QuotaStatus
 ): number {
-  // Base token budgets by complexity
   const complexityBudgets = {
     [TaskComplexity.LIGHTWEIGHT]: 500,
     [TaskComplexity.MODERATE]: 2000,
@@ -95,20 +112,13 @@ function calculateMaxTokens(
 
   let baseTokens = task.expectedTokens || complexityBudgets[task.complexity];
 
-  // Adjust based on remaining quota
   if (provider === AIProvider.GEMINI) {
-    const remaining = rateLimits.gemini.limit - rateLimits.gemini.used;
-    const percentRemaining = remaining / rateLimits.gemini.limit;
-
-    // If less than 20% quota remaining, reduce token budgets for non-critical tasks
+    const percentRemaining = 1 - quotaStatus.gemini.percentUsed;
     if (percentRemaining < 0.2 && task.priority < TaskPriority.HIGH_USER) {
       baseTokens = Math.floor(baseTokens * 0.5);
     }
   } else if (provider === AIProvider.GROQ) {
-    const remaining = rateLimits.groq.limit - rateLimits.groq.used;
-    const percentRemaining = remaining / rateLimits.groq.limit;
-
-    // If less than 10% quota remaining, reduce token budgets
+    const percentRemaining = 1 - quotaStatus.groq.percentUsed;
     if (percentRemaining < 0.1 && task.priority < TaskPriority.CRITICAL_USER) {
       baseTokens = Math.floor(baseTokens * 0.6);
     }
@@ -130,17 +140,14 @@ function determineVerbosity(maxTokens: number, priority: TaskPriority): 'concise
   return 'detailed';
 }
 
-/**
- * Main API: Get token budget for a task
- */
 export async function getBudgetForTask(task: AITaskMetadata): Promise<TokenBudget> {
   try {
-    const rateLimits = await getCurrentUsage();
+    const quotaStatus = await getQuotaStatus();
+    const bothExhausted = quotaStatus.gemini.percentUsed >= 0.95 && quotaStatus.groq.percentUsed >= 0.95;
 
-    // Check if both APIs are exhausted
-    if (await areBothAPIsExhausted()) {
+    if (bothExhausted) {
       return {
-        provider: AIProvider.GEMINI, // Doesn't matter
+        provider: AIProvider.GEMINI,
         maxTokens: 0,
         verbosityLevel: 'concise',
         shouldProceed: false,
@@ -148,35 +155,30 @@ export async function getBudgetForTask(task: AITaskMetadata): Promise<TokenBudge
       };
     }
 
-    // Select provider
-    const provider = await selectProvider(task, rateLimits);
+    const provider = await selectProvider(task, quotaStatus);
+    const providerStatus = provider === AIProvider.GEMINI ? quotaStatus.gemini : quotaStatus.groq;
+    const isExhausted = providerStatus.percentUsed >= 0.95;
 
-    // Check if selected provider is exhausted
-    const providerStatus = provider === AIProvider.GEMINI ? rateLimits.gemini : rateLimits.groq;
-    if (providerStatus.isExhausted) {
-      // If task can be deferred, defer it
-      if (task.allowDeferral) {
-        return {
-          provider,
-          maxTokens: 0,
-          verbosityLevel: 'concise',
-          shouldProceed: false,
-          deferralReason: `${provider} quota exhausted - task can be deferred`,
-        };
-      }
-
-      // Critical tasks proceed with minimal tokens
-      const emergencyTokens = 500;
+    if (isExhausted && task.allowDeferral) {
       return {
         provider,
-        maxTokens: emergencyTokens,
+        maxTokens: 0,
+        verbosityLevel: 'concise',
+        shouldProceed: false,
+        deferralReason: `${provider} quota exhausted - task can be deferred`,
+      };
+    }
+
+    if (isExhausted) {
+      return {
+        provider,
+        maxTokens: 500,
         verbosityLevel: 'concise',
         shouldProceed: true,
       };
     }
 
-    // Calculate max tokens
-    const maxTokens = calculateMaxTokens(task, provider, rateLimits);
+    const maxTokens = calculateMaxTokens(task, provider, quotaStatus);
     const verbosity = determineVerbosity(maxTokens, task.priority);
 
     return {
@@ -187,8 +189,6 @@ export async function getBudgetForTask(task: AITaskMetadata): Promise<TokenBudge
     };
   } catch (error) {
     console.error('[Token Governor] Error getting budget:', error);
-
-    // Default safe budget
     return {
       provider: AIProvider.GEMINI,
       maxTokens: 1000,
@@ -228,18 +228,13 @@ export async function recordUsage(
   }
 }
 
-/**
- * Check if non-critical tasks should be deferred
- */
 export async function shouldDeferNonCritical(): Promise<boolean> {
   try {
-    const rateLimits = await getCurrentUsage();
+    const quotaStatus = await getQuotaStatus();
+    const geminiRemaining = 1 - quotaStatus.gemini.percentUsed;
+    const groqRemaining = 1 - quotaStatus.groq.percentUsed;
 
-    // Defer if Gemini below 30% or Groq below 15%
-    const geminiPercent = (rateLimits.gemini.limit - rateLimits.gemini.used) / rateLimits.gemini.limit;
-    const groqPercent = (rateLimits.groq.limit - rateLimits.groq.used) / rateLimits.groq.limit;
-
-    return geminiPercent < 0.3 || groqPercent < 0.15;
+    return geminiRemaining < 0.3 || groqRemaining < 0.15;
   } catch (error) {
     console.error('[Token Governor] Error checking deferral:', error);
     return false;
