@@ -122,13 +122,13 @@ class ReplitEvidenceStorage implements IEvidenceStorage {
 
     const [exists] = await file.exists();
     if (!exists) {
-      throw new Error("File not found");
+      throw new EvidenceNotFoundError();
     }
 
     // Verify access
     const canAccess = await this.canAccess(filePath, userId, ObjectPermission.READ);
     if (!canAccess) {
-      throw new Error("Access denied");
+      throw new AccessDeniedError();
     }
 
     // Get metadata and stream file
@@ -157,9 +157,14 @@ class ReplitEvidenceStorage implements IEvidenceStorage {
     const bucket = this.storageClient.bucket(bucketName);
     const file = bucket.file(objectName);
 
+    const [exists] = await file.exists();
+    if (!exists) {
+      throw new EvidenceNotFoundError();
+    }
+
     const canDelete = await this.canAccess(filePath, userId, ObjectPermission.WRITE);
     if (!canDelete) {
-      throw new Error("Access denied");
+      throw new AccessDeniedError();
     }
 
     await file.delete();
@@ -257,20 +262,25 @@ class FilesystemEvidenceStorage implements IEvidenceStorage {
   }
 
   async downloadFile(filePath: string, userId: string, res: Response): Promise<void> {
-    const fileId = filePath.replace("/evidence/", "").replace("/objects/evidence/", "");
+    // Normalize path: remove all prefixes to get just the fileId
+    const fileId = filePath
+      .replace(/^\/objects\//, "")
+      .replace(/^\/evidence\//, "")
+      .replace(/^evidence\//, "");
+    
     const fullPath = this.getFilePath(fileId);
 
     // Check if file exists
     try {
       await fs.access(fullPath);
     } catch {
-      throw new Error("File not found");
+      throw new EvidenceNotFoundError();
     }
 
     // Verify access
-    const canAccess = await this.canAccess(filePath, userId, ObjectPermission.READ);
+    const canAccess = await this.canAccess(fileId, userId, ObjectPermission.READ);
     if (!canAccess) {
-      throw new Error("Access denied");
+      throw new AccessDeniedError();
     }
 
     // Get metadata
@@ -304,13 +314,25 @@ class FilesystemEvidenceStorage implements IEvidenceStorage {
   }
 
   async deleteFile(filePath: string, userId: string): Promise<void> {
-    const fileId = filePath.replace("/evidence/", "").replace("/objects/evidence/", "");
+    // Normalize path: remove all prefixes to get just the fileId
+    const fileId = filePath
+      .replace(/^\/objects\//, "")
+      .replace(/^\/evidence\//, "")
+      .replace(/^evidence\//, "");
+    
     const fullPath = this.getFilePath(fileId);
     const metadataPath = this.getMetadataPath(fileId);
 
-    const canDelete = await this.canAccess(filePath, userId, ObjectPermission.WRITE);
+    // Check if file exists first
+    try {
+      await fs.access(fullPath);
+    } catch {
+      throw new EvidenceNotFoundError();
+    }
+
+    const canDelete = await this.canAccess(fileId, userId, ObjectPermission.WRITE);
     if (!canDelete) {
-      throw new Error("Access denied");
+      throw new AccessDeniedError();
     }
 
     // Delete file and metadata
@@ -320,7 +342,12 @@ class FilesystemEvidenceStorage implements IEvidenceStorage {
   }
 
   async canAccess(filePath: string, userId: string, permission: ObjectPermission): Promise<boolean> {
-    const fileId = filePath.replace("/evidence/", "").replace("/objects/evidence/", "");
+    // Normalize path: remove all prefixes to get just the fileId
+    const fileId = filePath
+      .replace(/^\/objects\//, "")
+      .replace(/^\/evidence\//, "")
+      .replace(/^evidence\//, "");
+    
     const metadataPath = this.getMetadataPath(fileId);
 
     try {

@@ -1295,9 +1295,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve protected evidence files - with ownership verification (Platform-agnostic)
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    
     try {
-      const userId = req.user?.claims?.sub;
-
       if (!userId) {
         return res.sendStatus(401);
       }
