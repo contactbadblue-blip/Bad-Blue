@@ -22,9 +22,14 @@ export function getBaseURL(): string {
     return `https://${domains[0]}`;
   }
 
-  // Priority 3: Local development fallback
-  const port = process.env.PORT || 5000;
-  return `http://localhost:${port}`;
+// Priority 3: Railway or local development
+const port = process.env.PORT || 5000;
+
+if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+  return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+}
+
+return `http://localhost:${port}`;
 }
 
 /**
