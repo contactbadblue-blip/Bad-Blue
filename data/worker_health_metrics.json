@@ -1220,5 +1220,19 @@
     "status": "failed",
     "error": "Connection terminated due to connection timeout",
     "repairAttempts": 1
+  },
+  {
+    "timestamp": "2025-11-09T18:00:46.081Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot use a pool after calling end on the pool",
+    "consecutiveFailures": 2
+  },
+  {
+    "timestamp": "2025-11-09T18:00:46.087Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Called end on pool more than once",
+    "repairAttempts": 2
   }
 ]
