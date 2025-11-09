@@ -12,4 +12,4 @@ Disallow: /admin-*
 Disallow: /api/
 
 # Sitemap location
-Sitemap: https://badblue.replit.app/sitemap.xml
+Sitemap: https://bad-blue.com/sitemap.xml
