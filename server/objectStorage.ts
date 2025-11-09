@@ -1,4 +1,4 @@
-// From javascript_object_storage blueprint
+// From javascript_object_storage blueprint - Platform-agnostic with graceful degradation
 import { Storage, File } from "@google-cloud/storage";
 import { Response } from "express";
 import { randomUUID } from "crypto";
@@ -9,27 +9,43 @@ import {
   getObjectAclPolicy,
   setObjectAclPolicy,
 } from "./objectAcl";
+import { isObjectStorageAvailable } from "./platformConfig";
 
-const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
+const REPLIT_SIDECAR_ENDPOINT = process.env.REPLIT_SIDECAR_ENDPOINT || "http://127.0.0.1:1106";
 
-// The object storage client is used to interact with the object storage service.
-export const objectStorageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token",
+// The object storage client - only initialize if object storage is available
+// Platform-agnostic: works on Replit, gracefully degrades elsewhere
+export const objectStorageClient: Storage | null = (() => {
+  if (!isObjectStorageAvailable()) {
+    console.log('[Object Storage] Environment variables not configured - object storage unavailable');
+    console.log('[Object Storage] Application will use filesystem storage fallback');
+    return null;
+  }
+
+  try {
+    return new Storage({
+      credentials: {
+        audience: "replit",
+        subject_token_type: "access_token",
+        token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
+        type: "external_account",
+        credential_source: {
+          url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
+          format: {
+            type: "json",
+            subject_token_field_name: "access_token",
+          },
+        },
+        universe_domain: "googleapis.com",
       },
-    },
-    universe_domain: "googleapis.com",
-  },
-  projectId: "",
-});
+      projectId: "",
+    });
+  } catch (error) {
+    console.warn('[Object Storage] Failed to initialize client:', error);
+    console.log('[Object Storage] Application will use filesystem storage fallback');
+    return null;
+  }
+})();
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -77,6 +93,10 @@ export class ObjectStorageService {
 
   // Search for a public object from the search paths.
   async searchPublicObject(filePath: string): Promise<File | null> {
+    if (!objectStorageClient) {
+      throw new Error('Object storage not available - missing configuration or running on non-Replit platform');
+    }
+
     for (const searchPath of this.getPublicObjectSearchPaths()) {
       const fullPath = `${searchPath}/${filePath}`;
 
@@ -157,6 +177,10 @@ export class ObjectStorageService {
 
   // Gets the object entity file from the object path.
   async getObjectEntityFile(objectPath: string): Promise<File> {
+    if (!objectStorageClient) {
+      throw new Error('Object storage not available - missing configuration or running on non-Replit platform');
+    }
+
     if (!objectPath.startsWith("/objects/")) {
       throw new ObjectNotFoundError();
     }
