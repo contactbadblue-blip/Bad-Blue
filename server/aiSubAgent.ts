@@ -11911,6 +11911,16 @@ async function scheduleNextDataCollection(): Promise<void> {
  * Run the scheduled search based on current cycle
  */
 async function runScheduledSearch(): Promise<void> {
+  // Check if autonomous search is paused by Worker
+  const { searchController } = await import('./autonomousSearchController');
+  if (searchController.isPaused()) {
+    const status = searchController.getStatus();
+    console.log('[AI Sub-Agent] Autonomous search paused by Worker - skipping cycle');
+    console.log(`[AI Sub-Agent] Pause reason: ${status.pauseReason || 'Unknown'}`);
+    console.log(`[AI Sub-Agent] Paused at: ${status.pausedAt}`);
+    return;
+  }
+
   const cycle = await storage.getSearchCycle();
   if (!cycle) return;
 

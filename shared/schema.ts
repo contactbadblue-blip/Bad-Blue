@@ -1275,3 +1275,30 @@ export const insertDepartmentUrlSchema = createInsertSchema(departmentUrls).omit
 
 export type DepartmentUrl = typeof departmentUrls.$inferSelect;
 export type InsertDepartmentUrl = z.infer<typeof insertDepartmentUrlSchema>;
+
+// ============================================
+// WORKER ALERTS TABLE
+// ============================================
+// Stores alerts from BadBlue Worker for monitoring critical systems
+export const workerAlerts = pgTable("worker_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  alertType: varchar("alert_type").notNull(), // 'rate_limit_pause', 'rate_limit_resume', 'database_failure', 'stripe_failure', 'email_failure'
+  severity: integer("severity").notNull(), // Maps to Severity enum (1=NOTICE, 2=WARNING, 3=MODERATE, 4=SERIOUS, 5=CRITICAL)
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  metadata: jsonb("metadata"), // Additional context (API stats, system state, etc.)
+  resolved: boolean("resolved").default(false).notNull(),
+  resolvedAt: timestamp("resolved_at"),
+}, (table) => [
+  index("idx_alert_type_resolved").on(table.alertType, table.resolved),
+  index("idx_worker_alerts_timestamp").on(table.timestamp),
+]);
+
+export const insertWorkerAlertSchema = createInsertSchema(workerAlerts).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type WorkerAlert = typeof workerAlerts.$inferSelect;
+export type InsertWorkerAlert = z.infer<typeof insertWorkerAlertSchema>;

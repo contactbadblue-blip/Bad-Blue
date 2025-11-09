@@ -85,11 +85,13 @@ class BadBlueWorker {
   private weeklyTestSchedule: NodeJS.Timeout | null = null;
   private backupSchedule: NodeJS.Timeout | null = null;
   private databaseHeartbeatInterval: NodeJS.Timeout | null = null;
+  private criticalMonitoringInterval: NodeJS.Timeout | null = null;
   private isRepairInProgress = false;
   private isDiagnosticInProgress = false;
   private isMaintenanceMode = false;
   private consecutiveDbFailures = 0;
   private dbRepairAttempts = 0;
+  private lastAlertTimes: Map<string, number> = new Map(); // For alert deduplication
 
   // Parallel processing state
   private repairQueue: FailureLogEntry[] = [];
@@ -119,6 +121,7 @@ class BadBlueWorker {
   private readonly BACKUP_DIR = path.join(this.DATA_DIR, 'backups');
   private readonly METRICS_LOG = path.join(this.DATA_DIR, 'repair_metrics.json');
   private readonly HEALTH_METRICS_LOG = path.join(this.DATA_DIR, 'worker_health_metrics.json');
+  private readonly ALERTS_LOG = path.join(this.DATA_DIR, 'system_alerts.log');
 
   private constructor() {}
 
@@ -134,6 +137,13 @@ class BadBlueWorker {
 
     // Ensure data directory exists
     await this.ensureDataDirectory();
+
+    // Initialize autonomous search controller
+    const { searchController } = await import('./autonomousSearchController');
+    await searchController.initialize();
+
+    // Schedule 30-minute critical monitoring (rate limits, database, Stripe, email)
+    this.scheduleCriticalMonitoring();
 
     // Schedule 15-minute database heartbeat (runs independently)
     this.scheduleDatabaseHeartbeat();
@@ -151,6 +161,7 @@ class BadBlueWorker {
     this.scheduleWeeklyBackup();
 
     console.log('[BadBlue Worker] ✓ Background worker system active');
+    console.log('[BadBlue Worker] - Critical monitoring: Every 30 minutes (rate limits, AI, payments, email)');
     console.log('[BadBlue Worker] - Database heartbeat: Every 15 minutes (lightweight connectivity check)');
     console.log('[BadBlue Worker] - Diagnostic cycle: Every 6 hours (background process - no user interruption)');
     console.log('[BadBlue Worker] - Daily repair: 8:30 PM UTC (enters maintenance mode)');
@@ -247,6 +258,20 @@ class BadBlueWorker {
     };
 
     scheduleNextTest();
+  }
+
+  private scheduleCriticalMonitoring() {
+    // Run critical monitoring every 30 minutes
+    const THIRTY_MINUTES = 30 * 60 * 1000;
+
+    this.criticalMonitoringInterval = setInterval(async () => {
+      await this.runCriticalMonitoring();
+    }, THIRTY_MINUTES);
+
+    // Run initial check after 1 minute to avoid startup conflicts
+    setTimeout(async () => {
+      await this.runCriticalMonitoring();
+    }, 60000);
   }
 
   private scheduleWeeklyBackup() {
@@ -465,7 +490,155 @@ class BadBlueWorker {
     
     await this.logFailure(issue);
     
-    console.log(`[BadBlue Worker] 📋 Issue added to repair queue (Priority: ${Priority[issue.priority || Priority.MEDIUM]}, Queue size: ${this.repairQueue.length})`);
+    console.log(`[BadBlue Worker] Issue added to repair queue (Priority: ${Priority[issue.priority || Priority.MEDIUM]}, Queue size: ${this.repairQueue.length})`);
+  }
+
+  private async runCriticalMonitoring() {
+    try {
+      console.log('[BadBlue Worker] Running 30-minute critical system monitoring...');
+
+      const { rateLimitTracker } = await import('./rateLimitTracker');
+      const { searchController } = await import('./autonomousSearchController');
+
+      const geminiStats = rateLimitTracker.getStats();
+      const groqStats = rateLimitTracker.getGroqStats();
+      const bothExhausted = rateLimitTracker.areBothAPIsExhausted();
+
+      if (bothExhausted && !searchController.isPaused()) {
+        await searchController.pause('Both Gemini and Groq APIs rate limited');
+        await this.recordAlert({
+          alertType: 'rate_limit_pause',
+          severity: Severity.CRITICAL,
+          title: 'Autonomous Search Paused - API Quotas Exhausted',
+          message: `Gemini: ${geminiStats.utilizationPercent.toFixed(1)}% used, Groq: ${groqStats.tokenUtilizationPercent.toFixed(1)}% used (${groqStats.tokensUsed}/${groqStats.tokenLimit} tokens)`,
+          metadata: { geminiStats, groqStats },
+        });
+        console.log('[BadBlue Worker] CRITICAL: Both AI APIs exhausted - autonomous search paused');
+      }
+
+      if (!bothExhausted && searchController.isPaused()) {
+        await searchController.recordHealthyRun();
+        if (searchController.shouldAutoResume()) {
+          await searchController.resume('API quotas recovered');
+          await this.recordAlert({
+            alertType: 'rate_limit_resume',
+            severity: Severity.NOTICE,
+            title: 'Autonomous Search Resumed',
+            message: 'API quotas have recovered',
+            metadata: { geminiStats, groqStats },
+          });
+        }
+      } else if (bothExhausted) {
+        await searchController.recordUnhealthyRun();
+      }
+
+      try {
+        const { db } = await import('./db');
+        const start = Date.now();
+        await db.execute('SELECT 1');
+        const latency = Date.now() - start;
+        if (latency > 2000) {
+          await this.recordAlert({
+            alertType: 'database_slow',
+            severity: Severity.WARNING,
+            title: 'Database Performance Degraded',
+            message: `Query latency: ${latency}ms`,
+            metadata: { latency },
+          });
+        }
+      } catch (error: any) {
+        await this.recordAlert({
+          alertType: 'database_failure',
+          severity: Severity.CRITICAL,
+          title: 'Database Connection Failed',
+          message: error.message,
+        });
+      }
+
+      if (process.env.STRIPE_SECRET_KEY) {
+        try {
+          const Stripe = (await import('stripe')).default;
+          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
+          await Promise.race([
+            stripe.paymentIntents.list({ limit: 1 }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+          ]);
+        } catch (error: any) {
+          await this.recordAlert({
+            alertType: 'stripe_failure',
+            severity: Severity.SERIOUS,
+            title: 'Stripe API Connection Failed',
+            message: error.message,
+          });
+        }
+      }
+
+      if (process.env.GWSMTP_USER && process.env.GWSMTP_PASS) {
+        try {
+          const { emailTransporter } = await import('./emailService');
+          await Promise.race([
+            emailTransporter.verify(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+          ]);
+        } catch (error: any) {
+          await this.recordAlert({
+            alertType: 'email_failure',
+            severity: Severity.MODERATE,
+            title: 'Email SMTP Connection Failed',
+            message: error.message,
+          });
+        }
+      }
+
+      console.log('[BadBlue Worker] Critical monitoring complete');
+    } catch (error) {
+      console.error('[BadBlue Worker] Error in critical monitoring:', error);
+    }
+  }
+
+  private async recordAlert(alert: { alertType: string; severity: Severity; title: string; message: string; metadata?: any }): Promise<void> {
+    const alertKey = alert.alertType;
+    const lastTime = this.lastAlertTimes.get(alertKey) || 0;
+    const now = Date.now();
+    
+    if (now - lastTime < 10 * 60 * 1000) {
+      return;
+    }
+    
+    this.lastAlertTimes.set(alertKey, now);
+
+    try {
+      const logEntry = {
+        timestamp: new Date().toISOString(),
+        ...alert,
+      };
+      
+      let alerts: any[] = [];
+      try {
+        const data = await fs.readFile(this.ALERTS_LOG, 'utf-8');
+        alerts = JSON.parse(data);
+      } catch {
+      }
+      
+      alerts.push(logEntry);
+      if (alerts.length > 500) {
+        alerts.splice(0, alerts.length - 500);
+      }
+      await fs.writeFile(this.ALERTS_LOG, JSON.stringify(alerts, null, 2));
+
+      const { db } = await import('./db');
+      const { workerAlerts } = await import('@shared/schema');
+      await db.insert(workerAlerts).values({
+        alertType: alert.alertType,
+        severity: alert.severity,
+        title: alert.title,
+        message: alert.message,
+        metadata: alert.metadata || null,
+        resolved: false,
+      });
+    } catch (error) {
+      console.error('[BadBlue Worker] Error recording alert:', error);
+    }
   }
 
   private async runDiagnostics() {
