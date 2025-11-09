@@ -11353,8 +11353,11 @@ export function initializeAutonomousImprovements(): void {
   console.log('[Sub-Agent] - Daily improvement cycle: 10:30 PM UTC');
   console.log('[Sub-Agent] - Learns from user consultations, researches attorney techniques, improves system');
 
-  // Initialize autonomous data collection
-  initializeDataCollection();
+  // Initialize autonomous data collection (demand-based - only runs when users active)
+  // Note: Searches are now triggered by user activity, not on a fixed schedule
+  // This prevents API quota exhaustion when no users are present
+  console.log('[AI Sub-Agent] Autonomous data collection initialized in demand-based mode');
+  console.log('[AI Sub-Agent] Data collection will trigger when user activity is detected');
 }
 
 /**

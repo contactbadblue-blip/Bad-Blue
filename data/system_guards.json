@@ -1,4 +1,1 @@
-{
-  "aiSearchPaused": false,
-  "consecutiveHealthyRuns": 0
-}
+{"isPaused":true,"pauseReason":"EMERGENCY: Both Gemini and Groq API quotas exhausted - autonomous search disabled","pausedAt":"2025-11-09T19:05:37.951Z","consecutiveHealthyRuns":0}
