@@ -2320,7 +2320,26 @@ Implement the fix now.`;
   }
 
   private async testAIServicesComprehensive(results: FunctionErrorLogEntry[]) {
-    // CRITICAL: Check quota before AI tests
+    // CRITICAL: Enforce 15% Worker budget cap
+    const { workerTokenBudget } = await import('./workerTokenBudget');
+    const budgetStats = await workerTokenBudget.getTodayStats();
+    
+    console.log(`[Worker Budget] AI Services tests - ${budgetStats.percentUsed.toFixed(1)}% of daily budget used`);
+    
+    if (budgetStats.remaining < 1000) {
+      console.log('[Weekly Test] ⛔ Worker budget exhausted - AI Services tests skipped');
+      results.push({
+        timestamp: new Date().toISOString(),
+        functionTested: 'AI Services Configuration',
+        expectedBehavior: 'AI services operational',
+        observedBehavior: `Tests skipped - Worker budget exhausted (${budgetStats.used}/${budgetStats.budget} tokens)`,
+        severity: Severity.NOTICE,
+        status: 'skipped',
+      });
+      return;
+    }
+    
+    // LEGACY: Also check rateLimitTracker for backwards compatibility
     const { rateLimitTracker } = await import('./rateLimitTracker');
     const rateLimitStats = rateLimitTracker.getStats();
     
@@ -2374,7 +2393,26 @@ Implement the fix now.`;
   }
 
   private async testLegalAIAnalysis(results: FunctionErrorLogEntry[]) {
-    // CRITICAL: Check quota before AI tests
+    // CRITICAL: Enforce 15% Worker budget cap
+    const { workerTokenBudget } = await import('./workerTokenBudget');
+    const budgetStats = await workerTokenBudget.getTodayStats();
+    
+    console.log(`[Worker Budget] Legal AI tests - ${budgetStats.percentUsed.toFixed(1)}% of daily budget used`);
+    
+    if (budgetStats.remaining < 3000) {
+      console.log('[Weekly Test] ⛔ Worker budget exhausted - Legal AI tests skipped');
+      results.push({
+        timestamp: new Date().toISOString(),
+        functionTested: 'Legal AI Analysis',
+        expectedBehavior: 'AI analysis operational',
+        observedBehavior: `Tests skipped - Worker budget exhausted (${budgetStats.used}/${budgetStats.budget} tokens)`,
+        severity: Severity.NOTICE,
+        status: 'skipped',
+      });
+      return;
+    }
+    
+    // LEGACY: Also check rateLimitTracker for backwards compatibility
     const { rateLimitTracker } = await import('./rateLimitTracker');
     const rateLimitStats = rateLimitTracker.getStats();
     
@@ -2391,7 +2429,7 @@ Implement the fix now.`;
       return;
     }
     
-    const useReducedSuite = rateLimitStats.utilizationPercent > 50;
+    const useReducedSuite = rateLimitStats.utilizationPercent > 50 || budgetStats.remaining < 8000;
     
     const testCases = useReducedSuite
       ? [{ // Just 1 test
@@ -2489,7 +2527,26 @@ Implement the fix now.`;
   }
 
   private async testDocumentGeneration(results: FunctionErrorLogEntry[]) {
-    // CRITICAL: Check quota before AI tests
+    // CRITICAL: Enforce 15% Worker budget cap
+    const { workerTokenBudget } = await import('./workerTokenBudget');
+    const budgetStats = await workerTokenBudget.getTodayStats();
+    
+    console.log(`[Worker Budget] Document Generation tests - ${budgetStats.percentUsed.toFixed(1)}% of daily budget used`);
+    
+    if (budgetStats.remaining < 4000) {
+      console.log('[Weekly Test] ⛔ Worker budget exhausted - Document Generation tests skipped');
+      results.push({
+        timestamp: new Date().toISOString(),
+        functionTested: 'Document Generation',
+        expectedBehavior: 'Document generation operational',
+        observedBehavior: `Tests skipped - Worker budget exhausted (${budgetStats.used}/${budgetStats.budget} tokens)`,
+        severity: Severity.NOTICE,
+        status: 'skipped',
+      });
+      return;
+    }
+    
+    // LEGACY: Also check rateLimitTracker for backwards compatibility
     const { rateLimitTracker } = await import('./rateLimitTracker');
     const rateLimitStats = rateLimitTracker.getStats();
     
@@ -2506,7 +2563,7 @@ Implement the fix now.`;
       return;
     }
     
-    const useReducedSuite = rateLimitStats.utilizationPercent > 50;
+    const useReducedSuite = rateLimitStats.utilizationPercent > 50 || budgetStats.remaining < 10000;
     
     // Test Tort Notice Generation - scale based on quota
     const tortTests = useReducedSuite
@@ -2595,7 +2652,27 @@ Implement the fix now.`;
   }
 
   private async testSearchServices(results: FunctionErrorLogEntry[]) {
-    // CRITICAL: Check quota before starting expensive AI tests
+    // CRITICAL: Enforce 15% Worker budget cap
+    const { workerTokenBudget } = await import('./workerTokenBudget');
+    const budgetStats = await workerTokenBudget.getTodayStats();
+    
+    console.log(`[Worker Budget] Search tests - ${budgetStats.percentUsed.toFixed(1)}% of daily budget used`);
+    
+    // Strict 15% enforcement: Skip ALL tests if budget exhausted
+    if (budgetStats.remaining < 2000) { // Need at least 2k tokens for minimal test
+      console.log('[Weekly Test] ⛔ Worker budget exhausted - all search tests skipped');
+      results.push({
+        timestamp: new Date().toISOString(),
+        functionTested: 'AI Search Services',
+        expectedBehavior: 'Search services operational',
+        observedBehavior: `Tests skipped - Worker budget exhausted (${budgetStats.used}/${budgetStats.budget} tokens used today)`,
+        severity: Severity.NOTICE,
+        status: 'skipped',
+      });
+      return;
+    }
+    
+    // LEGACY: Also check rateLimitTracker for backwards compatibility
     const { rateLimitTracker } = await import('./rateLimitTracker');
     const rateLimitStats = rateLimitTracker.getStats();
     

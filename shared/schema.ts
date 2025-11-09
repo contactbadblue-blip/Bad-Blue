@@ -1375,9 +1375,12 @@ export const aiUsageMetrics = pgTable("ai_usage_metrics", {
   verbosity: varchar("verbosity", { length: 20 }).notNull(), // 'concise' | 'standard' | 'detailed'
   priority: integer("priority").notNull(),
   errorMessage: text("error_message"),
+  source: varchar("source", { length: 20 }).notNull().default('user'), // 'user' | 'worker' - tracks quota allocation
 }, (table) => [
   index("idx_ai_usage_provider_timestamp").on(table.provider, sql`${table.timestamp} DESC`),
   index("idx_ai_usage_task").on(table.taskName),
+  index("idx_ai_usage_source").on(table.source),
+  index("idx_ai_usage_source_timestamp").on(table.source, sql`${table.timestamp} DESC`),
 ]);
 
 export const insertAiUsageMetricSchema = createInsertSchema(aiUsageMetrics).omit({
@@ -1467,3 +1470,30 @@ export const insertWorkerHealthMetricSchema = createInsertSchema(workerHealthMet
 
 export type WorkerHealthMetric = typeof workerHealthMetrics.$inferSelect;
 export type InsertWorkerHealthMetric = z.infer<typeof insertWorkerHealthMetricSchema>;
+
+// ============================================
+// WORKER DEFERRED JOBS TABLE
+// ============================================
+// Stores worker operations deferred due to budget exhaustion
+export const workerDeferredJobs = pgTable("worker_deferred_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  scheduledFor: timestamp("scheduled_for").notNull(), // When to retry (usually next UTC midnight)
+  operationName: varchar("operation_name", { length: 100 }).notNull(),
+  estimatedTokens: integer("estimated_tokens").notNull(),
+  metadata: jsonb("metadata"), // Operation-specific data
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // 'pending' | 'completed' | 'failed'
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
+}, (table) => [
+  index("idx_deferred_scheduled").on(table.scheduledFor, table.status),
+  index("idx_deferred_operation").on(table.operationName),
+]);
+
+export const insertWorkerDeferredJobSchema = createInsertSchema(workerDeferredJobs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type WorkerDeferredJob = typeof workerDeferredJobs.$inferSelect;
+export type InsertWorkerDeferredJob = z.infer<typeof insertWorkerDeferredJobSchema>;

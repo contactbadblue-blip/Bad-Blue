@@ -9,27 +9,32 @@ import { aiUsageMetrics, type InsertAiUsageMetric, type AiUsageMetric } from '..
 import { eq, and, gte, sql } from 'drizzle-orm';
 
 export interface UsageRecord {
-  taskName: string;
+  taskName?: string;
   provider: 'gemini' | 'groq';
+  model?: string;
   tokensUsed: number;
-  latencyMs: number | null;
-  success: boolean;
-  verbosity: 'concise' | 'standard' | 'detailed';
-  priority: number;
+  latencyMs?: number | null;
+  success?: boolean;
+  verbosity?: 'concise' | 'standard' | 'detailed';
+  priority?: number;
   errorMessage?: string;
+  source?: 'user' | 'worker'; // Track quota allocation
+  operation?: string; // For worker operations
+  timestamp?: Date;
 }
 
 export async function recordUsage(record: UsageRecord): Promise<void> {
   try {
     const entry: InsertAiUsageMetric = {
-      taskName: record.taskName,
+      taskName: record.taskName || record.operation || 'unknown',
       provider: record.provider,
       tokensUsed: record.tokensUsed,
-      latencyMs: record.latencyMs,
-      success: record.success,
-      verbosity: record.verbosity,
-      priority: record.priority,
+      latencyMs: record.latencyMs || null,
+      success: record.success ?? true,
+      verbosity: record.verbosity || 'standard',
+      priority: record.priority || 5,
       errorMessage: record.errorMessage || null,
+      source: record.source || 'user',
     };
 
     await db.insert(aiUsageMetrics).values(entry);
@@ -129,3 +134,83 @@ export async function cleanupOldMetrics(retentionDays: number = 90): Promise<num
     return 0;
   }
 }
+
+/**
+ * Get usage by source for a specific date (for worker budget tracking)
+ */
+export async function getUsageBySource(
+  source: 'user' | 'worker',
+  date: string
+): Promise<{
+  totalTokens: number;
+  totalRequests: number;
+}> {
+  try {
+    const dateStart = new Date(date + 'T00:00:00.000Z');
+    const dateEnd = new Date(date + 'T23:59:59.999Z');
+
+    const results = await db
+      .select({
+        totalTokens: sql<number>`SUM(${aiUsageMetrics.tokensUsed})::int`,
+        totalRequests: sql<number>`COUNT(*)::int`,
+      })
+      .from(aiUsageMetrics)
+      .where(
+        and(
+          eq(aiUsageMetrics.source, source),
+          gte(aiUsageMetrics.timestamp, dateStart),
+          sql`${aiUsageMetrics.timestamp} <= ${dateEnd}`
+        )
+      );
+
+    const result = results[0];
+    return {
+      totalTokens: result?.totalTokens || 0,
+      totalRequests: result?.totalRequests || 0,
+    };
+  } catch (error) {
+    console.error('[Token Metrics] Error getting usage by source:', error);
+    return { totalTokens: 0, totalRequests: 0 };
+  }
+}
+
+/**
+ * Get moving average token usage for an operation
+ */
+export async function getMovingAverage(
+  operationName: string,
+  windowDays: number = 7
+): Promise<number> {
+  try {
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - windowDays);
+
+    const results = await db
+      .select({
+        averageTokens: sql<number>`AVG(${aiUsageMetrics.tokensUsed})::int`,
+      })
+      .from(aiUsageMetrics)
+      .where(
+        and(
+          eq(aiUsageMetrics.taskName, operationName),
+          gte(aiUsageMetrics.timestamp, windowStart)
+        )
+      );
+
+    const result = results[0];
+    return result?.averageTokens || 0;
+  } catch (error) {
+    console.error('[Token Metrics] Error getting moving average:', error);
+    return 0;
+  }
+}
+
+// Export as object for consistency with workerTokenBudget
+export const tokenMetricsRepository = {
+  recordUsage,
+  getUsageInWindow,
+  getTodayUsage,
+  getUsageBySource,
+  getMovingAverage,
+  cleanupOldMetrics,
+};
