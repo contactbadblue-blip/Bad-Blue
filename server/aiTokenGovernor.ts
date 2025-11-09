@@ -7,11 +7,8 @@
  * - Historical performance data
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import { getCurrentUsage, areBothAPIsExhausted, type RateLimitStatus } from './rateLimitTracker';
-
-const METRICS_FILE = path.join(process.cwd(), 'data', 'ai_usage_metrics.json');
+import * as tokenMetrics from './repositories/tokenMetricsRepository';
 
 /**
  * Task classification for AI operations
@@ -58,26 +55,6 @@ export interface TokenBudget {
   deferralReason?: string;
 }
 
-/**
- * AI usage metrics for performance tracking
- */
-interface AIUsageMetric {
-  timestamp: string;
-  taskName: string;
-  provider: AIProvider;
-  tokensUsed: number;
-  latencyMs: number;
-  success: boolean;
-  verbosity: string;
-  priority: TaskPriority;
-}
-
-interface AIMetricsStore {
-  totalRequests: number;
-  totalTokens: number;
-  metrics: AIUsageMetric[];
-  lastCleanup: string;
-}
 
 /**
  * Provider selection based on task priority and quota status
@@ -223,35 +200,20 @@ export async function getBudgetForTask(task: AITaskMetadata): Promise<TokenBudge
 
 /**
  * Record AI usage for telemetry and adaptive learning
+ * MIGRATED: Now uses PostgreSQL-backed repository
  */
 export async function recordUsage(
   taskName: string,
   provider: AIProvider,
   tokensUsed: number,
-  latencyMs: number,
+  latencyMs: number | null,
   success: boolean,
-  verbosity: string,
-  priority: TaskPriority
+  verbosity: 'concise' | 'standard' | 'detailed',
+  priority: TaskPriority,
+  errorMessage?: string
 ): Promise<void> {
   try {
-    await fs.mkdir(path.dirname(METRICS_FILE), { recursive: true });
-
-    let store: AIMetricsStore;
-    try {
-      const content = await fs.readFile(METRICS_FILE, 'utf-8');
-      store = JSON.parse(content);
-    } catch {
-      store = {
-        totalRequests: 0,
-        totalTokens: 0,
-        metrics: [],
-        lastCleanup: new Date().toISOString(),
-      };
-    }
-
-    // Add new metric
-    const metric: AIUsageMetric = {
-      timestamp: new Date().toISOString(),
+    await tokenMetrics.recordUsage({
       taskName,
       provider,
       tokensUsed,
@@ -259,21 +221,10 @@ export async function recordUsage(
       success,
       verbosity,
       priority,
-    };
-
-    store.totalRequests++;
-    store.totalTokens += tokensUsed;
-    store.metrics.push(metric);
-
-    // Keep only last 1000 metrics
-    if (store.metrics.length > 1000) {
-      store.metrics = store.metrics.slice(-1000);
-      store.lastCleanup = new Date().toISOString();
-    }
-
-    await fs.writeFile(METRICS_FILE, JSON.stringify(store, null, 2));
+      errorMessage,
+    });
   } catch (error) {
-    console.error('[Token Governor] Error recording usage:', error);
+    console.error('[Token Governor] Error recording usage (degrading gracefully):', error);
   }
 }
 
