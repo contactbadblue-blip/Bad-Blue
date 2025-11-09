@@ -46,6 +46,7 @@ import {
   subAgentRateLimit,
   autosaveRateLimit,
 } from "./rateLimit";
+import { getBaseURL } from "./platformConfig";
 import {
   insertComplaintSchema,
   insertLawsuitFilingSchema,
@@ -1391,10 +1392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Get the base URL for redirects (platform-agnostic)
-        const baseUrl = process.env.BASE_URL || 
-          (process.env.REPLIT_DOMAINS 
-            ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-            : `${req.protocol}://${req.get("host")}`);
+        const baseUrl = getBaseURL();
 
         // Create Checkout Session for one-time payment
         const session = await stripe.checkout.sessions.create({
@@ -1485,10 +1483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Get the base URL for redirects (platform-agnostic)
-        const baseUrl = process.env.BASE_URL || 
-          (process.env.REPLIT_DOMAINS 
-            ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-            : `${req.protocol}://${req.get("host")}`);
+        const baseUrl = getBaseURL();
 
         // Create Checkout Session for one-time payment
         const session = await stripe.checkout.sessions.create({
@@ -1594,10 +1589,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.updateUserStripeCustomerId(user.id, customerId);
         }
 
-        // Get the base URL for redirects
-        const baseUrl = process.env.REPLIT_DOMAINS
-          ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-          : `${req.protocol}://${req.get("host")}`;
+        // Get the base URL for redirects (platform-agnostic)
+        const baseUrl = getBaseURL();
 
         // Create Checkout Session for petition payment
         const session = await stripe.checkout.sessions.create({
@@ -1679,10 +1672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get the base URL for redirects (platform-agnostic)
-      const baseUrl = process.env.BASE_URL || 
-        (process.env.REPLIT_DOMAINS 
-          ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-          : `${req.protocol}://${req.get("host")}`);
+      const baseUrl = getBaseURL();
 
       // Create Checkout Session for FOIA payment
       const session = await stripe.checkout.sessions.create({
@@ -3274,10 +3264,7 @@ For questions or support, contact: support@badblue.com
         }
 
         // Get the base URL for redirects (platform-agnostic)
-        const baseUrl = process.env.BASE_URL || 
-          (process.env.REPLIT_DOMAINS 
-            ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-            : `${req.protocol}://${req.get("host")}`);
+        const baseUrl = getBaseURL();
 
         // Create Checkout Session for one-time payment
         const session = await stripe.checkout.sessions.create({

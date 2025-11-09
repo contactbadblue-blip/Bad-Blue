@@ -6,6 +6,7 @@ import { db } from './db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@shared/schema';
 import { sendMail as sendViaSMTP } from './mailer';
+import { getBaseURL } from './platformConfig';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -170,6 +171,7 @@ async function getFromAddress(): Promise<string> {
  * Compose welcome email as plain text
  */
 function composeWelcomeEmailText(data: WelcomeEmailData): string {
+  const baseUrl = getBaseURL();
   return `Hello ${data.firstName},
 
 Welcome to Bad Blue! We're honored that you've chosen us as your partner in pursuing police accountability and justice.
@@ -209,7 +211,7 @@ PROBLEMS WE SOLVE:
 
 Whether you're seeking accountability for police misconduct, pursuing justice for civil rights violations, or simply exploring your legal options, Bad Blue provides the tools and guidance you need.
 
-Log in to your account at any time to access our services: ${process.env.BASE_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://badblue.com')}
+Log in to your account at any time to access our services: ${baseUrl}
 
 If you have any questions or need assistance, our support team is here to help.
 
@@ -221,6 +223,7 @@ Bad Blue`;
  * Compose purchase confirmation email as plain text
  */
 function composeConfirmationEmailText(data: PurchaseConfirmationData): string {
+  const baseUrl = getBaseURL();
   let email = `Hello ${data.firstName},
 
 Thank you for your purchase!
@@ -320,7 +323,7 @@ WHAT YOU CAN DO:
 - Assess the viability of various legal remedies
 - Generate preliminary legal documents
 
-Log in to your account to access LegalAI: ${process.env.BASE_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://badblue.com')}
+Log in to your account to access LegalAI: ${baseUrl}
 
 Your access will expire on ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}.
 
