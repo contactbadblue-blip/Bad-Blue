@@ -254,7 +254,7 @@ export default function Landing() {
             Law Enforcement Accountability Service
           </h1>
           <p className="text-white/90 text-xl md:text-2xl mb-8 leading-relaxed">
-            Convenient and affordable officer searches, legal consultations, FOIA requests, complaints, and civil suit filings—all powered by AI.
+            Convenient and affordable access to legal tools, including AI legal support, in-depth officer searches with detailed background reports, FOIA requests (auto submitted), circulation of persuasive petition for officer resignation, elaborate officer complaints (auto submitted) and efficient 1983 civil suits that include tort notice and cover sheet. All without the need to leave home.
           </p>
 
           {/* Three-Tier Pricing */}
