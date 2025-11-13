@@ -1,3 +1,11 @@
+// Copyright (c) 2025 Robert “RJDC” Clinkenbeard. All rights reserved.
+// Unauthorized copying, modification, distribution, or use of this file,
+// via any medium, is strictly prohibited without express written permission.
+
+import express from "express";
+import { createClient } from "@supabase/supabase-js";
+...
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
