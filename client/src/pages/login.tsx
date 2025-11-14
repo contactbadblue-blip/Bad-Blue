@@ -23,6 +23,11 @@ export default function Login() {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Check URL parameters to determine which tab to show
+  const urlParams = new URLSearchParams(window.location.search);
+  const shouldShowSignup = urlParams.get('signup') === 'true';
+  const defaultTab = shouldShowSignup ? 'signup' : 'signin';
+
   // Local login mutation (works for both regular users and admin)
   const loginMutation = useMutation({
     mutationFn: async (data: { username: string; password?: string }) => {
@@ -413,7 +418,7 @@ export default function Login() {
               </p>
             </div>
 
-            <Tabs defaultValue="signin" className="w-full">
+            <Tabs defaultValue={defaultTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin" data-testid="tab-signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup" data-testid="tab-signup">Sign Up</TabsTrigger>

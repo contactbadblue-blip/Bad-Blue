@@ -1881,5 +1881,109 @@
     "check": "database_repair",
     "status": "success",
     "repairAttempts": 0
+  },
+  {
+    "timestamp": "2025-11-14T23:02:50.284Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Connection terminated due to connection timeout",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-14T23:03:00.301Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Connection terminated due to connection timeout",
+    "repairAttempts": 1
+  },
+  {
+    "timestamp": "2025-11-14T23:03:43.933Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Connection terminated due to connection timeout",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-14T23:03:56.388Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-14T23:05:25.009Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-14T23:05:52.340Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-14T23:07:03.189Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-14T23:08:15.514Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-14T23:08:44.360Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-14T23:09:41.193Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Connection terminated due to connection timeout",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-14T23:09:51.209Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Connection terminated due to connection timeout",
+    "repairAttempts": 1
+  },
+  {
+    "timestamp": "2025-11-14T23:11:41.612Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Connection terminated due to connection timeout",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-14T23:12:12.059Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Connection terminated due to connection timeout",
+    "consecutiveFailures": 1
+  },
+  {
+    "timestamp": "2025-11-14T23:12:27.516Z",
+    "check": "database_repair",
+    "status": "failed",
+    "error": "Connection terminated due to connection timeout",
+    "repairAttempts": 1
+  },
+  {
+    "timestamp": "2025-11-14T23:13:14.657Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-14T23:14:11.894Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
   }
 ]

@@ -6262,8 +6262,11 @@ For questions or support, contact: support@badblue.com
     }
   });
 
-  // Apply error handling middleware at the end
-  app.use(notFoundHandler);
+  // Apply notFoundHandler ONLY to API routes to ensure proper JSON 404 responses
+  // This won't interfere with frontend routes since those don't start with /api
+  app.use('/api', notFoundHandler);
+  
+  // Apply the general error handler globally
   app.use(errorHandler);
 
   const httpServer = createServer(app);

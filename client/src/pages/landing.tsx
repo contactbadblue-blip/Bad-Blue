@@ -322,7 +322,7 @@ export default function Landing() {
             <Button
               size="lg"
               className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-primary hover:bg-primary/90 backdrop-blur-sm border-2 border-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-500 w-full sm:w-auto min-h-[3rem] font-bold"
-              onClick={() => window.location.href = "/login"}
+              onClick={() => window.location.href = "/login?signup=true"}
               disabled={!disclaimerAccepted}
               data-testid="button-get-started"
             >
