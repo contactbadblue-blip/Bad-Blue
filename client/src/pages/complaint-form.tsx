@@ -238,6 +238,7 @@ export default function ComplaintForm() {
 
   const submitMutation = useMutation({
     mutationFn: async (complaintData: any) => {
+      // First, create the complaint in the database
       const response = await fetch("/api/complaints", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -249,15 +250,33 @@ export default function ComplaintForm() {
         throw new Error(errorData.message || "Failed to submit complaint");
       }
       
-      return response.json();
+      const data = await response.json();
+      
+      // Then create the payment session for the complaint
+      const paymentResponse = await fetch("/api/create-complaint-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ complaintId: data.complaintId }),
+      });
+      
+      if (!paymentResponse.ok) {
+        const errorData = await paymentResponse.json();
+        throw new Error(errorData.error || "Failed to create payment session");
+      }
+      
+      return await paymentResponse.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Success!",
-        description: "Complaint submitted successfully. You will receive confirmation via email.",
-      });
-      // Redirect to home or complaints list
-      window.location.href = "/home";
+      if (data.sessionUrl) {
+        // Redirect to Stripe checkout
+        window.location.href = data.sessionUrl;
+      } else {
+        toast({
+          title: "Error",
+          description: "Payment session URL not received",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: any) => {
       console.error("Submission error:", error);
@@ -269,7 +288,16 @@ export default function ComplaintForm() {
     },
   });
 
-  const handleSubmitComplaint = () => {
+  const handleConfirmAndPay = () => {
+    if (!officerName || !state || !city || !complaintType || !description || !incidentDate) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     submitMutation.mutate({
       officerName,
       officerBadge: badgeNumber || null,
@@ -416,22 +444,25 @@ export default function ComplaintForm() {
               </CardContent>
             </Card>
 
-            {/* Submission Info */}
-            <Card className="border-green-600/20">
+            {/* Payment Summary */}
+            <Card className="border-primary/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  Ready to Submit
+                  <DollarSign className="w-5 h-5" />
+                  Payment Summary
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Your complaint will be automatically routed to the appropriate authority and you will receive confirmation via email.
-                </p>
-                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-950/20 p-3 rounded-md">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span className="font-medium">Full Access Active - No Additional Fees</span>
+                <div className="flex items-center justify-between py-4 mb-4 border-b">
+                  <div>
+                    <p className="font-medium">Police Complaint Filing Fee</p>
+                    <p className="text-sm text-muted-foreground">Service payment</p>
+                  </div>
+                  <div className="text-2xl font-bold">${PRICING.COMPLAINT.toFixed(2)}</div>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  By proceeding, you agree to file this complaint and authorize payment of ${PRICING.COMPLAINT.toFixed(2)} for document generation and processing. Your complaint will be automatically routed to the appropriate authority.
+                </p>
               </CardContent>
             </Card>
 
@@ -450,19 +481,19 @@ export default function ComplaintForm() {
                 type="button"
                 size="lg"
                 className="flex-1"
-                onClick={handleSubmitComplaint}
+                onClick={handleConfirmAndPay}
                 disabled={submitMutation.isPending}
-                data-testid="button-submit-complaint"
+                data-testid="button-confirm-pay"
               >
                 {submitMutation.isPending ? (
                   <>
                     <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                    Submitting...
+                    Processing...
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Submit Complaint
+                    Confirm & Pay ${PRICING.COMPLAINT.toFixed(2)}
                   </>
                 )}
               </Button>
