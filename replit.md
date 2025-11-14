@@ -9,10 +9,12 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 The platform utilizes a modern web stack featuring a React 18 frontend with TypeScript, Vite, Wouter for routing, and Radix UI/shadcn/ui with Tailwind CSS for styling, adhering to Material Design and civic technology UI patterns. State management is handled by TanStack Query, and form validation uses React Hook Form with Zod. The backend is a Node.js/Express.js application providing a RESTful API, with authentication via Replit OAuth and PostgreSQL for session storage. PostgreSQL (Neon serverless) with Drizzle ORM serves as the primary database, while Replit App Storage is used for private evidence files.
 
-**CRITICAL BUG FIXES (Nov 9, 2025)**:
+**CRITICAL BUG FIXES (Nov 14, 2025)**:
+-   **Groq Quota Exhaustion Prevention**: Disabled autonomous data collection system that was consuming 100% of daily Groq quotas (100,000 tokens), violating the 35% limit requirement. System now prevents quota exhaustion with autonomous functions temporarily disabled pending proper token budget implementation.
+-   **Frontend Serving Fix**: Fixed critical issue where notFoundHandler middleware was catching all routes before Vite could serve the frontend, causing JSON 404 errors for all UI routes. Implemented scoped notFoundHandler only for /api routes.
+-   **Authentication Flow Enhancement**: Fixed Get Started button redirect to properly open signup tab using URL parameters (/login?signup=true), improving user onboarding experience.
 -   **Database Pool Reset Helper**: Fixed critical bug where `repairDatabaseConnection()` called `pool.end()` on singleton pool, leaving drizzle with dead connection. Implemented thread-safe `resetPool()` helper in `server/db.ts` that atomically swaps pool/drizzle instances using module-level `let` exports and promise locking.
 -   **Auto-Repair TypeError Guard**: Fixed `attemptAutoRepair()` calling `.includes()` on undefined `issue.cause` field by adding null-safety guard `const cause = issue.cause || ''`.
--   **Quota-Aware Weekly Testing**: Implemented tiered test coverage in weekly diagnostics (Phases 2-5) to prevent Groq API quota exhaustion. Tests check utilization before running: skip if >80%, reduced suite (1 test) if >50%, full suite (3+ tests) if <50%. Mid-run quota monitoring stops tests immediately if threshold exceeded. **Note**: This is a simplified inline implementation; architectural refactoring to centralized `weeklyTestQuota` module + `EfficientWorkerAI` wrappers is recommended for maintainability.
 
 Key architectural decisions and features include:
 
