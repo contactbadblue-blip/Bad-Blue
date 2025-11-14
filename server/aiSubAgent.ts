@@ -11333,6 +11333,20 @@ let improvementSchedule: NodeJS.Timeout | null = null;
 export async function initializeAutonomousImprovements(): Promise<void> {
   console.log('[Sub-Agent] Initializing autonomous improvement system...');
 
+  // CRITICAL: Check if autonomous search is paused before doing anything
+  try {
+    const { searchController } = await import('./autonomousSearchController');
+    if (searchController.isPaused()) {
+      const status = searchController.getStatus();
+      console.log('[Sub-Agent] ⛔ Autonomous search is PAUSED - skipping initialization');
+      console.log(`[Sub-Agent] Pause reason: ${status.pauseReason || 'Unknown'}`);
+      console.log('[Sub-Agent] Call searchController.resume() to re-enable autonomous features');
+      return; // EXIT EARLY - don't initialize anything
+    }
+  } catch (error: any) {
+    console.error('[Sub-Agent] Failed to check pause status:', error.message);
+  }
+
   // Verification test available but not run automatically to avoid database connection issues
   // Admin can manually trigger verification via API endpoint if needed
   // setTimeout(async () => {
@@ -11372,20 +11386,39 @@ export async function initializeAutonomousImprovements(): Promise<void> {
 
   // Initialize autonomous data collection (scheduled every 4 hours)
   // ONLY if rate limits allow - prevents quota exhaustion
-  const { rateLimitTracker } = await import('./rateLimitTracker');
+  console.log('[Sub-Agent] Checking API quotas before starting data collection...');
+  
+  let rateLimitTracker: any;
+  try {
+    const module = await import('./rateLimitTracker');
+    rateLimitTracker = module.rateLimitTracker;
+    console.log('[Sub-Agent] ✓ Rate limit tracker loaded successfully');
+  } catch (error: any) {
+    console.error('[Sub-Agent] ❌ Failed to load rate limit tracker:', error.message);
+    console.error('[Sub-Agent] Cannot start autonomous data collection without rate limit tracking');
+    return; // EXIT - can't proceed without rate limit tracking
+  }
   
   let dataCollectionInitialized = false;
   
   const tryStartDataCollection = () => {
     if (dataCollectionInitialized) return; // Prevent multiple instances
     
-    if (!rateLimitTracker.areBothAPIsExhausted()) {
-      console.log('[Sub-Agent] ✓ API quotas available - starting autonomous data collection');
-      initializeDataCollection();
-      dataCollectionInitialized = true;
-    } else {
-      console.log('[Sub-Agent] ⚠️ API quotas exhausted - autonomous data collection disabled');
-      console.log('[Sub-Agent] Will retry every 30 minutes until quotas recover');
+    try {
+      const bothExhausted = rateLimitTracker.areBothAPIsExhausted();
+      console.log('[Sub-Agent] Rate limit check: both APIs exhausted =', bothExhausted);
+      
+      if (!bothExhausted) {
+        console.log('[Sub-Agent] ✓ API quotas available - starting autonomous data collection');
+        initializeDataCollection();
+        dataCollectionInitialized = true;
+      } else {
+        console.log('[Sub-Agent] ⚠️ API quotas exhausted - autonomous data collection disabled');
+        console.log('[Sub-Agent] Will retry every 30 minutes until quotas recover');
+      }
+    } catch (error: any) {
+      console.error('[Sub-Agent] ❌ Error checking rate limits:', error.message);
+      console.error('[Sub-Agent] Assuming quotas exhausted to be safe');
     }
   };
   
