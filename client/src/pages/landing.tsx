@@ -3,66 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { Shield, Search, FileText, TrendingUp, Upload, Database, Bell, Check, Scale, ArrowRight, Users, Loader2, MessageSquare } from "lucide-react";
+import { Shield, Search, FileText, TrendingUp, Upload, Database, Bell, Check, Scale, ArrowRight, Users } from "lucide-react";
 import { LanguageSelectorLight } from "@/components/LanguageSelectorLight";
-import LegalConsultation from "@/components/LegalConsultation";
 import heroImage from "@assets/generated_images/Civic_accountability_hero_image_a13a823c.png";
 import { SEOHead } from "@/components/SEOHead";
 import { SupportEmailFooter } from "@/components/SupportEmailFooter";
 import { useLocation } from "wouter";
 import { FULL_ACCESS_PRICING, LAWSUIT_DIY_PRICING, LAWSUIT_FULL_SERVICE_PRICING, COMPLAINT_PRICING, PETITION_PRICING, FOIA_REQUEST_PRICING } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-
-// Generate a simple device fingerprint based on browser characteristics
-function generateDeviceFingerprint(): string {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.textBaseline = 'top';
-    ctx.font = '14px Arial';
-    ctx.fillText('fingerprint', 2, 2);
-  }
-
-  const data = [
-    navigator.userAgent,
-    navigator.language,
-    new Date().getTimezoneOffset(),
-    screen.width + 'x' + screen.height,
-    screen.colorDepth,
-    canvas.toDataURL()
-  ].join('|');
-
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    const char = data.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash.toString(36);
-}
 
 export default function Landing() {
   const [, setLocation] = useLocation();
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
-  const [trialDisclaimerAccepted, setTrialDisclaimerAccepted] = useState(false);
-  const [trialQuestion, setTrialQuestion] = useState("");
-  const [trialResponse, setTrialResponse] = useState("");
-  const [isLoadingTrial, setIsLoadingTrial] = useState(false);
-  const [hasUsedTrial, setHasUsedTrial] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioAttempted, setAudioAttempted] = useState(false); // Added state for tracking audio attempt
-  const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement>(null);
-
-  // Check localStorage on mount to see if trial was used
-  useEffect(() => {
-    const usedTrial = localStorage.getItem('badblue_trial_used');
-    if (usedTrial === 'true') {
-      setHasUsedTrial(true);
-    }
-  }, []);
 
   // Enable audio on user interaction (unmute and play)
   const enableAudio = () => {
@@ -133,55 +87,6 @@ export default function Landing() {
 
     return () => clearTimeout(timer);
   }, [audioAttempted, audioPlaying]); // Dependencies include new state
-
-  const handleTrialConsultation = async () => {
-    if (!trialQuestion || trialQuestion.trim().length < 10) {
-      toast({
-        title: "Please provide a detailed question",
-        description: "Your legal question should be at least 10 characters long.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoadingTrial(true);
-    try {
-      const deviceFingerprint = generateDeviceFingerprint();
-
-      const res = await apiRequest('/api/trial-consultation', 'POST', {
-        question: trialQuestion,
-        deviceFingerprint
-      });
-
-      const response = await res.json();
-
-      if (response.alreadyUsed) {
-        setHasUsedTrial(true);
-        localStorage.setItem('badblue_trial_used', 'true');
-        toast({
-          title: "Trial Already Used",
-          description: response.message,
-          variant: "destructive",
-        });
-      } else {
-        setTrialResponse(response.response);
-        localStorage.setItem('badblue_trial_used', 'true');
-        setHasUsedTrial(true);
-      }
-    } catch (error: any) {
-      if (error.message?.includes("already used")) {
-        setHasUsedTrial(true);
-        localStorage.setItem('badblue_trial_used', 'true');
-      }
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process your consultation. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingTrial(false);
-    }
-  };
 
   const baseUrl = import.meta.env.VITE_BASE_URL || window.location.origin;
   
