@@ -11548,19 +11548,15 @@ export async function initializeAutonomousImprovements(): Promise<void> {
     }
   };
   
-  // Try to start immediately
-  tryStartDataCollection();
+  // DISABLED: Autonomous data collection disabled to prevent Groq quota exhaustion
+  // The system was consuming 100% of daily Groq quotas, violating the 35% limit requirement
+  // TODO: Re-enable with proper enforcement of the 35% Groq resource limit
+  console.log('[Sub-Agent] ⚠️ CRITICAL: Autonomous data collection DISABLED');
+  console.log('[Sub-Agent] Reason: Preventing Groq quota exhaustion (was using 100% instead of 35% limit)');
+  console.log('[Sub-Agent] Manual searches via API remain available with proper rate limiting');
   
-  // If failed due to quotas, retry every 30 minutes until successful
-  if (!dataCollectionInitialized) {
-    const retryInterval = setInterval(() => {
-      tryStartDataCollection();
-      if (dataCollectionInitialized) {
-        clearInterval(retryInterval);
-        console.log('[Sub-Agent] ✓ Autonomous data collection resumed after quota recovery');
-      }
-    }, 30 * 60 * 1000); // 30 minutes
-  }
+  // Do NOT start data collection or set up retry intervals
+  dataCollectionInitialized = false;
 }
 
 /**
