@@ -1,0 +1,75 @@
+```json
+{
+  "retryDelay": 5000,
+  "apiEndpoint": "https://api.newendpoint.com/v2",
+  "otherConfig": "otherValue"
+}
+```
+
+However, if you are looking to implement this in a TypeScript file that exports a configuration object, here's how you can do it:
+
+FILE: config.ts
+
+```typescript
+interface Config {
+  retryDelay: number;
+  apiEndpoint: string;
+  // Add other config properties as needed
+}
+
+const config: Config = {
+  retryDelay: 5000, // 5 seconds
+  apiEndpoint: 'https://api.newendpoint.com/v2',
+  // Add other config properties as needed
+};
+
+export default config;
+```
+
+If your `config.json` is being used directly and you want to update it with TypeScript syntax for handling the configuration, consider using a `.ts` file as shown above. However, if you're directly editing a `config.json` file, the first example applies. 
+
+Remember, `config.json` files typically do not use TypeScript syntax directly; they are JSON files. If you're working in a TypeScript environment, you might import or read the `config.json` file in a TypeScript file to utilize its configuration. 
+
+For a more complex setup where you might be reading and writing to a `config.json` file from a TypeScript application, consider the following example:
+
+FILE: config.ts
+
+```typescript
+import fs from 'fs';
+
+interface Config {
+  retryDelay: number;
+  apiEndpoint: string;
+  // Add other config properties as needed
+}
+
+class ConfigManager {
+  private filePath: string;
+
+  constructor(filePath: string) {
+    this.filePath = filePath;
+  }
+
+  readConfig(): Config {
+    const configFileContent = fs.readFileSync(this.filePath, 'utf8');
+    return JSON.parse(configFileContent) as Config;
+  }
+
+  updateConfig(newConfig: Config): void {
+    const configJson = JSON.stringify(newConfig, null, 2);
+    fs.writeFileSync(this.filePath, configJson);
+  }
+}
+
+// Example usage
+const configManager = new ConfigManager('config.json');
+const currentConfig = configManager.readConfig();
+
+// Update the config
+currentConfig.retryDelay = 5000;
+currentConfig.apiEndpoint = 'https://api.newendpoint.com/v2';
+
+configManager.updateConfig(currentConfig);
+```
+
+This example demonstrates how to read, modify, and write back a `config.json` file from a TypeScript application, ensuring that the file remains in JSON format while allowing TypeScript to handle the configuration logic.
