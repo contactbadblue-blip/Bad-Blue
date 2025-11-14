@@ -44,10 +44,10 @@ export const users = pgTable("users", {
   // Stripe customer tracking
   stripeCustomerId: varchar("stripe_customer_id"),
 
-  // Full access payment tracking ($9.75 for 7-day access including LegalAI Consultation and Officer Search)
-  hasPaidForAccess: boolean("has_paid_for_access").default(false).notNull(),
-  accessPaymentId: varchar("access_payment_id"), // Stripe payment intent ID for access payment
-  accessPaidAt: timestamp("access_paid_at"), // When user paid for access
+  // Full access payment tracking (Free for signed-in users: LegalAI Consultation and Officer Search)
+  hasPaidForAccess: boolean("has_paid_for_access").default(true).notNull(), // Default true since access is free for signed-in users
+  accessPaymentId: varchar("access_payment_id"), // Stripe payment intent ID for access payment (kept for backwards compatibility)
+  accessPaidAt: timestamp("access_paid_at"), // When user paid for access (kept for backwards compatibility)
 
   // Login tracking for admin panel
   lastLoginAt: timestamp("last_login_at"),
@@ -393,10 +393,10 @@ export type Complaint = typeof complaints.$inferSelect;
 // ============================================
 // PRICING (Per-feature pricing model)
 // ============================================
-// $9.75 one-time for 7-day app access (includes LegalAI Consultation + Officer Search with comprehensive reports)
+// Free for signed-in users: LegalAI Consultation + Officer Search with comprehensive reports
 // Then pay-per-use for complaints and lawsuits
-export const APP_ACCESS_PRICING = 9.75;
-export const APP_ACCESS_PRICING_CENTS = 975;
+export const APP_ACCESS_PRICING = 0;
+export const APP_ACCESS_PRICING_CENTS = 0;
 
 // Per-complaint filing fee (includes certified mail service and clerical services)
 export const COMPLAINT_PRICING = 39.75;

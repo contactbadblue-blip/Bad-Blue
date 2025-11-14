@@ -3235,74 +3235,16 @@ For questions or support, contact: support@badblue.com
   // ============================================
 
   // Create Stripe Checkout Session for full access payment
+  // DEPRECATED: Officer search and legal consultation are now FREE for all signed-in users
   app.post(
     "/api/create-access-payment",
     isAuthenticated,
     async (req: any, res) => {
-      try {
-        const stripe = getStripeClient();
-        const userId = req.user.claims.sub;
-
-        const user = await storage.getUser(userId);
-        if (!user) {
-          return res.status(404).json({ message: "User not found" });
-        }
-
-        // Check if user already has access
-        if (user.hasPaidForAccess) {
-          return res.status(400).json({ message: "User already has full access" });
-        }
-
-        // Create or get Stripe customer
-        let customerId = user.stripeCustomerId;
-        if (!customerId) {
-          const customer = await stripe.customers.create({
-            email: user.email || undefined,
-            metadata: { userId: user.id },
-          });
-          customerId = customer.id;
-          await storage.updateUserStripeCustomerId(user.id, customerId);
-        }
-
-        // Get the base URL for redirects (platform-agnostic)
-        const baseUrl = getBaseURL();
-
-        // Create Checkout Session for one-time payment
-        const session = await stripe.checkout.sessions.create({
-          customer: customerId,
-          mode: "payment",
-          payment_method_types: ["card"],
-          line_items: [
-            {
-              price_data: {
-                currency: "usd",
-                unit_amount: FULL_ACCESS_PRICING_CENTS,
-                product_data: {
-                  name: "BadBlue Full Access",
-                  description: "7-day access to all features",
-                },
-              },
-              quantity: 1,
-            },
-          ],
-          success_url: `${baseUrl}/?payment=success`,
-          cancel_url: `${baseUrl}/?payment=cancelled`,
-          metadata: {
-            userId: user.id,
-            type: "full_access",
-          },
-        });
-
-        res.json({
-          sessionId: session.id,
-          url: session.url,
-        });
-      } catch (error: any) {
-        console.error("Error creating access payment session:", error);
-        res
-          .status(500)
-          .json({ message: "Error creating payment: " + error.message });
-      }
+      // Officer search and legal consultation are now FREE for all signed-in users
+      // This endpoint is deprecated but kept for backwards compatibility
+      return res.status(400).json({ 
+        message: "Payment not required. Officer search and legal consultation are free for all signed-in users." 
+      });
     },
   );
 
@@ -3856,49 +3798,9 @@ For questions or support, contact: support@badblue.com
               }
             }
           } else if (type === "full_access") {
-            // Full access payment successful
-            if (session.payment_status === "paid") {
-              // Validate required payment fields
-              if (!session.payment_intent) {
-                console.error("Missing payment_intent in webhook session");
-                return res.status(400).send("Missing payment_intent");
-              }
-
-              const paymentIntentId = session.payment_intent as string;
-              const amountPaid = session.amount_total || FULL_ACCESS_PRICING_CENTS;
-
-              // Update user with full access
-              if (userId) {
-                await storage.updateUserAccess(userId, paymentIntentId, amountPaid);
-                console.log(`User ${userId} granted full access after payment of ${amountPaid}`);
-
-                // Send confirmation email
-                const user = await storage.getUser(userId);
-                if (user && user.email && user.firstName) {
-                  sendPurchaseConfirmationEmail({
-                    firstName: user.firstName,
-                    email: user.email,
-                    type: "full_access",
-                    amount: amountPaid,
-                    officerName: "N/A",
-                    incidentDate: new Date().toISOString().split("T")[0],
-                    state: "N/A",
-                    document: "Full platform access granted. You can now use all features: Legal Consultation, Officer Search, Complaint Filing, Petition Creation, and Lawsuit Generation.",
-                    submissionVenue: "All features unlocked",
-                    submissionEmail: "",
-                    submissionAddress: "",
-                  })
-                    .then((sent) => {
-                      if (sent) {
-                        console.log(`Full access confirmation email sent to ${user.email}`);
-                      }
-                    })
-                    .catch((error) => {
-                      console.error(`Failed to send full access confirmation email:`, error);
-                    });
-                }
-              }
-            }
+            // DEPRECATED: Full access payments are no longer needed
+            // Officer search and legal consultation are now FREE for all signed-in users
+            console.log(`Received deprecated full_access payment webhook - ignoring as these features are now free`);
           }
           break;
         }

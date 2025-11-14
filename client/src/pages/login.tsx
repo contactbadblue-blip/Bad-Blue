@@ -143,10 +143,13 @@ export default function Login() {
     "applicationCategory": "LegalService",
     "offers": {
       "@type": "Offer",
-      "price": "9.75",
-      "priceCurrency": "USD"
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Free legal consultation and officer search for signed-in users"
     },
     "featureList": [
+      "FREE AI-powered legal consultation",
+      "FREE comprehensive officer search",
       "AI-powered officer badge identification",
       "Automated complaint routing to proper authorities",
       "Civil rights lawsuit document generation",
@@ -257,10 +260,10 @@ export default function Login() {
                     1
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-2xl font-semibold mb-2">Sign In & Get Access</h3>
-                    <p className="text-muted-foreground mb-4">Get access to legal consultation and officer search</p>
+                    <h3 className="text-2xl font-semibold mb-2">Sign In & Get Free Access</h3>
+                    <p className="text-muted-foreground mb-4">Get FREE access to legal consultation and officer search</p>
                     <p className="text-muted-foreground mb-3">
-                      Create an account or sign in using your email. After signing in, get access to unlock LegalAI Consultation and comprehensive officer search.
+                      Create an account or sign in using your email. After signing in, you get immediate FREE access to LegalAI Consultation and comprehensive officer search.
                     </p>
                   </div>
                 </div>
@@ -277,12 +280,12 @@ export default function Login() {
                   <div className="flex-1">
                     <h3 className="text-2xl font-semibold mb-4">Choose Your Service</h3>
                     
-                    {/* Tier 1: Platform Access */}
+                    {/* Tier 1: Platform Access - FREE */}
                     <div className="border-2 border-primary/40 rounded-lg p-4 mb-4 bg-primary/5">
-                      <p className="text-sm text-muted-foreground mb-3">Access to comprehensive legal consultation and in-depth officer search</p>
+                      <p className="text-sm text-muted-foreground mb-3">FREE access to comprehensive legal consultation and in-depth officer search for all signed-in users</p>
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary">Legal Consultation</Badge>
-                        <Badge variant="secondary">Officer Search</Badge>
+                        <Badge variant="secondary">Legal Consultation - FREE</Badge>
+                        <Badge variant="secondary">Officer Search - FREE</Badge>
                       </div>
                     </div>
 

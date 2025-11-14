@@ -173,10 +173,10 @@ BadBlue is more than just a platform—it's a movement toward transparency, fair
 
 SERVICES WE PROVIDE:
 
-1. LegalAI Consultation ($9.75 for 7-day access)
+1. LegalAI Consultation (FREE for signed-in users)
    Access our AI-powered legal research assistant to analyze your case, review applicable laws, and assess the strength of your claims before taking action.
 
-2. Officer Search (Included with access)
+2. Officer Search (FREE for signed-in users)
    Our advanced AI system helps you identify and gather public information about police officers involved in your incident.
 
 3. Police Complaint Filing ($39.75)
@@ -305,9 +305,10 @@ We will handle all filing procedures and provide you with confirmation once your
       break;
 
     case 'full_access':
-      email += `SERVICE PURCHASED: LegalAI Consultation (7-Day Access - $${(data.amount / 100).toFixed(2)})
+      // DEPRECATED: Full access payments are no longer needed - these features are now FREE for all signed-in users
+      email += `SERVICE UPDATE: LegalAI Consultation & Officer Search (FREE for signed-in users)
 
-You now have full access to our AI-powered legal research and consultation tools for the next 7 days.
+Officer search and legal consultation are now FREE for all signed-in users.
 
 WHAT YOU CAN DO:
 - Analyze the legal merits of your case
@@ -315,10 +316,9 @@ WHAT YOU CAN DO:
 - Review state-specific statutes and regulations
 - Assess the viability of various legal remedies
 - Generate preliminary legal documents
+- Search for officer information
 
-Log in to your account to access LegalAI: ${baseUrl}
-
-Your access will expire on ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}.
+Log in to your account to access these free features: ${baseUrl}
 
 `;
       break;
@@ -326,7 +326,7 @@ Your access will expire on ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLo
 
   email += `
 WHAT'S NEXT:
-${data.type === 'complaint' ? '- Monitor your email for acknowledgment from the oversight agency\n- Keep records of all communications\n- Follow up if you don\'t hear back within 10 business days' : ''}${data.type === 'petition' ? '- Share your petition with community members and advocacy groups\n- Track signatures and support\n- Consider organizing public awareness campaigns' : ''}${data.type === 'foia' ? '- Wait for agency response (typically 20 business days)\n- Review provided documents carefully\n- Submit follow-up requests if needed' : ''}${data.type === 'lawsuit' && data.filingInstructions ? '- Review all filing instructions carefully\n- Gather required documents and fees\n- File within applicable statute of limitations\n- Consider consulting a local attorney' : ''}${data.type === 'lawsuit' && !data.filingInstructions ? '- Await filing confirmation from Bad Blue\n- Expect case number within 5-7 business days\n- Prepare for potential court proceedings' : ''}${data.type === 'full_access' ? '- Log in to access LegalAI tools\n- Analyze your case thoroughly\n- Determine next steps based on AI assessment\n- Consider purchasing additional services if needed' : ''}
+${data.type === 'complaint' ? '- Monitor your email for acknowledgment from the oversight agency\n- Keep records of all communications\n- Follow up if you don\'t hear back within 10 business days' : ''}${data.type === 'petition' ? '- Share your petition with community members and advocacy groups\n- Track signatures and support\n- Consider organizing public awareness campaigns' : ''}${data.type === 'foia' ? '- Wait for agency response (typically 20 business days)\n- Review provided documents carefully\n- Submit follow-up requests if needed' : ''}${data.type === 'lawsuit' && data.filingInstructions ? '- Review all filing instructions carefully\n- Gather required documents and fees\n- File within applicable statute of limitations\n- Consider consulting a local attorney' : ''}${data.type === 'lawsuit' && !data.filingInstructions ? '- Await filing confirmation from Bad Blue\n- Expect case number within 5-7 business days\n- Prepare for potential court proceedings' : ''}${data.type === 'full_access' ? '- Log in to access free LegalAI tools and Officer Search\n- Analyze your case using our AI consultation\n- Search for officer information\n- Consider our paid services for complaints and lawsuits if needed' : ''}
 
 If you have any questions or need further assistance, please contact our support team.
 

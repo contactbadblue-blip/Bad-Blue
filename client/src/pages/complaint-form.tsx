@@ -143,7 +143,8 @@ export default function ComplaintForm() {
     return null;
   }
 
-  // Check if user has paid for access (one-time $29.99 payment for ALL features)
+  // DEPRECATED: Access check removed - Officer search and legal consultation are now FREE for all signed-in users
+  // The complaint filing itself still requires a separate payment ($39.75), but access to the platform is free
   const { data: userData } = useQuery({
     queryKey: ['/api/user'],
     queryFn: async () => {
@@ -153,11 +154,8 @@ export default function ComplaintForm() {
     }
   });
 
-  // Redirect to payment if user hasn't paid for access
-  if (userData && !userData.hasPaidForAccess) {
-    window.location.href = "/payment";
-    return null;
-  }
+  // DEPRECATED: Payment redirect removed - All signed-in users have full access
+  // Note: Complaint filing still requires payment, but platform access is free
 
   // Hydrate from URL params first (for shareable links)
   useEffect(() => {
