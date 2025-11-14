@@ -213,7 +213,7 @@ export default function PetitionForm() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create petition");
+        throw new Error(errorData.message || errorData.error || "Connection issue");
       }
 
       return response.json();
@@ -224,9 +224,31 @@ export default function PetitionForm() {
       }
     },
     onError: (error: any) => {
+      // Provide user-friendly error messages based on error type
+      let errorMessage = "We couldn't create your petition. Please check your information and try again";
+      
+      if (error.message?.toLowerCase().includes('payment') || 
+          error.message?.toLowerCase().includes('stripe')) {
+        errorMessage = "Payment could not be processed. Please check your card details and try again";
+      } else if (error.message?.toLowerCase().includes('network') || 
+                 error.message?.toLowerCase().includes('connection')) {
+        errorMessage = "Connection issue. Please check your internet and try again";
+      } else if (error.message?.toLowerCase().includes('session') || 
+                 error.message?.toLowerCase().includes('expired')) {
+        errorMessage = "Your session has expired. Please log in again to continue";
+      } else if (error.message?.toLowerCase().includes('validation')) {
+        errorMessage = "Please check the highlighted fields and correct any issues";
+      } else if (error.message?.toLowerCase().includes('rate') || 
+                 error.message?.toLowerCase().includes('too many')) {
+        errorMessage = "Too many requests. Please wait a few moments before trying again";
+      } else if (error.message?.toLowerCase().includes('technical') ||
+                 error.message?.toLowerCase().includes('database')) {
+        errorMessage = "We're experiencing technical difficulties. Please try again in a few moments";
+      }
+      
       toast({
-        title: "Creation Failed",
-        description: error.message || "Failed to create petition. Please try again.",
+        title: "Unable to Create Petition",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -235,8 +257,8 @@ export default function PetitionForm() {
   const handleConfirmAndPay = () => {
     if (!officerName || !department || !state || !city || !incidentDate || !incidentSummary) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
+        title: "Required Fields Missing",
+        description: "Please complete all required fields before continuing",
         variant: "destructive",
       });
       return;

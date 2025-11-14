@@ -151,7 +151,7 @@ export default function FOIARequestForm() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate FOIA request");
+        throw new Error(errorData.error || errorData.message || "Connection issue");
       }
 
       return response.json();
@@ -164,9 +164,28 @@ export default function FOIARequestForm() {
       setShowPreview(true);
     },
     onError: (error: any) => {
+      // Provide user-friendly error messages based on error type
+      let errorMessage = "We couldn't generate your FOIA request. Please check your information and try again";
+      
+      if (error.message?.toLowerCase().includes('network') || 
+          error.message?.toLowerCase().includes('connection')) {
+        errorMessage = "Connection issue. Please check your internet and try again";
+      } else if (error.message?.toLowerCase().includes('session') || 
+                 error.message?.toLowerCase().includes('expired')) {
+        errorMessage = "Your session has expired. Please log in again to continue";
+      } else if (error.message?.toLowerCase().includes('validation')) {
+        errorMessage = "Please check the highlighted fields and correct any issues";
+      } else if (error.message?.toLowerCase().includes('rate') || 
+                 error.message?.toLowerCase().includes('too many')) {
+        errorMessage = "Too many requests. Please wait a few moments before trying again";
+      } else if (error.message?.toLowerCase().includes('technical') ||
+                 error.message?.toLowerCase().includes('database')) {
+        errorMessage = "We're experiencing technical difficulties. Please try again in a few moments";
+      }
+      
       toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate FOIA request. Please try again.",
+        title: "Unable to Generate Request",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -182,7 +201,7 @@ export default function FOIARequestForm() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create payment session");
+        throw new Error(errorData.error || errorData.message || "Payment processing issue");
       }
 
       return response.json();
@@ -193,9 +212,26 @@ export default function FOIARequestForm() {
       }
     },
     onError: (error: any) => {
+      // Provide user-friendly error messages based on error type
+      let errorMessage = "Payment could not be processed. Please check your card details and try again";
+      
+      if (error.message?.toLowerCase().includes('network') || 
+          error.message?.toLowerCase().includes('connection')) {
+        errorMessage = "Connection issue. Please check your internet and try again";
+      } else if (error.message?.toLowerCase().includes('session') || 
+                 error.message?.toLowerCase().includes('expired')) {
+        errorMessage = "Your session has expired. Please log in again to continue";
+      } else if (error.message?.toLowerCase().includes('card') || 
+                 error.message?.toLowerCase().includes('stripe')) {
+        errorMessage = "Payment could not be processed. Please check your card details and try again";
+      } else if (error.message?.toLowerCase().includes('rate') || 
+                 error.message?.toLowerCase().includes('too many')) {
+        errorMessage = "Too many payment attempts. Please wait a few moments before trying again";
+      }
+      
       toast({
-        title: "Payment Failed",
-        description: error.message || "Failed to initiate payment. Please try again.",
+        title: "Payment Issue",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -204,8 +240,8 @@ export default function FOIARequestForm() {
   const handleGenerateLetter = () => {
     if (!state || !officerName || !incidentDate) {
       toast({
-        title: "Missing Required Fields",
-        description: "Please complete all required fields before generating the letter.",
+        title: "Required Fields Missing",
+        description: "Please complete all required fields (state, officer name, incident date) before generating",
         variant: "destructive",
       });
       return;
@@ -213,8 +249,8 @@ export default function FOIARequestForm() {
 
     if (!certifiedMailConsent) {
       toast({
-        title: "Certification Required",
-        description: "You must authorize certified mail delivery to proceed.",
+        title: "Action Required",
+        description: "Please check the box to authorize certified mail delivery before continuing",
         variant: "destructive",
       });
       return;
@@ -236,8 +272,8 @@ export default function FOIARequestForm() {
   const handleConfirmAndPay = () => {
     if (!generateMutation.data?.foiaRequestId) {
       toast({
-        title: "No Request Generated",
-        description: "Please generate your FOIA letter first.",
+        title: "Letter Not Generated",
+        description: "Please generate your FOIA request letter before proceeding to payment",
         variant: "destructive",
       });
       return;

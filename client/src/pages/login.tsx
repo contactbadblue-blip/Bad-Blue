@@ -42,9 +42,26 @@ export default function Login() {
       window.location.href = "/";
     },
     onError: (error: any) => {
+      // Provide user-friendly error messages based on error type
+      let errorMessage = "Please check your login credentials and try again";
+      
+      if (error.message?.toLowerCase().includes('network') || 
+          error.message?.toLowerCase().includes('connection')) {
+        errorMessage = "Connection issue. Please check your internet and try again";
+      } else if (error.message?.toLowerCase().includes('session') || 
+                 error.message?.toLowerCase().includes('expired')) {
+        errorMessage = "Your session has expired. Please log in again to continue";
+      } else if (error.message?.toLowerCase().includes('suspended') || 
+                 error.message?.toLowerCase().includes('banned')) {
+        errorMessage = "Your account has been suspended. Please contact support for assistance";
+      } else if (error.message?.toLowerCase().includes('rate') || 
+                 error.message?.toLowerCase().includes('too many')) {
+        errorMessage = "Too many login attempts. Please wait a few moments before trying again";
+      }
+      
       toast({
-        title: "Sign In Failed",
-        description: error.message || "Invalid credentials",
+        title: "Unable to Sign In",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -65,9 +82,28 @@ export default function Login() {
       setEmail("");
     },
     onError: (error: any) => {
+      // Provide user-friendly error messages based on error type
+      let errorMessage = "Please check your information and try again";
+      
+      if (error.message?.toLowerCase().includes('duplicate') || 
+          error.message?.toLowerCase().includes('already exists') ||
+          error.message?.toLowerCase().includes('already in use')) {
+        errorMessage = "This username or email is already in use. Please try a different one";
+      } else if (error.message?.toLowerCase().includes('network') || 
+                 error.message?.toLowerCase().includes('connection')) {
+        errorMessage = "Connection issue. Please check your internet and try again";
+      } else if (error.message?.toLowerCase().includes('password')) {
+        errorMessage = "Password must be at least 8 characters long";
+      } else if (error.message?.toLowerCase().includes('email')) {
+        errorMessage = "Please enter a valid email address";
+      } else if (error.message?.toLowerCase().includes('rate') || 
+                 error.message?.toLowerCase().includes('too many')) {
+        errorMessage = "Too many sign-up attempts. Please wait a few moments before trying again";
+      }
+      
       toast({
-        title: "Sign Up Failed",
-        description: error.message || "Please try again",
+        title: "Unable to Create Account",
+        description: errorMessage,
         variant: "destructive",
       });
     },

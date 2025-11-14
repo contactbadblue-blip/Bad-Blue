@@ -247,7 +247,7 @@ export default function ComplaintForm() {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to submit complaint");
+        throw new Error(errorData.message || errorData.error || "Connection issue");
       }
       
       const data = await response.json();
@@ -261,7 +261,7 @@ export default function ComplaintForm() {
       
       if (!paymentResponse.ok) {
         const errorData = await paymentResponse.json();
-        throw new Error(errorData.error || "Failed to create payment session");
+        throw new Error(errorData.error || errorData.message || "Payment processing issue");
       }
       
       return await paymentResponse.json();
@@ -272,17 +272,40 @@ export default function ComplaintForm() {
         window.location.href = data.sessionUrl;
       } else {
         toast({
-          title: "Error",
-          description: "Payment session URL not received",
+          title: "Processing Error",
+          description: "We couldn't process your payment. Please try again or contact support",
           variant: "destructive",
         });
       }
     },
     onError: (error: any) => {
       console.error("Submission error:", error);
+      
+      // Provide user-friendly error messages based on error type
+      let errorMessage = "We couldn't submit your complaint. Please check your information and try again";
+      
+      if (error.message?.toLowerCase().includes('payment') || 
+          error.message?.toLowerCase().includes('stripe')) {
+        errorMessage = "Payment could not be processed. Please check your card details and try again";
+      } else if (error.message?.toLowerCase().includes('network') || 
+                 error.message?.toLowerCase().includes('connection')) {
+        errorMessage = "Connection issue. Please check your internet and try again";
+      } else if (error.message?.toLowerCase().includes('session') || 
+                 error.message?.toLowerCase().includes('expired')) {
+        errorMessage = "Your session has expired. Please log in again to continue";
+      } else if (error.message?.toLowerCase().includes('validation')) {
+        errorMessage = "Please check the highlighted fields and correct any issues";
+      } else if (error.message?.toLowerCase().includes('rate') || 
+                 error.message?.toLowerCase().includes('too many')) {
+        errorMessage = "Too many requests. Please wait a few moments before trying again";
+      } else if (error.message?.toLowerCase().includes('technical') ||
+                 error.message?.toLowerCase().includes('database')) {
+        errorMessage = "We're experiencing technical difficulties. Please try again in a few moments";
+      }
+      
       toast({
-        title: "Submission Failed",
-        description: error.message || "Failed to submit complaint. Please try again.",
+        title: "Unable to Submit Complaint",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -291,8 +314,8 @@ export default function ComplaintForm() {
   const handleConfirmAndPay = () => {
     if (!officerName || !state || !city || !complaintType || !description || !incidentDate) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
+        title: "Required Fields Missing",
+        description: "Please complete all required fields before continuing",
         variant: "destructive",
       });
       return;

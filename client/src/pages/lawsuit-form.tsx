@@ -292,7 +292,7 @@ export default function LawsuitForm() {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to submit lawsuit");
+        throw new Error(errorData.message || errorData.error || "Connection issue");
       }
       
       return response.json();
@@ -309,9 +309,32 @@ export default function LawsuitForm() {
     },
     onError: (error: any) => {
       console.error("Submission error:", error);
+      
+      // Provide user-friendly error messages based on error type
+      let errorMessage = "We couldn't submit your lawsuit. Please check your information and try again";
+      
+      if (error.message?.toLowerCase().includes('payment') || 
+          error.message?.toLowerCase().includes('stripe')) {
+        errorMessage = "Payment could not be processed. Please check your card details and try again";
+      } else if (error.message?.toLowerCase().includes('network') || 
+                 error.message?.toLowerCase().includes('connection')) {
+        errorMessage = "Connection issue. Please check your internet and try again";
+      } else if (error.message?.toLowerCase().includes('session') || 
+                 error.message?.toLowerCase().includes('expired')) {
+        errorMessage = "Your session has expired. Please log in again to continue";
+      } else if (error.message?.toLowerCase().includes('validation')) {
+        errorMessage = "Please check the highlighted fields and correct any issues";
+      } else if (error.message?.toLowerCase().includes('rate') || 
+                 error.message?.toLowerCase().includes('too many')) {
+        errorMessage = "Too many requests. Please wait a few moments before trying again";
+      } else if (error.message?.toLowerCase().includes('technical') ||
+                 error.message?.toLowerCase().includes('database')) {
+        errorMessage = "We're experiencing technical difficulties. Please try again in a few moments";
+      }
+      
       toast({
-        title: "Filing Failed",
-        description: error.message || "Failed to file lawsuit. Please try again.",
+        title: "Unable to File Lawsuit",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -321,8 +344,8 @@ export default function LawsuitForm() {
     // Validate service disclaimer is accepted
     if (!serviceDisclaimerAccepted) {
       toast({
-        title: "Disclaimer Required",
-        description: "Please acknowledge the service disclaimer to continue",
+        title: "Action Required",
+        description: "Please review and accept the service disclaimer before continuing",
         variant: "destructive",
       });
       return;
