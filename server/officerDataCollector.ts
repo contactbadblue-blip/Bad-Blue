@@ -1,3 +1,8 @@
+import { 
+  searchOfficerData,
+  generateUserText,
+  TaskPriority
+} from './aiProvider';
 import { GoogleGenAI } from "@google/genai";
 import { EventEmitter } from "events";
 import type { OfficerProfile, InsertOfficerProfile } from "@shared/schema";
@@ -31,6 +36,34 @@ function getGeminiClient(): GoogleGenAI {
     gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   }
   return gemini;
+}
+
+/**
+ * Helper function to use unified AI provider for officer searches
+ * All officer searches are user-initiated, so they use USER context
+ */
+async function generateOfficerSearchContent(
+  searchType: string,
+  prompt: string,
+  systemPrompt: string = '',
+  expectJSON: boolean = false
+): Promise<string> {
+  try {
+    const response = await generateUserText(
+      `officer-${searchType}`,
+      prompt,
+      {
+        systemPrompt,
+        temperature: 0.3,
+        useJSON: expectJSON
+      },
+      TaskPriority.CRITICAL_USER
+    );
+    return response.content;
+  } catch (error: any) {
+    console.error(`[Officer Search] Error in ${searchType}:`, error);
+    throw error;
+  }
 }
 
 function getCacheKey(officerName: string, department?: string, location?: string): string {

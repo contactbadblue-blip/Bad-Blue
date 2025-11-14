@@ -1,6 +1,14 @@
 // Advanced Legal AI System - Sophisticated Legal Analysis Platform
-// Using Google Gemini API (Primary) with Groq fallback
+// Using unified AI provider with automatic Gemini-first, Groq-backup strategy
 import { GoogleGenAI } from "@google/genai";
+import { 
+  generateLegalAnalysis,
+  generateUserText,
+  createTaskMetadata,
+  UsageContext,
+  TaskPriority,
+  TaskComplexity
+} from './aiProvider';
 import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqLegalConsultation, generateGroqLegalJSON } from "./groq";
 import { getOptimalGeminiTokens } from "./tokenOptimizer";
@@ -15,6 +23,36 @@ function getGeminiClient(): GoogleGenAI {
     gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   }
   return gemini;
+}
+
+/**
+ * Unified legal AI generation using the governor
+ * Automatically handles Gemini-first, Groq-backup strategy
+ * Records all usage with USER context for proper tracking
+ */
+async function generateLegalContent(
+  taskName: string,
+  prompt: string,
+  systemPrompt: string,
+  expectJSON: boolean = false
+): Promise<string> {
+  try {
+    // Use the unified provider with USER context for all legal AI
+    const response = await generateUserText(
+      `legal-${taskName}`,
+      prompt,
+      {
+        systemPrompt,
+        temperature: 0.7,
+        useJSON: expectJSON
+      },
+      TaskPriority.CRITICAL_USER
+    );
+    return response.content;
+  } catch (error: any) {
+    console.error(`[Legal AI] Error in ${taskName}:`, error);
+    throw error;
+  }
 }
 
 /**

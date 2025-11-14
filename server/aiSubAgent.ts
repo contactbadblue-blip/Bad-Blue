@@ -2,9 +2,18 @@
 // Provides intelligent command processing and EXECUTION for admin control panel
 // This agent has FULL ACCESS to database, file system, and all application operations
 
-// NOTE: Uses ONLY Groq (via getGroqClient) - no OpenAI dependencies
-// This app uses ONLY Gemini (primary) and Groq (fallback) - no OpenAI API keys
-import { getGroqClient } from './groq';
+// NOTE: Uses unified AI provider with AUTONOMOUS context - respects 15% Groq limit
+// Autonomous functions will be rescheduled when limit is reached
+import { 
+  generateAutonomousText, 
+  canAutonomousProceed, 
+  getAutonomousRescheduleInfo, 
+  createTaskMetadata,
+  UsageContext, 
+  TaskPriority, 
+  TaskComplexity 
+} from './aiProvider';
+import { getGroqClient } from './groq'; // Keep for backward compatibility during transition
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs/promises';
@@ -15,6 +24,105 @@ import { storage } from './storage';
 import { z } from 'zod';
 
 const execAsync = promisify(exec);
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * AI GOVERNOR INTEGRATION - HELPER FOR AUTONOMOUS OPERATIONS
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * Helper function to make AI calls with proper governor enforcement
+ * All sub-agent AI calls should use this to respect the 15% limit
+ */
+async function callAIWithGovernor(
+  taskName: string,
+  prompt: string,
+  systemPrompt?: string
+): Promise<{ success: boolean; content?: string; error?: string }> {
+  try {
+    // Check if we can proceed with autonomous operations
+    const canProceed = await canAutonomousProceed();
+    if (!canProceed) {
+      const rescheduleInfo = await getAutonomousRescheduleInfo();
+      console.error(`[AI Sub-Agent] ⛔ 15% Groq limit reached for autonomous operations`);
+      console.error(`[AI Sub-Agent] Will resume at: ${new Date(Date.now() + rescheduleInfo.delayMs).toISOString()}`);
+      return {
+        success: false,
+        error: `AUTONOMOUS_LIMIT_REACHED: ${rescheduleInfo.reason}. Reschedule in ${Math.round(rescheduleInfo.delayMs / 1000 / 60)} minutes.`
+      };
+    }
+
+    // Make the AI call with autonomous context
+    const response = await generateAutonomousText(
+      taskName,
+      prompt,
+      { 
+        systemPrompt,
+        temperature: 0.7,
+        model: 'llama-3.3-70b-versatile' 
+      },
+      TaskPriority.LOW_BACKGROUND
+    );
+
+    return {
+      success: true,
+      content: response.content
+    };
+  } catch (error: any) {
+    console.error(`[AI Sub-Agent] Error in AI call: ${error.message}`);
+    
+    // Check if it's a limit error that needs rescheduling
+    if (error.message.includes('AUTONOMOUS_LIMIT_REACHED')) {
+      const rescheduleInfo = await getAutonomousRescheduleInfo();
+      return {
+        success: false,
+        error: `Autonomous operations paused until quota reset. Resume at: ${new Date(Date.now() + rescheduleInfo.delayMs).toISOString()}`
+      };
+    }
+    
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Compatibility wrapper for existing Groq client calls
+ * Gradually migrate to use callAIWithGovernor directly
+ */
+function getGroqClientWithGovernor(): any {
+  return {
+    chat: {
+      completions: {
+        create: async (request: any) => {
+          const systemPrompt = request.messages.find((m: any) => m.role === 'system')?.content;
+          const userPrompt = request.messages.find((m: any) => m.role === 'user')?.content || 
+                           request.messages[request.messages.length - 1]?.content;
+          
+          const result = await callAIWithGovernor(
+            'subagent-command',
+            userPrompt,
+            systemPrompt
+          );
+          
+          if (!result.success) {
+            throw new Error(result.error);
+          }
+          
+          return {
+            choices: [{
+              message: {
+                content: result.content
+              }
+            }]
+          };
+        }
+      }
+    }
+  };
+}
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -6219,8 +6327,26 @@ export async function processSubAgentCommand(cmd: SubAgentCommand): Promise<SubA
   let currentCommand = cmd.command;
   let fixAttempts: string[] = [];
   
-  // Initialize Groq for error analysis
-  const genAI = getGroqClient();
+  // Check if autonomous operations can proceed
+  const canProceed = await canAutonomousProceed();
+  if (!canProceed) {
+    const rescheduleInfo = await getAutonomousRescheduleInfo();
+    console.error(`[AI Sub-Agent] ⛔ 15% Groq limit reached - cannot process command`);
+    return {
+      success: false,
+      response: `Autonomous operations paused: ${rescheduleInfo.reason}`,
+      category: 'quota_limit',
+      executionTimeMs: 0,
+      errorMessage: `RESCHEDULE_REQUIRED: Resume at ${new Date(Date.now() + rescheduleInfo.delayMs).toISOString()}`,
+      metadata: {
+        rescheduleDelayMs: rescheduleInfo.delayMs,
+        resumeTime: new Date(Date.now() + rescheduleInfo.delayMs).toISOString()
+      }
+    };
+  }
+  
+  // Initialize Groq with governor wrapper for error analysis
+  const genAI = getGroqClientWithGovernor();
   
   // Initialize knowledge from database on first run
   await initializeKnowledgeFromDatabase();

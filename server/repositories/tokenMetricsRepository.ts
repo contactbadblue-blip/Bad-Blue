@@ -175,6 +175,45 @@ export async function getUsageBySource(
 }
 
 /**
+ * Get today's usage by source and provider (essential for 15% autonomous limit tracking)
+ */
+export async function getTodayUsageBySource(
+  provider: 'gemini' | 'groq',
+  source: 'user' | 'worker'
+): Promise<{
+  tokens: number;
+  requests: number;
+}> {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const results = await db
+      .select({
+        tokens: sql<number>`COALESCE(SUM(${aiUsageMetrics.tokensUsed}), 0)::int`,
+        requests: sql<number>`COUNT(*)::int`,
+      })
+      .from(aiUsageMetrics)
+      .where(
+        and(
+          eq(aiUsageMetrics.provider, provider),
+          eq(aiUsageMetrics.source, source),
+          gte(aiUsageMetrics.timestamp, todayStart)
+        )
+      );
+
+    const result = results[0];
+    return {
+      tokens: result?.tokens || 0,
+      requests: result?.requests || 0,
+    };
+  } catch (error) {
+    console.error('[Token Metrics] Error getting today usage by source:', error);
+    return { tokens: 0, requests: 0 };
+  }
+}
+
+/**
  * Get moving average token usage for an operation
  */
 export async function getMovingAverage(
@@ -210,6 +249,7 @@ export const tokenMetricsRepository = {
   recordUsage,
   getUsageInWindow,
   getTodayUsage,
+  getTodayUsageBySource,
   getUsageBySource,
   getMovingAverage,
   cleanupOldMetrics,
