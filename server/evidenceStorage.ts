@@ -36,32 +36,21 @@ export interface IEvidenceStorage {
 }
 
 // ============================================
-// REPLIT OBJECT STORAGE IMPLEMENTATION
+// CLOUD OBJECT STORAGE IMPLEMENTATION
 // ============================================
-class ReplitEvidenceStorage implements IEvidenceStorage {
+class CloudEvidenceStorage implements IEvidenceStorage {
   private storageClient: Storage;
-  private sidecarEndpoint: string;
 
   constructor() {
-    this.sidecarEndpoint = process.env.REPLIT_SIDECAR_ENDPOINT || "http://127.0.0.1:1106";
-    
-    this.storageClient = new Storage({
-      credentials: {
-        audience: "replit",
-        subject_token_type: "access_token",
-        token_url: `${this.sidecarEndpoint}/token`,
-        type: "external_account",
-        credential_source: {
-          url: `${this.sidecarEndpoint}/credential`,
-          format: {
-            type: "json",
-            subject_token_field_name: "access_token",
-          },
-        },
-        universe_domain: "googleapis.com",
-      },
-      projectId: "",
-    });
+    // Standard Google Cloud Storage initialization
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GCS_PROJECT_ID) {
+      this.storageClient = new Storage({
+        projectId: process.env.GCS_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT,
+      });
+    } else {
+      // Use Application Default Credentials
+      this.storageClient = new Storage();
+    }
   }
 
   private getPrivateObjectDir(): string {
@@ -416,14 +405,14 @@ class FilesystemEvidenceStorage implements IEvidenceStorage {
 // FACTORY FUNCTION
 // ============================================
 export function createEvidenceStorage(): IEvidenceStorage {
-  // Use Replit object storage if available
-  if (process.env.PRIVATE_OBJECT_DIR && process.env.REPLIT_SIDECAR_ENDPOINT !== "disabled") {
-    console.log("✓ Using Replit Object Storage for evidence files");
-    return new ReplitEvidenceStorage();
+  // Use cloud object storage if available
+  if (process.env.PRIVATE_OBJECT_DIR && (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GCS_PROJECT_ID)) {
+    console.log("✓ Using Cloud Object Storage for evidence files");
+    return new CloudEvidenceStorage();
   }
 
   // Fall back to filesystem storage
-  console.log("✓ Using Filesystem Storage for evidence files (Railway/Platform-agnostic)");
+  console.log("✓ Using Filesystem Storage for evidence files (Platform-agnostic)");
   return new FilesystemEvidenceStorage();
 }
 

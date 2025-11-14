@@ -7131,7 +7131,7 @@ async function performDataOperation(command: string, client: any): Promise<{ res
     const prompt = `You are a database operations AI with FULL ACCESS to the BadBlue PostgreSQL database.
 
 Database schema includes tables:
-- users (id, username, email, replitUserId, createdAt, etc.)
+- users (id, username, email, createdAt, etc.)
 - payments (id, userId, type, amount, status, etc.)
 - complaints (id, userId, officerName, department, incidentDate, etc.)
 - petitions (id, title, description, category, targetName, etc.)
@@ -7447,11 +7447,11 @@ async function detectAndInstallPackages(target: string, action: string): Promise
         message: 'This application uses Node.js ecosystem with npm exclusively. Please specify npm-compatible packages.',
       };
     } else if (targetLower.includes('system') || targetLower.includes('apt') || targetLower.includes('package manager')) {
-      // For this Replit environment, we can't use apt directly
-      // We would need to use nix or request from user
+      // For this environment, we can't use apt directly
+      // System packages need to be installed at the container/platform level
       return {
         success: false,
-        message: 'System package installation requires manual intervention in Replit environment. Please use the packager tool or contact admin.',
+        message: 'System package installation requires manual intervention. Please install system packages through your platform\'s package manager or contact admin.',
       };
     }
     

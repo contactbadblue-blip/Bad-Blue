@@ -1,4 +1,4 @@
-// useAuth hook - from javascript_log_in_with_replit blueprint
+// Authentication hook
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 

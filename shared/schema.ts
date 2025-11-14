@@ -1,5 +1,5 @@
 // BadBlue - Database Schema
-// Following javascript_log_in_with_replit and javascript_stripe blueprints
+// Following authentication and payment processing best practices
 
 import { sql } from 'drizzle-orm';
 import { relations } from 'drizzle-orm';
@@ -19,7 +19,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // ============================================
-// SESSIONS TABLE (Required for Replit Auth)
+// SESSIONS TABLE (Required for Authentication)
 // ============================================
 export const sessions = pgTable(
   "sessions",
@@ -32,7 +32,7 @@ export const sessions = pgTable(
 );
 
 // ============================================
-// USERS TABLE (Replit Auth + Stripe)
+// USERS TABLE (Authentication + Stripe Payments)
 // ============================================
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -65,7 +65,7 @@ export type User = typeof users.$inferSelect;
 export const authAccounts = pgTable("auth_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  authType: varchar("auth_type", { length: 20 }).notNull(), // 'replit' | 'local'
+  authType: varchar("auth_type", { length: 20 }).notNull(), // 'oauth' | 'local'
   username: varchar("username").unique(), // For local auth only
   passwordHash: text("password_hash"), // For local auth only
   passwordSalt: text("password_salt"), // For local auth only

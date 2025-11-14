@@ -1,42 +1,34 @@
 /**
  * Platform-agnostic configuration helper
- * Abstracts Replit-specific environment variables for deployment anywhere
+ * Abstracts environment variables for deployment anywhere
  */
 
 /**
  * Get the base URL for the application
  * Supports multiple platforms:
- * - Custom BASE_URL environment variable (Railway, Heroku, etc.)
- * - Replit REPLIT_DOMAINS
+ * - Custom BASE_URL environment variable (Railway, Heroku, AWS, etc.)
+ * - Platform-specific domain variables
  * - Local development fallback
  */
 export function getBaseURL(): string {
-  // Priority 1: Custom BASE_URL (Railway.com, Heroku, custom hosting)
+  // Priority 1: Custom BASE_URL (Railway, Heroku, AWS, custom hosting)
   if (process.env.BASE_URL) {
     return process.env.BASE_URL;
   }
 
-  // Priority 2: Replit REPLIT_DOMAINS (backwards compatibility)
-  if (process.env.REPLIT_DOMAINS) {
-    const domains = process.env.REPLIT_DOMAINS.split(",");
-    return `https://${domains[0]}`;
+  // Priority 2: Railway or other platforms
+  const port = process.env.PORT || 5000;
+  
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
   }
-
-// Priority 3: Railway or local development
-const port = process.env.PORT || 5000;
-
-if (process.env.RAILWAY_PUBLIC_DOMAIN) {
-  return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
-}
-
-return `http://localhost:${port}`;
-}
-
-/**
- * Check if running on Replit platform
- */
-export function isReplitPlatform(): boolean {
-  return Boolean(process.env.REPL_ID && process.env.REPLIT_DOMAINS);
+  
+  if (process.env.HEROKU_APP_NAME) {
+    return `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`;
+  }
+  
+  // Priority 3: Local development fallback
+  return `http://localhost:${port}`;
 }
 
 /**
@@ -53,9 +45,9 @@ export function isObjectStorageAvailable(): boolean {
  * Get platform name for logging
  */
 export function getPlatformName(): string {
-  if (isReplitPlatform()) return "Replit";
   if (process.env.RAILWAY_ENVIRONMENT) return "Railway";
   if (process.env.HEROKU_APP_NAME) return "Heroku";
   if (process.env.VERCEL) return "Vercel";
+  if (process.env.AWS_REGION) return "AWS";
   return "Custom/Local";
 }

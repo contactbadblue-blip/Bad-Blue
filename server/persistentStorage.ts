@@ -62,7 +62,7 @@ class NullPersistentStorage implements IPersistentStorage {
 
 /**
  * Persistent storage service that survives deployments and republishing
- * Uses Replit Object Storage for durable data persistence
+ * Uses Cloud Object Storage for durable data persistence
  */
 export class PersistentStorage implements IPersistentStorage {
   private bucketName: string;

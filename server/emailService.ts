@@ -76,7 +76,7 @@ export async function sendEmail({
     console.error('[EMAIL] ✗ SMTP credentials check failed:');
     console.error('[EMAIL]   - GWSMTP_USER present:', hasUser);
     console.error('[EMAIL]   - GWSMTP_PASS present:', hasPass);
-    console.error('[EMAIL] Please verify these secrets are set in Replit Secrets tool');
+    console.error('[EMAIL] Please verify these secrets are set in environment variables');
     return false;
   }
   

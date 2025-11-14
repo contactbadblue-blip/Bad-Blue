@@ -6,7 +6,7 @@ import multer from "multer";
 import { z } from "zod";
 import passport from "passport";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./auth";
 import {
   analyzeBadgeImage,
   lookupOfficerInfo,
@@ -1254,7 +1254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
   // From javascript_object_storage blueprint
 
-  // Get upload URL for evidence files (Platform-agnostic: Replit object storage OR filesystem)
+  // Get upload URL for evidence files (Platform-agnostic: cloud object storage OR filesystem)
   app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
     try {
       const uploadURL = await evidenceStorage.getUploadURL();
@@ -1267,7 +1267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Set ACL policy for uploaded evidence file (Platform-agnostic: Replit OR filesystem)
+  // Set ACL policy for uploaded evidence file (Platform-agnostic: cloud OR filesystem)
   app.put("/api/evidence-files", isAuthenticated, async (req: any, res) => {
     try {
       if (!req.body.fileURL) {
@@ -1321,8 +1321,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Filesystem upload endpoint (for non-Replit platforms like Railway)
-  // This handles direct file uploads when Replit object storage is not available
+  // Filesystem upload endpoint (for platforms without cloud storage)
+  // This handles direct file uploads when cloud object storage is not available
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB limit
   app.post("/api/evidence/filesystem-upload", isAuthenticated, upload.single('file'), async (req: any, res) => {
     try {
@@ -1346,9 +1346,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileId 
         });
       } else {
-        // Replit storage uses signed URLs, not this endpoint
+        // Cloud storage uses signed URLs, not this endpoint
         return res.status(400).json({ 
-          error: "This endpoint is only for filesystem storage. Replit storage uses signed URLs." 
+          error: "This endpoint is only for filesystem storage. Cloud storage uses signed URLs." 
         });
       }
     } catch (error: any) {

@@ -1,4 +1,4 @@
-// authUtils - from javascript_log_in_with_replit blueprint
+// Authentication utility functions
 export function isUnauthorizedError(error: Error): boolean {
   return /^401: .*Unauthorized/.test(error.message);
 }

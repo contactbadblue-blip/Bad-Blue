@@ -1,4 +1,4 @@
-// Database Storage - from javascript_database and javascript_log_in_with_replit blueprints
+// Database Storage - Platform-agnostic database operations
 import {
   users,
   badgeLookups,
@@ -100,7 +100,7 @@ if (!db) {
 
 // Interface for storage operations
 export interface IStorage {
-  // User operations (required for Replit Auth)
+  // User operations (required for Authentication)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserStripeCustomerId(userId: string, stripeCustomerId: string): Promise<User>;
