@@ -6,13 +6,14 @@ import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { sendWelcomeEmail } from "./emailService";
 import { setupLocalStrategy } from "./localAuth";
+import { pool } from "./db"; // Import the shared pool
 
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
-    conString: process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL,
+    pool: pool, // Use the shared pool instead of creating new connections
     createTableIfMissing: false,
     ttl: sessionTtl,
     tableName: "sessions",
