@@ -234,10 +234,90 @@ export async function createSubAgentTables() {
     `);
     console.log('[Migration] ✓ Created indexes for sub_agent_search_cycles');
 
+    // Create worker_alerts table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS worker_alerts (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        timestamp TIMESTAMP DEFAULT NOW() NOT NULL,
+        alert_type VARCHAR NOT NULL,
+        severity INTEGER NOT NULL,
+        title VARCHAR NOT NULL,
+        message TEXT NOT NULL,
+        metadata JSONB,
+        resolved BOOLEAN DEFAULT FALSE NOT NULL,
+        resolved_at TIMESTAMP
+      );
+    `);
+    console.log('[Migration] ✓ Created worker_alerts table');
+
+    // Create indexes for worker_alerts
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_alert_type_resolved ON worker_alerts(alert_type, resolved);
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_worker_alerts_timestamp ON worker_alerts(timestamp);
+    `);
+    console.log('[Migration] ✓ Created indexes for worker_alerts');
+
+    // Create worker_failure_logs table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS worker_failure_logs (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        timestamp TIMESTAMP DEFAULT NOW() NOT NULL,
+        function_affected VARCHAR(255) NOT NULL,
+        cause TEXT NOT NULL,
+        system_state VARCHAR(20) NOT NULL,
+        severity INTEGER NOT NULL,
+        priority INTEGER,
+        category VARCHAR(50),
+        resolved BOOLEAN DEFAULT FALSE NOT NULL,
+        resolved_at TIMESTAMP,
+        metadata JSONB
+      );
+    `);
+    console.log('[Migration] ✓ Created worker_failure_logs table');
+
+    // Create indexes for worker_failure_logs
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_failure_timestamp ON worker_failure_logs(timestamp);
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_failure_category_severity ON worker_failure_logs(category, severity DESC, timestamp DESC);
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_failure_unresolved ON worker_failure_logs(resolved) WHERE resolved = false;
+    `);
+    console.log('[Migration] ✓ Created indexes for worker_failure_logs');
+
+    // Create worker_function_errors table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS worker_function_errors (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        timestamp TIMESTAMP DEFAULT NOW() NOT NULL,
+        function_tested VARCHAR(255) NOT NULL,
+        expected_behavior TEXT NOT NULL,
+        observed_behavior TEXT NOT NULL,
+        severity INTEGER NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        notes TEXT
+      );
+    `);
+    console.log('[Migration] ✓ Created worker_function_errors table');
+
+    // Create indexes for worker_function_errors
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_func_error_timestamp ON worker_function_errors(timestamp);
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_func_error_status_severity ON worker_function_errors(status, severity DESC);
+    `);
+    console.log('[Migration] ✓ Created indexes for worker_function_errors');
+
     console.log('[Migration] ✅ Successfully created all Sub-Agent tables and indexes');
     console.log('[Migration] ✅ Officer Profiles table: READY for autonomous data storage');
     console.log('[Migration] ✅ Department URLs table: READY for autonomous data storage');
     console.log('[Migration] ✅ Search Cycles table: READY for autonomous operations');
+    console.log('[Migration] ✅ Worker monitoring tables: READY for system alerts and diagnostics');
     return true;
   } catch (error) {
     console.error('[Migration] ❌ Failed to create Sub-Agent tables:', error);
