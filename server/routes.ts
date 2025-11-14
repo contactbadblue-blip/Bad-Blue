@@ -7,6 +7,7 @@ import { z } from "zod";
 import passport from "passport";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
+import { errorHandler, notFoundHandler, asyncHandler, ErrorTypes } from "./errorHandler";
 import {
   analyzeBadgeImage,
   lookupOfficerInfo,
@@ -1010,34 +1011,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PREVIEW ROUTES (No charge, no save - just show what they'll get)
   // ============================================
 
-  app.post("/api/preview-complaint", async (req, res) => {
-    try {
-      const { state, complaintType, officerName, officerBadge, department, description, incidentDate, city, county } = req.body;
+  app.post("/api/preview-complaint", asyncHandler(async (req: any, res: any) => {
+    const { state, complaintType, officerName, officerBadge, department, description, incidentDate, city, county } = req.body;
 
-      if (!state || !complaintType || !officerName || !department || !description || !incidentDate || !city) {
-        return res.status(400).json({ error: "Missing required fields for preview" });
-      }
+    // Validate required fields
+    const missingFields = [];
+    if (!state) missingFields.push('state');
+    if (!complaintType) missingFields.push('complaintType');
+    if (!officerName) missingFields.push('officerName');
+    if (!department) missingFields.push('department');
+    if (!description) missingFields.push('description');
+    if (!incidentDate) missingFields.push('incidentDate');
+    if (!city) missingFields.push('city');
 
-      const document = generateComplaintDocument(
-        state,
-        complaintType,
-        officerName,
-        officerBadge,
-        department,
-        description,
-        new Date(incidentDate),
-        city,
-        county,
-        null, // complainantName - not needed for preview
-        null  // complainantAddress - not needed for preview
-      );
-
-      res.json({ document });
-    } catch (error: any) {
-      console.error("Error generating complaint preview:", error);
-      res.status(500).json({ error: "Failed to generate preview" });
+    if (missingFields.length > 0) {
+      throw ErrorTypes.MISSING_REQUIRED_FIELDS(missingFields);
     }
-  });
+
+    const document = generateComplaintDocument(
+      state,
+      complaintType,
+      officerName,
+      officerBadge,
+      department,
+      description,
+      new Date(incidentDate),
+      city,
+      county,
+      null, // complainantName - not needed for preview
+      null  // complainantAddress - not needed for preview
+    );
+
+    res.json({ document });
+  }));
 
   app.post("/api/preview-lawsuit", async (req, res) => {
     try {
@@ -1129,28 +1135,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }, 60 * 60 * 1000);
 
   // Local registration (username/password)
-  app.post("/api/register/local", async (req: any, res) => {
+  app.post("/api/register/local", asyncHandler(async (req: any, res: any) => {
+    const { username, password, email } = req.body;
+    const clientIp = req.ip || req.connection.remoteAddress || "unknown";
+
+    // Rate limiting - prevent registration spam
+    const ipIdentifier = `register:ip:${clientIp}`;
+
+    if (!checkRateLimit(ipIdentifier)) {
+      console.log(`[SECURITY] Registration rate limit exceeded from IP: ${clientIp}`);
+      throw ErrorTypes.RATE_LIMIT_EXCEEDED(15);
+    }
+
+    if (!username || !password) {
+      throw ErrorTypes.MISSING_REQUIRED_FIELDS(['username', 'password']);
+    }
+
+    const { registerLocalUser } = await import("./localAuth");
+    
     try {
-      const { username, password, email } = req.body;
-      const clientIp = req.ip || req.connection.remoteAddress || "unknown";
-
-      // Rate limiting - prevent registration spam
-      const ipIdentifier = `register:ip:${clientIp}`;
-
-      if (!checkRateLimit(ipIdentifier)) {
-        console.log(`[SECURITY] Registration rate limit exceeded from IP: ${clientIp}`);
-        return res.status(429).json({
-          message: "Too many registration attempts. Please try again in 15 minutes."
-        });
-      }
-
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password are required" });
-      }
-
-      const { registerLocalUser } = await import("./localAuth");
       const { user, authAccount } = await registerLocalUser(username, password, email);
-
+      
       console.log(`[SECURITY] New user registered: ${username} from IP: ${clientIp}`);
 
       res.json({
@@ -1159,10 +1164,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user.id,
       });
     } catch (error: any) {
-      console.error("Registration error:", error);
-      res.status(400).json({ message: error.message || "Registration failed" });
+      // Handle specific registration errors
+      if (error.message?.includes('already exists')) {
+        throw ErrorTypes.DUPLICATE_ENTRY('Username');
+      }
+      throw error; // Re-throw for general error handler
     }
-  });
+  }));
 
   // Local login (username/password)
   app.post("/api/login/local", async (req: any, res, next) => {
@@ -6253,6 +6261,10 @@ For questions or support, contact: support@badblue.com
       });
     }
   });
+
+  // Apply error handling middleware at the end
+  app.use(notFoundHandler);
+  app.use(errorHandler);
 
   const httpServer = createServer(app);
   return httpServer;
