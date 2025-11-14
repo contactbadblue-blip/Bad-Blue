@@ -7798,19 +7798,25 @@ Analyze this command and determine:
 7. What DATABASE operations are needed?
 
 Available action types:
-- file_modify: Modify existing files
-- file_create: Create new files/components
-- file_delete: Delete files/directories
-- command: Execute shell commands or install packages
-- database: Execute SQL queries
-- service_replicate: Replicate external services/functionality
-- api_call: Call external APIs
+- file_modify: Modify existing files (target = file path)
+- file_create: Create new files/components (target = file path, content = file contents)
+- file_delete: Delete files/directories (target = file path)
+- command: Execute shell commands or install packages (target = shell command)
+- database: Execute SQL queries (target = COMPLETE SQL QUERY - e.g., "CREATE TABLE users (id VARCHAR PRIMARY KEY, name TEXT)")
+- service_replicate: Replicate external services/functionality (target = service description)
+- api_call: Call external APIs (target = API endpoint/description)
+
+CRITICAL FOR DATABASE ACTIONS:
+- The "target" field MUST contain a complete, valid SQL statement
+- NOT just a table name like "users_table"
+- MUST include SQL keywords: CREATE TABLE, INSERT INTO, SELECT, UPDATE, DELETE, ALTER TABLE, etc.
+- Example: {"type": "database", "target": "CREATE TABLE officer_info (name TEXT, badge VARCHAR, department TEXT)"}
 
 Respond in JSON:
 {
   "intent": "The admin's true goal with full understanding of desired outcome",
   "requiredActions": [
-    {"type": "file_modify|file_create|file_delete|command|database|service_replicate|api_call", "target": "what to modify/create/delete/execute", "action": "specific change to make", "reason": "why this is needed", "content": "file content if creating/modifying"}
+    {"type": "file_modify|file_create|file_delete|command|database|service_replicate|api_call", "target": "FULL SQL QUERY for database type, file path for file types, shell command for command type", "action": "specific change to make", "reason": "why this is needed", "content": "file content if creating/modifying"}
   ],
   "expectedOutcome": "What should happen after execution"
 }`;
@@ -7981,6 +7987,17 @@ Then provide the complete file content.`;
         }
         
       } else if (action.type === 'database') {
+        // VALIDATION: Ensure target contains valid SQL
+        const sqlKeywords = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRUNCATE'];
+        const targetUpper = action.target.toUpperCase();
+        const hasSqlKeyword = sqlKeywords.some(keyword => targetUpper.includes(keyword));
+        
+        if (!hasSqlKeyword) {
+          executionLog.push(`  ❌ DATABASE FAILED: Invalid SQL - target must be a complete SQL query, not just "${action.target}"`);
+          executionLog.push(`  💡 Example: "CREATE TABLE ${action.target} (id VARCHAR PRIMARY KEY, ...)"`);
+          throw new Error(`Database action requires complete SQL query. Received: "${action.target}"`);
+        }
+        
         // ENHANCED: Full database manipulation with SQL execution
         executionLog.push(`  🔧 DATABASE: Executing SQL...`);
         const dbResult = await manipulateDatabase(action.target);
