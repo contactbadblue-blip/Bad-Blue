@@ -16,9 +16,16 @@ import { useToast } from "@/hooks/use-toast";
 import { FULL_ACCESS_PRICING, LAWSUIT_DIY_PRICING, LAWSUIT_FULL_SERVICE_PRICING, COMPLAINT_PRICING, PETITION_PRICING, FOIA_REQUEST_PRICING } from "@shared/schema";
 
 export default function Login() {
-  const [login, setLogin] = useState(""); // Changed from username to login
-  const [password, setPassword] = useState("");
-  const [email, setEmail] = useState("");
+  // Login fields
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  
+  // Registration fields
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -29,7 +36,7 @@ export default function Login() {
 
   // Local login mutation (works for both regular users and admin)
   const loginMutation = useMutation({
-    mutationFn: async (data: { username: string; password?: string }) => {
+    mutationFn: async (data: { email: string; password: string }) => {
       const res = await apiRequest("/api/login/local", "POST", data);
       return await res.json();
     },
@@ -69,7 +76,7 @@ export default function Login() {
 
   // Local registration mutation
   const registerMutation = useMutation({
-    mutationFn: async (data: { username: string; password: string; email: string }) => {
+    mutationFn: async (data: { firstName: string; lastName: string; email: string; password: string }) => {
       const res = await apiRequest("/api/register/local", "POST", data);
       return await res.json();
     },
@@ -78,8 +85,10 @@ export default function Login() {
         title: "Account Created",
         description: "Please sign in with your new credentials",
       });
-      setPassword("");
-      setEmail("");
+      setSignupPassword("");
+      setSignupEmail("");
+      setFirstName("");
+      setLastName("");
     },
     onError: (error: any) => {
       // Provide user-friendly error messages based on error type
@@ -87,8 +96,9 @@ export default function Login() {
       
       if (error.message?.toLowerCase().includes('duplicate') || 
           error.message?.toLowerCase().includes('already exists') ||
-          error.message?.toLowerCase().includes('already in use')) {
-        errorMessage = "This username or email is already in use. Please try a different one";
+          error.message?.toLowerCase().includes('already in use') ||
+          error.message?.toLowerCase().includes('already registered')) {
+        errorMessage = "This email is already registered. Please sign in or use a different email";
       } else if (error.message?.toLowerCase().includes('network') || 
                  error.message?.toLowerCase().includes('connection')) {
         errorMessage = "Connection issue. Please check your internet and try again";
@@ -111,29 +121,29 @@ export default function Login() {
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!login || !password) {
+    if (!loginEmail || !loginPassword) {
       toast({
         title: "Missing Information",
-        description: "Please enter login and password",
+        description: "Please enter email and password",
         variant: "destructive",
       });
       return;
     }
     // Admin login is inconspicuous - works seamlessly through same form
-    loginMutation.mutate({ username: login, password });
+    loginMutation.mutate({ email: loginEmail, password: loginPassword });
   };
 
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!login || !password || !email) {
+    if (!firstName || !lastName || !signupEmail || !signupPassword) {
       toast({
         title: "Missing Information",
-        description: "Please enter login, email, and password",
+        description: "Please enter all required fields",
         variant: "destructive",
       });
       return;
     }
-    if (!email.includes('@')) {
+    if (!signupEmail.includes('@')) {
       toast({
         title: "Invalid Email",
         description: "Please enter a valid email address",
@@ -141,7 +151,7 @@ export default function Login() {
       });
       return;
     }
-    registerMutation.mutate({ username: login, password, email });
+    registerMutation.mutate({ firstName, lastName, email: signupEmail, password: signupPassword });
   };
 
   // Unmute video on first user interaction (click, keypress, or scroll)
@@ -463,13 +473,14 @@ export default function Login() {
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-login">Login</Label>
+                    <Label htmlFor="signin-email">Email</Label>
                     <Input
-                      id="signin-login"
-                      data-testid="input-signin-login"
-                      value={login}
-                      onChange={(e) => setLogin(e.target.value)}
-                      placeholder="Enter your login"
+                      id="signin-email"
+                      data-testid="input-signin-email"
+                      type="email"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      placeholder="Enter your email"
                       disabled={loginMutation.isPending}
                       required
                     />
@@ -480,8 +491,8 @@ export default function Login() {
                       id="signin-password"
                       data-testid="input-signin-password"
                       type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder="Enter your password"
                       disabled={loginMutation.isPending}
                       required
@@ -503,13 +514,25 @@ export default function Login() {
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-login">Login</Label>
+                    <Label htmlFor="signup-firstName">First Name</Label>
                     <Input
-                      id="signup-login"
-                      data-testid="input-signup-login"
-                      value={login}
-                      onChange={(e) => setLogin(e.target.value)}
-                      placeholder="Choose your login"
+                      id="signup-firstName"
+                      data-testid="input-signup-firstName"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="Enter your first name"
+                      disabled={registerMutation.isPending}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-lastName">Last Name</Label>
+                    <Input
+                      id="signup-lastName"
+                      data-testid="input-signup-lastName"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Enter your last name"
                       disabled={registerMutation.isPending}
                       required
                     />
@@ -520,14 +543,14 @@ export default function Login() {
                       id="signup-email"
                       data-testid="input-signup-email"
                       type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
                       placeholder="Enter your email"
                       disabled={registerMutation.isPending}
                       required
                     />
                     <p className="text-xs text-muted-foreground">
-                      Required for confirmation emails and account recovery
+                      We'll use this to sign you in and send important updates
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -536,8 +559,8 @@ export default function Login() {
                       id="signup-password"
                       data-testid="input-signup-password"
                       type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
                       placeholder="Choose a password (min 8 characters)"
                       disabled={registerMutation.isPending}
                       required

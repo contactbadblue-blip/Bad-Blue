@@ -1134,9 +1134,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }, 60 * 60 * 1000);
 
-  // Local registration (username/password)
+  // Local registration (email/password with firstName/lastName)
   app.post("/api/register/local", asyncHandler(async (req: any, res: any) => {
-    const { username, password, email } = req.body;
+    const { firstName, lastName, email, password } = req.body;
     const clientIp = req.ip || req.connection.remoteAddress || "unknown";
 
     // Rate limiting - prevent registration spam
@@ -1147,16 +1147,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       throw ErrorTypes.RATE_LIMIT_EXCEEDED(15);
     }
 
-    if (!username || !password) {
-      throw ErrorTypes.MISSING_REQUIRED_FIELDS(['username', 'password']);
+    if (!firstName || !lastName || !email || !password) {
+      throw ErrorTypes.MISSING_REQUIRED_FIELDS(['firstName', 'lastName', 'email', 'password']);
     }
 
     const { registerLocalUser } = await import("./localAuth");
     
     try {
-      const { user, authAccount } = await registerLocalUser(username, password, email);
+      const { user, authAccount } = await registerLocalUser(email, password, firstName, lastName);
       
-      console.log(`[SECURITY] New user registered: ${username} from IP: ${clientIp}`);
+      console.log(`[SECURITY] New user registered: ${email} from IP: ${clientIp}`);
 
       res.json({
         success: true,
@@ -1165,34 +1165,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       // Handle specific registration errors
-      if (error.message?.includes('already exists')) {
-        throw ErrorTypes.DUPLICATE_ENTRY('Username');
+      if (error.message?.includes('already exists') || error.message?.includes('already registered')) {
+        throw ErrorTypes.DUPLICATE_ENTRY('Email');
       }
       throw error; // Re-throw for general error handler
     }
   }));
 
-  // Local login (username/password)
+  // Local login (email/password)
   app.post("/api/login/local", async (req: any, res, next) => {
     try {
-      const { username } = req.body;
+      // Support both email and username for backward compatibility
+      const { email, username } = req.body;
+      const loginIdentifier = email || username; // Use email if provided, fallback to username
       const clientIp = req.ip || req.connection.remoteAddress || "unknown";
 
-      // Rate limiting - check both IP and username
+      // Rate limiting - check both IP and email/username
       const ipIdentifier = `login:ip:${clientIp}`;
-      const usernameIdentifier = `login:user:${username}`;
+      const userIdentifier = `login:user:${loginIdentifier}`;
 
-      if (!checkRateLimit(ipIdentifier) || !checkRateLimit(usernameIdentifier)) {
-        console.log(`[SECURITY] Rate limit exceeded for ${username} from IP: ${clientIp}`);
+      if (!checkRateLimit(ipIdentifier) || !checkRateLimit(userIdentifier)) {
+        console.log(`[SECURITY] Rate limit exceeded for ${loginIdentifier} from IP: ${clientIp}`);
         return res.status(429).json({
           message: "Too many login attempts. Please try again in 15 minutes."
         });
       }
 
       // Log admin bypass attempts for security audit trail
-      if (process.env.ADMIN_BYPASS_ID && username === process.env.ADMIN_BYPASS_ID) {
+      if (process.env.ADMIN_BYPASS_ID && loginIdentifier === process.env.ADMIN_BYPASS_ID) {
         await storage.createAdminAccessLog({
-          adminId: username,
+          adminId: loginIdentifier,
           ipAddress: clientIp,
           userAgent: req.get("user-agent") || null,
           sessionId: req.sessionID || null,
@@ -1200,13 +1202,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[SECURITY] Admin bypass login attempt from IP: ${clientIp}, User-Agent: ${req.get("user-agent")}`);
       }
 
+      // Prepare the request body for passport with 'email' field
+      req.body.email = loginIdentifier; // Passport strategy expects 'email' field
+      
       passport.authenticate("local", (err: any, user: any, info: any) => {
         if (err) {
           console.error("[AUTH ERROR] Passport authentication error:", err);
           return res.status(500).json({ message: "Authentication error" });
         }
         if (!user) {
-          console.log(`[AUTH] Login failed for username: ${username}, reason: ${info?.message}`);
+          console.log(`[AUTH] Login failed for: ${loginIdentifier}, reason: ${info?.message}`);
           return res.status(401).json({ message: info?.message || "Invalid credentials" });
         }
 
@@ -1215,7 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error("[AUTH ERROR] req.login error:", loginErr);
             return res.status(500).json({ message: "Login failed" });
           }
-          console.log(`[AUTH] Login successful for user: ${username}`);
+          console.log(`[AUTH] Login successful for: ${loginIdentifier}`);
           res.json({
             success: true,
             message: "Login successful",

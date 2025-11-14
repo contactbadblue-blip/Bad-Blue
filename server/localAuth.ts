@@ -24,13 +24,13 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 /**
- * Register a new user with username/password
+ * Register a new user with email/password and firstName/lastName
  */
-export async function registerLocalUser(username: string, password: string, email?: string) {
-  // Check if username already exists
-  const existing = await storage.getAuthAccountByUsername(username);
-  if (existing) {
-    throw new Error("Username already exists");
+export async function registerLocalUser(email: string, password: string, firstName: string, lastName: string) {
+  // Check if email already exists
+  const existingUser = await storage.getUserByEmail(email);
+  if (existingUser) {
+    throw new Error("Email already registered");
   }
 
   // Validate password strength
@@ -41,20 +41,31 @@ export async function registerLocalUser(username: string, password: string, emai
   // Hash password
   const { hash, salt } = await hashPassword(password);
 
-  // Create user
+  // Create user with firstName and lastName
   const user = await storage.upsertUser({
     id: crypto.randomUUID(),
-    email: email || null,
-    firstName: username,
-    lastName: null,
+    email,
+    firstName,
+    lastName,
     profileImageUrl: null,
   });
 
-  // Create auth account
+  // Generate a default username from firstName+lastName for backward compatibility
+  const baseUsername = `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/[^a-z0-9]/g, '');
+  let username = baseUsername;
+  let counter = 1;
+  
+  // Ensure username is unique
+  while (await storage.getAuthAccountByUsername(username)) {
+    username = `${baseUsername}${counter}`;
+    counter++;
+  }
+
+  // Create auth account with generated username (for backward compatibility)
   const authAccount = await storage.createAuthAccount({
     userId: user.id,
     authType: "local",
-    username,
+    username, // Keep for backward compatibility, but not used for login
     passwordHash: hash,
     passwordSalt: salt,
   });
@@ -63,132 +74,136 @@ export async function registerLocalUser(username: string, password: string, emai
 }
 
 /**
- * Setup passport-local strategy
+ * Setup passport-local strategy for email-based authentication
  */
 export function setupLocalStrategy() {
   passport.use(
     "local",
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        // Special case: Admin bypass (requires specific password)
-        const adminBypassId = process.env.ADMIN_BYPASS_ID || "$ADMIN85";
-        const adminBypassPassword = process.env.ADMIN_BYPASS_PASSWORD || "SARBEAR";
-        
-        if (username === adminBypassId) {
-          // Verify admin password
-          if (password !== adminBypassPassword) {
-            return done(null, false, { message: "Invalid admin credentials" });
+    new LocalStrategy(
+      { usernameField: 'email', passwordField: 'password' }, // Use email instead of username
+      async (email, password, done) => {
+        try {
+          // Special case: Admin bypass (requires specific password)
+          const adminBypassId = process.env.ADMIN_BYPASS_ID || "$ADMIN85";
+          const adminBypassPassword = process.env.ADMIN_BYPASS_PASSWORD || "SARBEAR";
+          
+          if (email === adminBypassId) {
+            // Verify admin password
+            if (password !== adminBypassPassword) {
+              return done(null, false, { message: "Invalid admin credentials" });
+            }
+            
+            // Note: Admin access logging is handled in the route handler where
+            // we have access to req.ip, req.get("user-agent"), and req.sessionID
+            console.log(`[SECURITY] Admin bypass authentication successful`);
+            
+            // Create or get admin user with firstName: "Bypass" and lastName: "User" as requested
+            let user = await storage.getUser("admin-bypass");
+            if (!user) {
+              user = await storage.upsertUser({
+                id: "admin-bypass",
+                email: "brclink1985@gmail.com",
+                firstName: "Bypass",
+                lastName: "User",
+                profileImageUrl: null,
+                lastLoginAt: new Date(),
+              });
+            } else {
+              // Update last login for existing admin user
+              await storage.updateUserLastLogin("admin-bypass");
+            }
+            
+            // Grant admin access without waiting (bypass payment gate)
+            // Update happens asynchronously to avoid blocking authentication
+            if (!user.hasPaidForAccess) {
+              storage.updateUserAccess("admin-bypass", "admin-bypass", 0).catch(err => {
+                console.error('[SECURITY] Failed to update admin access:', err);
+              });
+            }
+            
+            return done(null, {
+              claims: { sub: user.id, email: user.email || "brclink1985@gmail.com", first_name: user.firstName, last_name: user.lastName },
+              isAdminBypass: true,
+            });
           }
-          
-          // Note: Admin access logging is handled in the route handler where
-          // we have access to req.ip, req.get("user-agent"), and req.sessionID
-          console.log(`[SECURITY] Admin bypass authentication successful`);
-          
-          // Create or get admin user
-          let user = await storage.getUser("admin-bypass");
+
+          // Special case: Payment bypass (allows paid access without admin privileges)
+          if (email === "Bypass") {
+            console.log(`[SECURITY] Payment bypass login attempt detected`);
+            
+            // Verify bypass password
+            if (password !== "Payment") {
+              console.log(`[SECURITY] Payment bypass authentication FAILED - incorrect password`);
+              return done(null, false, { message: "Invalid bypass credentials" });
+            }
+            
+            console.log(`[SECURITY] Payment bypass authentication successful`);
+            
+            // Create or get payment bypass user with firstName: "Bypass" and lastName: "User" as requested
+            let user = await storage.getUser("payment-bypass");
+            if (!user) {
+              console.log(`[SECURITY] Creating new payment bypass user`);
+              user = await storage.upsertUser({
+                id: "payment-bypass",
+                email: "bypass@badblue.internal",
+                firstName: "Bypass",
+                lastName: "User",
+                profileImageUrl: null,
+                lastLoginAt: new Date(),
+              });
+            } else {
+              console.log(`[SECURITY] Payment bypass user exists, updating last login`);
+              // Update last login for existing bypass user
+              await storage.updateUserLastLogin("payment-bypass");
+            }
+            
+            // Grant paid access without admin privileges
+            if (!user.hasPaidForAccess) {
+              console.log(`[SECURITY] Granting paid access to payment bypass user`);
+              await storage.updateUserAccess("payment-bypass", "payment-bypass", 0);
+            } else {
+              console.log(`[SECURITY] Payment bypass user already has paid access`);
+            }
+            
+            console.log(`[SECURITY] Payment bypass login complete for user: ${user.id}`);
+            
+            return done(null, {
+              claims: { sub: user.id, email: user.email || "bypass@badblue.internal", first_name: user.firstName, last_name: user.lastName },
+              isAdminBypass: false, // Not admin - just payment bypass
+            });
+          }
+
+          // Normal email/password authentication
+          // First find user by email
+          const user = await storage.getUserByEmail(email);
           if (!user) {
-            user = await storage.upsertUser({
-              id: "admin-bypass",
-              email: "brclink1985@gmail.com",
-              firstName: "Administrator",
-              lastName: "Bypass",
-              profileImageUrl: null,
-              lastLoginAt: new Date(),
-            });
-          } else {
-            // Update last login for existing admin user
-            await storage.updateUserLastLogin("admin-bypass");
+            return done(null, false, { message: "Invalid email or password" });
           }
-          
-          // Grant admin access without waiting (bypass payment gate)
-          // Update happens asynchronously to avoid blocking authentication
-          if (!user.hasPaidForAccess) {
-            storage.updateUserAccess("admin-bypass", "admin-bypass", 0).catch(err => {
-              console.error('[SECURITY] Failed to update admin access:', err);
-            });
+
+          // Find auth account for this user
+          const authAccount = await storage.getAuthAccountByUserId(user.id);
+          if (!authAccount) {
+            return done(null, false, { message: "Invalid email or password" });
           }
-          
+
+          // Verify password
+          const isValid = await verifyPassword(password, authAccount.passwordHash!);
+          if (!isValid) {
+            return done(null, false, { message: "Invalid email or password" });
+          }
+
+          // Update last login for both auth account and user
+          await storage.updateAuthAccountLastLogin(authAccount.id);
+          await storage.updateUserLastLogin(authAccount.userId);
+
           return done(null, {
-            claims: { sub: user.id, email: user.email || "brclink1985@gmail.com", first_name: user.firstName },
-            isAdminBypass: true,
+            claims: { sub: user.id, email: user.email, first_name: user.firstName, last_name: user.lastName },
+            isAdminBypass: false,
           });
+        } catch (error) {
+          return done(error);
         }
-
-        // Special case: Payment bypass (allows paid access without admin privileges)
-        if (username === "Bypass") {
-          console.log(`[SECURITY] Payment bypass login attempt detected`);
-          
-          // Verify bypass password
-          if (password !== "Payment") {
-            console.log(`[SECURITY] Payment bypass authentication FAILED - incorrect password`);
-            return done(null, false, { message: "Invalid bypass credentials" });
-          }
-          
-          console.log(`[SECURITY] Payment bypass authentication successful`);
-          
-          // Create or get payment bypass user
-          let user = await storage.getUser("payment-bypass");
-          if (!user) {
-            console.log(`[SECURITY] Creating new payment bypass user`);
-            user = await storage.upsertUser({
-              id: "payment-bypass",
-              email: "bypass@badblue.internal",
-              firstName: "Payment",
-              lastName: "Bypass",
-              profileImageUrl: null,
-              lastLoginAt: new Date(),
-            });
-          } else {
-            console.log(`[SECURITY] Payment bypass user exists, updating last login`);
-            // Update last login for existing bypass user
-            await storage.updateUserLastLogin("payment-bypass");
-          }
-          
-          // Grant paid access without admin privileges
-          if (!user.hasPaidForAccess) {
-            console.log(`[SECURITY] Granting paid access to payment bypass user`);
-            await storage.updateUserAccess("payment-bypass", "payment-bypass", 0);
-          } else {
-            console.log(`[SECURITY] Payment bypass user already has paid access`);
-          }
-          
-          console.log(`[SECURITY] Payment bypass login complete for user: ${user.id}`);
-          
-          return done(null, {
-            claims: { sub: user.id, email: user.email || "bypass@badblue.internal", first_name: user.firstName },
-            isAdminBypass: false, // Not admin - just payment bypass
-          });
-        }
-
-        // Normal username/password authentication
-        const authAccount = await storage.getAuthAccountByUsername(username);
-        if (!authAccount) {
-          return done(null, false, { message: "Invalid username or password" });
-        }
-
-        // Verify password
-        const isValid = await verifyPassword(password, authAccount.passwordHash!);
-        if (!isValid) {
-          return done(null, false, { message: "Invalid username or password" });
-        }
-
-        // Update last login for both auth account and user
-        await storage.updateAuthAccountLastLogin(authAccount.id);
-        await storage.updateUserLastLogin(authAccount.userId);
-
-        // Get user
-        const user = await storage.getUser(authAccount.userId);
-        if (!user) {
-          return done(null, false, { message: "User not found" });
-        }
-
-        return done(null, {
-          claims: { sub: user.id, email: user.email, first_name: user.firstName },
-          isAdminBypass: false,
-        });
-      } catch (error) {
-        return done(error);
       }
-    })
+    )
   );
 }

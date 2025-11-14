@@ -211,6 +211,13 @@ export default function LawsuitForm() {
     if (sessionData.damagesAmount) setDamagesAmount(sessionData.damagesAmount);
   }, [sessionData]);
 
+  // Auto-fill plaintiff name from user profile
+  useEffect(() => {
+    if (user && user.firstName && user.lastName && !plaintiffName) {
+      setPlaintiffName(`${user.firstName} ${user.lastName}`);
+    }
+  }, [user]);
+
   // Auto-fill from LegalAI Consultation data (if available)
   useEffect(() => {
     const prefillData = localStorage.getItem("prefillData");
