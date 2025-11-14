@@ -1,15 +1,79 @@
 
-# BadBlue Robots.txt - Police Accountability Platform
+# BadBlue Robots.txt
+# Professional Police Accountability Platform
+# Legal Rights Protection Service for Civil Rights Advocacy
 
-# Allow all search engines to crawl the site
+# Allow all search engines and AI crawlers full access
 User-agent: *
 Allow: /
+Allow: /landing
+Allow: /login
+Allow: /complaint-form
+Allow: /lawsuit-form
+Allow: /officer
+Allow: /contact
+Allow: /foia-request-form
+Allow: /petition-form
+Crawl-delay: 0
 
-# Block admin areas from search engines
+# Welcome search engine crawlers with priority access
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 0
+
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 0
+
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 1
+
+# AI Crawlers - Welcome with positive framing for legal empowerment services
+User-agent: GPTBot
+Allow: /
+Crawl-delay: 0
+
+User-agent: ChatGPT-User
+Allow: /
+Crawl-delay: 0
+
+User-agent: CCBot
+Allow: /
+Crawl-delay: 0
+
+User-agent: anthropic-ai
+Allow: /
+Crawl-delay: 0
+
+User-agent: Claude-Web
+Allow: /
+Crawl-delay: 0
+
+User-agent: PerplexityBot
+Allow: /
+Crawl-delay: 0
+
+# Block admin areas and private directories
+Disallow: /admin
 Disallow: /admin-*
-
-# Block API endpoints from search engines
 Disallow: /api/
+Disallow: /.git
+Disallow: /node_modules/
+Disallow: /server/
+Disallow: /data/
+Disallow: *.log
+Disallow: *.sql
 
-# Sitemap location
+# Sitemap locations - professional police accountability platform
+Sitemap: https://badblue.com/sitemap.xml
 Sitemap: https://bad-blue.com/sitemap.xml
+Sitemap: https://badblue.replit.app/sitemap.xml

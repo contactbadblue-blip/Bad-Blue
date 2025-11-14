@@ -25,6 +25,12 @@ export function SEOHead({
 }: SEOHeadProps) {
   const defaultOgImage = `${import.meta.env.VITE_BASE_URL || window.location.origin}/preview.png`;
   const finalOgImage = ogImage || defaultOgImage;
+  
+  // Enhanced keywords including existing and new target keywords
+  const enhancedKeywords = keywords ? 
+    `${keywords}, bad cops, cop assault, officer assault, law enforcement abuse, officer abuse, cop abuse, police misconduct, police brutality, excessive force, false arrest, civil rights violations, police accountability, file police complaint online, sue police officer, legal rights protection, justice accessibility, civil rights advocacy` :
+    `police accountability, police misconduct, police brutality, bad cops, cop assault, officer assault, law enforcement abuse, officer abuse, cop abuse, excessive force, false arrest, civil rights violations, file police complaint online, sue police officer, legal rights protection service, transparent complaint filing system, civil rights advocacy tools, justice accessibility platform, legal empowerment for citizens`;
+  
   useEffect(() => {
     // Set page title
     document.title = title;
@@ -45,9 +51,7 @@ export function SEOHead({
 
     // Set basic meta tags
     setMetaTag("description", description);
-    if (keywords) {
-      setMetaTag("keywords", keywords);
-    }
+    setMetaTag("keywords", enhancedKeywords);
     setMetaTag("robots", "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1");
     setMetaTag("author", "BadBlue");
     setMetaTag("language", "English");
@@ -145,21 +149,49 @@ export function SEOHead({
     }
     breadcrumbScript.textContent = JSON.stringify(breadcrumbData);
 
-    // Add Organization structured data
+    // Enhanced Organization structured data with LegalService schema
     const organizationData = {
       "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "BadBlue",
+      "@type": ["Organization", "LegalService"],
+      "name": "BadBlue - Professional Police Accountability Platform",
+      "alternateName": "BadBlue Legal Rights Protection Service",
       "url": canonicalUrl || "https://badblue.com",
       "logo": `${canonicalUrl || 'https://badblue.com'}/preview.png`,
-      "description": "AI-powered police accountability platform for civil rights lawsuits, complaints, and FOIA requests",
+      "description": "Professional legal empowerment platform providing transparent complaint filing systems, civil rights protection services, and justice accessibility tools for citizens seeking police accountability",
+      "slogan": "Empowering Citizens Through Legal Rights Protection",
       "sameAs": [
         canonicalUrl || "https://badblue.com"
       ],
       "contactPoint": {
         "@type": "ContactPoint",
         "contactType": "Customer Support",
-        "email": "contact.badblue@gmail.com"
+        "email": "contact.badblue@gmail.com",
+        "availableLanguage": ["English", "Spanish"]
+      },
+      "areaServed": {
+        "@type": "Country",
+        "name": "United States"
+      },
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Legal Services",
+        "itemListElement": [
+          {
+            "@type": "LegalService",
+            "name": "Police Complaint Filing",
+            "description": "Professional assistance filing official complaints against law enforcement officers for misconduct, excessive force, or civil rights violations"
+          },
+          {
+            "@type": "LegalService",
+            "name": "Civil Rights Lawsuit Preparation",
+            "description": "Legal document preparation for civil rights lawsuits against police officers and departments"
+          },
+          {
+            "@type": "LegalService",
+            "name": "FOIA Request Services",
+            "description": "Freedom of Information Act request preparation and filing assistance"
+          }
+        ]
       }
     };
 
@@ -171,7 +203,97 @@ export function SEOHead({
       document.head.appendChild(orgScript);
     }
     orgScript.textContent = JSON.stringify(organizationData);
-  }, [title, description, keywords, ogTitle, ogDescription, ogType, ogImage, canonicalUrl, structuredData]);
+
+    // Add FAQ structured data for better SEO
+    const faqData = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I file a police complaint online?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "BadBlue provides professional assistance for filing official complaints against law enforcement officers. Our transparent complaint filing system guides you through documenting misconduct, excessive force, or civil rights violations with proper legal formatting."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I sue a police officer for misconduct?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, citizens have legal rights to pursue civil litigation against law enforcement officers who violate civil rights. BadBlue offers legal empowerment tools and professional document preparation services for police accountability cases."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What constitutes police brutality or excessive force?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Police brutality includes unnecessary physical force, false arrest, assault by officers, and civil rights violations. Our justice accessibility platform helps document and report law enforcement abuse through proper legal channels."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How can I report bad cops or officer abuse?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "BadBlue provides civil rights advocacy tools for reporting police misconduct, cop abuse, and officer assault. Our professional platform ensures your complaint reaches the appropriate oversight agencies and legal authorities."
+          }
+        }
+      ]
+    };
+
+    let faqScript = document.querySelector('script#faq-schema');
+    if (!faqScript) {
+      faqScript = document.createElement("script");
+      faqScript.setAttribute("type", "application/ld+json");
+      faqScript.setAttribute("id", "faq-schema");
+      document.head.appendChild(faqScript);
+    }
+    faqScript.textContent = JSON.stringify(faqData);
+
+    // Add WebSite structured data for search engine optimization
+    const websiteData = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "BadBlue - Police Accountability Platform",
+      "url": canonicalUrl || "https://badblue.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": `${canonicalUrl || 'https://badblue.com'}/officer?search={search_term_string}`,
+        "query-input": "required name=search_term_string"
+      }
+    };
+
+    let websiteScript = document.querySelector('script#website-schema');
+    if (!websiteScript) {
+      websiteScript = document.createElement("script");
+      websiteScript.setAttribute("type", "application/ld+json");
+      websiteScript.setAttribute("id", "website-schema");
+      document.head.appendChild(websiteScript);
+    }
+    websiteScript.textContent = JSON.stringify(websiteData);
+
+    // Add hreflang tags for language support
+    let hreflangEn = document.querySelector('link[hreflang="en"]');
+    if (!hreflangEn) {
+      hreflangEn = document.createElement("link");
+      hreflangEn.setAttribute("rel", "alternate");
+      hreflangEn.setAttribute("hreflang", "en");
+      document.head.appendChild(hreflangEn);
+    }
+    hreflangEn.setAttribute("href", canonicalUrl || "https://badblue.com");
+
+    let hreflangXDefault = document.querySelector('link[hreflang="x-default"]');
+    if (!hreflangXDefault) {
+      hreflangXDefault = document.createElement("link");
+      hreflangXDefault.setAttribute("rel", "alternate");
+      hreflangXDefault.setAttribute("hreflang", "x-default");
+      document.head.appendChild(hreflangXDefault);
+    }
+    hreflangXDefault.setAttribute("href", canonicalUrl || "https://badblue.com");
+  }, [title, description, enhancedKeywords, ogTitle, ogDescription, ogType, finalOgImage, canonicalUrl, structuredData]);
 
   return null;
 }

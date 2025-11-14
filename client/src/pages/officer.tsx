@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Shield, MapPin, Calendar, ArrowLeft, FileText, Building2 } from "lucide-react";
 import type { BadgeLookup } from "@shared/schema";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function OfficerInfo() {
   const { id } = useParams();
@@ -67,6 +68,11 @@ export default function OfficerInfo() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title="Officer Information | BadBlue - Professional Police Accountability Platform"
+        description="View officer information and records. Professional legal rights protection service for reporting police misconduct and civil rights violations."
+        keywords="police officer information, officer badge lookup, police accountability, bad cops, officer assault, law enforcement abuse, police misconduct records"
+      />
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
