@@ -61,7 +61,7 @@ function getTransporter(): Transporter {
  * @param subject - Email subject line
  * @param html - HTML body content
  * @param text - Optional plain text content (fallback)
- * @param from - Optional from address (defaults to "Bad Blue <no-reply@mail.badblue.app>")
+ * @param from - Optional from address (defaults to "BadBlue <contact.badblue@gmail.com>")
  * @param attachments - Optional email attachments
  * @returns Promise<boolean> - true if sent successfully, false otherwise
  */
@@ -81,7 +81,7 @@ export async function sendMail(
     const transporter = getTransporter();
 
     const mailOptions: any = {
-      from: from || 'Bad Blue <no-reply@mail.badblue.app>',
+      from: from || 'BadBlue <contact.badblue@gmail.com>',
       to,
       subject,
       text: text || undefined,

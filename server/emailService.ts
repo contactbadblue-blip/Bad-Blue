@@ -44,15 +44,17 @@ async function getEmailSettings() {
     const fromEmailSetting = fromEmailResults?.[0];
     const fromNameSetting = fromNameResults?.[0];
 
+    // Always use contact.badblue@gmail.com as primary sender
     return {
-      fromEmail: fromEmailSetting?.value || process.env.DEFAULT_FROM_EMAIL || 'contact.badblue@gmail.com',
-      fromName: fromNameSetting?.value || process.env.DEFAULT_FROM_NAME || 'Bad Blue',
+      fromEmail: 'contact.badblue@gmail.com',
+      fromName: 'BadBlue',
     };
   } catch (error: any) {
-    console.error('[EMAIL] Error loading email settings from database, using environment fallbacks:', error.message || error);
+    console.error('[EMAIL] Error loading email settings from database, using default:', error.message || error);
+    // Always use contact.badblue@gmail.com as primary sender
     return {
-      fromEmail: process.env.DEFAULT_FROM_EMAIL || 'contact.badblue@gmail.com',
-      fromName: process.env.DEFAULT_FROM_NAME || 'Bad Blue',
+      fromEmail: 'contact.badblue@gmail.com',
+      fromName: 'BadBlue',
     };
   }
 }
@@ -149,21 +151,12 @@ async function getFromAddress(): Promise<string> {
       timeoutPromise
     ]) as any[];
 
-    const fromName = settings.find(s => s.key === 'support_from_name')?.value 
-      || process.env.DEFAULT_FROM_NAME 
-      || 'Bad Blue';
-
-    const fromEmail = settings.find(s => s.key === 'support_from_email')?.value 
-      || process.env.DEFAULT_FROM_EMAIL 
-      || 'contact.badblue@gmail.com';
-
-    return `${fromName} <${fromEmail}>`;
+    // Always use contact.badblue@gmail.com as primary sender
+    return `BadBlue <contact.badblue@gmail.com>`;
   } catch (error: any) {
-    console.error('[EMAIL] Error fetching from address settings, using environment fallbacks:', error.message || error);
-    // Fallback to environment variables or defaults
-    const fromName = process.env.DEFAULT_FROM_NAME || 'Bad Blue';
-    const fromEmail = process.env.DEFAULT_FROM_EMAIL || 'contact.badblue@gmail.com';
-    return `${fromName} <${fromEmail}>`;
+    console.error('[EMAIL] Error fetching from address settings, using default:', error.message || error);
+    // Always use contact.badblue@gmail.com as primary sender
+    return `BadBlue <contact.badblue@gmail.com>`;
   }
 }
 
@@ -174,9 +167,9 @@ function composeWelcomeEmailText(data: WelcomeEmailData): string {
   const baseUrl = getBaseURL();
   return `Hello ${data.firstName},
 
-Welcome to Bad Blue! We're honored that you've chosen us as your partner in pursuing police accountability and justice.
+Welcome to BadBlue! We're honored that you've chosen us as your partner in pursuing police accountability and justice.
 
-Bad Blue is more than just a platform—it's a movement toward transparency, fairness, and constitutional rights protection. Our mission is to make the complaint and lawsuit filing process accessible, affordable, and effective for every citizen.
+BadBlue is more than just a platform—it's a movement toward transparency, fairness, and constitutional rights protection. Our mission is to make the complaint and lawsuit filing process accessible, affordable, and effective for every citizen.
 
 SERVICES WE PROVIDE:
 
@@ -209,14 +202,14 @@ PROBLEMS WE SOLVE:
 - Time-consuming paperwork and filing procedures
 - Limited knowledge of state-specific laws and requirements
 
-Whether you're seeking accountability for police misconduct, pursuing justice for civil rights violations, or simply exploring your legal options, Bad Blue provides the tools and guidance you need.
+Whether you're seeking accountability for police misconduct, pursuing justice for civil rights violations, or simply exploring your legal options, BadBlue provides the tools and guidance you need.
 
 Log in to your account at any time to access our services: ${baseUrl}
 
-If you have any questions or need assistance, our support team is here to help.
+If you have any questions or need assistance, our support team is here to help at contact.badblue@gmail.com.
 
 Sincerely,
-Bad Blue`;
+BadBlue`;
 }
 
 /**
