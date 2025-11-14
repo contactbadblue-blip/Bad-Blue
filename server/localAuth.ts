@@ -115,11 +115,11 @@ export function setupLocalStrategy() {
         }
 
         // Special case: Payment bypass (allows paid access without admin privileges)
-        if (username === "bypass") {
+        if (username === "Bypass") {
           console.log(`[SECURITY] Payment bypass login attempt detected`);
           
           // Verify bypass password
-          if (password !== "password") {
+          if (password !== "Payment") {
             console.log(`[SECURITY] Payment bypass authentication FAILED - incorrect password`);
             return done(null, false, { message: "Invalid bypass credentials" });
           }
