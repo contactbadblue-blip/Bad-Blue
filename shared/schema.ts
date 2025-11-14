@@ -6,6 +6,7 @@ import { relations } from 'drizzle-orm';
 import {
   index,
   uniqueIndex,
+  unique,
   jsonb,
   pgTable,
   timestamp,
@@ -264,12 +265,14 @@ export const officerProfiles = pgTable("officer_profiles", {
   lastSearchedAt: timestamp("last_searched_at"),
   
   createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("officer_profiles_name_idx").on(table.officerName),
-  index("officer_profiles_badge_idx").on(table.badgeNumber),
-  index("officer_profiles_department_idx").on(table.department),
-  index("officer_profiles_location_idx").on(table.location),
-]);
+}, (table) => ({
+  nameIdx: index("officer_profiles_name_idx").on(table.officerName),
+  badgeIdx: index("officer_profiles_badge_idx").on(table.badgeNumber),
+  departmentIdx: index("officer_profiles_department_idx").on(table.department),
+  locationIdx: index("officer_profiles_location_idx").on(table.location),
+  // Unique constraint to prevent duplicate profiles (name + department combination)
+  uniqueNameDept: unique("officer_profiles_unique_name_dept").on(table.officerName, table.department),
+}));
 
 export const insertOfficerProfileSchema = createInsertSchema(officerProfiles).omit({
   id: true,

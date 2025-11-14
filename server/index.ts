@@ -119,5 +119,5 @@ app.use((req, res, next) => {
 
   // Initialize AI Sub-Agent autonomous improvements
   const { initializeAutonomousImprovements } = await import('./aiSubAgent');
-  initializeAutonomousImprovements();
+  await initializeAutonomousImprovements();
 })();

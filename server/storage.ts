@@ -20,6 +20,7 @@ import {
   subAgentSelfImprovementActions,
   subAgentSearchCycles,
   departmentUrls,
+  officerProfiles,
   type User,
   type UpsertUser,
   type BadgeLookup,
@@ -56,6 +57,8 @@ import {
   type InsertSubAgentSearchCycle,
   type DepartmentUrl,
   type InsertDepartmentUrl,
+  type OfficerProfile,
+  type InsertOfficerProfile,
 } from "@shared/schema";
 
 // Define types for PublicEvidence
@@ -197,6 +200,12 @@ export interface IStorage {
   getDepartmentUrlsByType(departmentType: string): Promise<DepartmentUrl[]>;
   getAllDepartmentUrls(limit?: number): Promise<DepartmentUrl[]>;
   updateDepartmentUrlVerification(id: string, verified: boolean): Promise<DepartmentUrl>;
+
+  // Officer Profile operations
+  upsertOfficerProfile(profile: InsertOfficerProfile): Promise<OfficerProfile>;
+  getOfficerProfileByName(name: string, department?: string): Promise<OfficerProfile | undefined>;
+  getAllOfficerProfiles(limit?: number): Promise<OfficerProfile[]>;
+  searchOfficerProfiles(query: { name?: string; badgeNumber?: string; department?: string; location?: string }): Promise<OfficerProfile[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1194,6 +1203,78 @@ export class DatabaseStorage implements IStorage {
     }
     
     return updated;
+  }
+
+  // Officer Profile operations
+  async upsertOfficerProfile(profile: InsertOfficerProfile): Promise<OfficerProfile> {
+    const [upserted] = await db
+      .insert(officerProfiles)
+      .values(profile)
+      .onConflictDoUpdate({
+        target: [officerProfiles.officerName, officerProfiles.department],
+        set: {
+          ...profile,
+          lastUpdated: new Date(),
+        },
+      })
+      .returning();
+    
+    return upserted;
+  }
+
+  async getOfficerProfileByName(name: string, department?: string): Promise<OfficerProfile | undefined> {
+    const conditions = department
+      ? and(eq(officerProfiles.officerName, name), eq(officerProfiles.department, department))
+      : eq(officerProfiles.officerName, name);
+
+    const [profile] = await db
+      .select()
+      .from(officerProfiles)
+      .where(conditions)
+      .limit(1);
+    
+    return profile;
+  }
+
+  async getAllOfficerProfiles(limit: number = 100): Promise<OfficerProfile[]> {
+    return await db
+      .select()
+      .from(officerProfiles)
+      .orderBy(desc(officerProfiles.lastUpdated))
+      .limit(limit);
+  }
+
+  async searchOfficerProfiles(query: {
+    name?: string;
+    badgeNumber?: string;
+    department?: string;
+    location?: string;
+  }): Promise<OfficerProfile[]> {
+    const conditions: any[] = [];
+
+    if (query.name) {
+      conditions.push(sql`${officerProfiles.officerName} ILIKE ${`%${query.name}%`}`);
+    }
+    if (query.badgeNumber) {
+      conditions.push(eq(officerProfiles.badgeNumber, query.badgeNumber));
+    }
+    if (query.department) {
+      conditions.push(sql`${officerProfiles.department} ILIKE ${`%${query.department}%`}`);
+    }
+    if (query.location) {
+      conditions.push(sql`${officerProfiles.location} ILIKE ${`%${query.location}%`}`);
+    }
+
+    if (conditions.length === 0) {
+      return [];
+    }
+
+    return await db
+      .select()
+      .from(officerProfiles)
+      .where(and(...conditions))
+      .orderBy(desc(officerProfiles.dataQualityScore))
+      .limit(100);
   }
 }
 

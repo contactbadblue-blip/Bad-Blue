@@ -11330,7 +11330,7 @@ Provide specific, implementable improvements.`;
  */
 let improvementSchedule: NodeJS.Timeout | null = null;
 
-export function initializeAutonomousImprovements(): void {
+export async function initializeAutonomousImprovements(): Promise<void> {
   console.log('[Sub-Agent] Initializing autonomous improvement system...');
 
   // Verification test available but not run automatically to avoid database connection issues
@@ -11370,11 +11370,38 @@ export function initializeAutonomousImprovements(): void {
   console.log('[Sub-Agent] - Daily improvement cycle: 10:30 PM UTC');
   console.log('[Sub-Agent] - Learns from user consultations, researches attorney techniques, improves system');
 
-  // Initialize autonomous data collection (demand-based - only runs when users active)
-  // Note: Searches are now triggered by user activity, not on a fixed schedule
-  // This prevents API quota exhaustion when no users are present
-  console.log('[AI Sub-Agent] Autonomous data collection initialized in demand-based mode');
-  console.log('[AI Sub-Agent] Data collection will trigger when user activity is detected');
+  // Initialize autonomous data collection (scheduled every 4 hours)
+  // ONLY if rate limits allow - prevents quota exhaustion
+  const { rateLimitTracker } = await import('./rateLimitTracker');
+  
+  let dataCollectionInitialized = false;
+  
+  const tryStartDataCollection = () => {
+    if (dataCollectionInitialized) return; // Prevent multiple instances
+    
+    if (!rateLimitTracker.areBothAPIsExhausted()) {
+      console.log('[Sub-Agent] ✓ API quotas available - starting autonomous data collection');
+      initializeDataCollection();
+      dataCollectionInitialized = true;
+    } else {
+      console.log('[Sub-Agent] ⚠️ API quotas exhausted - autonomous data collection disabled');
+      console.log('[Sub-Agent] Will retry every 30 minutes until quotas recover');
+    }
+  };
+  
+  // Try to start immediately
+  tryStartDataCollection();
+  
+  // If failed due to quotas, retry every 30 minutes until successful
+  if (!dataCollectionInitialized) {
+    const retryInterval = setInterval(() => {
+      tryStartDataCollection();
+      if (dataCollectionInitialized) {
+        clearInterval(retryInterval);
+        console.log('[Sub-Agent] ✓ Autonomous data collection resumed after quota recovery');
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+  }
 }
 
 /**
@@ -11628,12 +11655,14 @@ async function runOfficerSearch(durationMs: number = 30 * 60 * 1000): Promise<vo
         progress.officersSearched++;
         console.log(`[Officer Search] Searching for ${officerName} in ${dept.name}...`);
 
-        // Compile officer data (this will take several seconds due to multiple API calls)
+        // Compile officer data in AUTONOMOUS MODE (Groq-only, no Gemini)
+        // This prevents API quota exhaustion by skipping web-dependent searches
         const officerData = await compileOfficerData(
           officerName,
           dept.name,
           dept.location,
-          true // bypass cache for fresh data
+          true, // bypass cache for fresh data
+          true  // autonomous mode: Groq-only, no Gemini
         );
 
         // Only save if we found significant data (quality score > 30)
@@ -11643,8 +11672,27 @@ async function runOfficerSearch(durationMs: number = 30 * 60 * 1000): Promise<vo
           progress.officersFound++;
           progress.totalQualityScore += officerData.dataQualityScore;
 
-          // Log the discovery (you could save to database here if needed)
-          // For now, we're just collecting and analyzing
+          // Save officer profile to database (upsert to handle duplicates)
+          try {
+            await storage.upsertOfficerProfile({
+              officerName: officerData.officerName,
+              badgeNumber: officerData.badgeNumber,
+              department: officerData.department,
+              rank: officerData.rank,
+              location: officerData.location,
+              careerData: officerData.careerData as any,
+              incidents: officerData.incidents as any,
+              courtCases: officerData.courtCases as any,
+              newsMentions: officerData.newsMentions as any,
+              communityComplaints: officerData.communityComplaints as any,
+              sources: officerData.sources,
+              dataQualityScore: officerData.dataQualityScore,
+              lastUpdated: new Date(),
+            });
+            console.log(`[Officer Search] ✓ Saved ${officerName} to database`);
+          } catch (error: any) {
+            console.error(`[Officer Search] Failed to save ${officerName}:`, error.message);
+          }
         }
 
         // Check if we should continue
@@ -11929,8 +11977,25 @@ async function scheduleNextDataCollection(): Promise<void> {
 
 /**
  * Run the scheduled search based on current cycle
+ * CRITICAL: Checks rate limits before each search to prevent quota exhaustion
  */
 async function runScheduledSearch(): Promise<void> {
+  // CRITICAL: Check rate limits BEFORE running search
+  const { rateLimitTracker } = await import('./rateLimitTracker');
+  if (rateLimitTracker.areBothAPIsExhausted()) {
+    console.log('[Data Collection] ⚠️ API quotas exhausted - skipping scheduled search');
+    console.log('[Data Collection] Groq quota:', rateLimitTracker.getGroqStats());
+    await storage.updateSearchCycleState('quota_exhausted', false, null);
+    return;
+  }
+
+  // Check if Groq is available (required for autonomous searches)
+  if (rateLimitTracker.getGroqStats().isNearLimit) {
+    console.log('[Data Collection] ⚠️ Groq near limit - skipping search to preserve quota');
+    await storage.updateSearchCycleState('quota_warning', false, null);
+    return;
+  }
+
   // Check if autonomous search is paused by Worker
   const { searchController } = await import('./autonomousSearchController');
   if (searchController.isPaused()) {

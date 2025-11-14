@@ -522,12 +522,14 @@ function calculateDataQualityScore(results: DatabaseSearchResult[]): number {
 
 /**
  * Main function to compile comprehensive officer data from all public sources
+ * @param autonomousMode When true, uses ONLY Groq (no Gemini) to prevent quota exhaustion. Skips web-dependent searches.
  */
 export async function compileOfficerData(
   officerName: string,
   department?: string,
   location?: string,
-  bypassCache: boolean = false
+  bypassCache: boolean = false,
+  autonomousMode: boolean = false
 ): Promise<CompiledOfficerData> {
   const collectionId = `collect_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const cacheKey = getCacheKey(officerName, department, location);
@@ -554,6 +556,45 @@ export async function compileOfficerData(
     }
   }
   
+  // AUTONOMOUS MODE: Use ONLY Groq (no Gemini) to prevent quota exhaustion
+  // Skips web-dependent searches (FOIA, Rosters, Verification) that require Gemini's Google Search
+  if (autonomousMode) {
+    console.log(`[Officer Data Collector] 🤖 AUTONOMOUS MODE: Using Groq-only for ${officerName}`);
+    console.log(`[Officer Data Collector] Skipping web searches (FOIA/Rosters/Verify) to prevent Gemini quota exhaustion`);
+    
+    const [newsResults, courtResults, disciplinaryResults] = await Promise.all([
+      searchNewsArticles(officerName, department, location, collectionId),
+      searchCourtRecords(officerName, department, location, collectionId),
+      searchDisciplinaryRecords(officerName, department, location, collectionId)
+    ]);
+    
+    const allResults = [newsResults, courtResults, disciplinaryResults];
+    const allSources = Array.from(new Set(allResults.flatMap(r => r.sources)));
+    const dataQualityScore = calculateDataQualityScore(allResults);
+    
+    const compiledData: CompiledOfficerData = {
+      officerName,
+      badgeNumber: undefined,
+      department: department || undefined,
+      rank: undefined,
+      location: location || undefined,
+      careerData: undefined,
+      incidents: disciplinaryResults.data,
+      courtCases: courtResults.data,
+      newsMentions: newsResults.data,
+      communityComplaints: {
+        summary: disciplinaryResults.data.narrative,
+        incidentCount: disciplinaryResults.data.incidentCount
+      },
+      sources: allSources,
+      dataQualityScore
+    };
+    
+    console.log(`[Officer Data Collector] ✓ Autonomous compilation complete. Quality: ${dataQualityScore}, Sources: ${allSources.length} (Groq-only)`);
+    return compiledData;
+  }
+  
+  // STANDARD MODE: Full hybrid search (Gemini + Groq)
   console.log(`[Officer Data Collector] Starting hybrid data collection for ${officerName} (Gemini: FOIA/Rosters/Verify, Groq: News/Court/Disciplinary)`);
   
   // Run all searches in parallel for performance (hybrid: 3 Gemini + 3 Groq)
