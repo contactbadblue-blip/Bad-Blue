@@ -627,8 +627,8 @@ class BadBlueWorker {
           metadata: alert.metadata || null,
           resolved: false,
         });
-      } catch (dbError) {
-        console.warn('[BadBlue Worker] Database alert logging unavailable (table may not exist yet)');
+      } catch (dbError: any) {
+        console.warn('[BadBlue Worker] Database alert logging failed:', dbError?.message || dbError);
       }
     } catch (error) {
       console.error('[BadBlue Worker] Error recording alert:', error);
