@@ -9,6 +9,7 @@ import { Shield, FileText, Scale, Upload, Bell, ArrowLeft } from "lucide-react";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { SEOHead } from "@/components/SEOHead";
 import { SupportEmailFooter } from "@/components/SupportEmailFooter";
+import SampleLegalConsultation from "@/components/SampleLegalConsultation";
 import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -513,6 +514,11 @@ export default function Login() {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Sample Legal Consultation - Below sign-in form */}
+        <div className="mt-8">
+          <SampleLegalConsultation />
+        </div>
       </div>
       
       <SupportEmailFooter />

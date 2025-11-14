@@ -59,6 +59,9 @@ import {
   type InsertDepartmentUrl,
   type OfficerProfile,
   type InsertOfficerProfile,
+  deviceFingerprints,
+  type DeviceFingerprint,
+  type InsertDeviceFingerprint,
 } from "@shared/schema";
 
 // Define types for PublicEvidence
@@ -206,6 +209,11 @@ export interface IStorage {
   getOfficerProfileByName(name: string, department?: string): Promise<OfficerProfile | undefined>;
   getAllOfficerProfiles(limit?: number): Promise<OfficerProfile[]>;
   searchOfficerProfiles(query: { name?: string; badgeNumber?: string; department?: string; location?: string }): Promise<OfficerProfile[]>;
+
+  // Device Fingerprint operations (for sample consultation tracking)
+  createDeviceFingerprint(fingerprint: InsertDeviceFingerprint): Promise<DeviceFingerprint>;
+  getDeviceFingerprint(deviceId: string): Promise<DeviceFingerprint | undefined>;
+  hasDeviceUsedSample(deviceId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1275,6 +1283,31 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .orderBy(desc(officerProfiles.dataQualityScore))
       .limit(100);
+  }
+
+  // Device Fingerprint operations
+  async createDeviceFingerprint(fingerprint: InsertDeviceFingerprint): Promise<DeviceFingerprint> {
+    const [created] = await db
+      .insert(deviceFingerprints)
+      .values(fingerprint)
+      .returning();
+    
+    return created;
+  }
+
+  async getDeviceFingerprint(deviceId: string): Promise<DeviceFingerprint | undefined> {
+    const [fingerprint] = await db
+      .select()
+      .from(deviceFingerprints)
+      .where(eq(deviceFingerprints.deviceId, deviceId))
+      .limit(1);
+    
+    return fingerprint;
+  }
+
+  async hasDeviceUsedSample(deviceId: string): Promise<boolean> {
+    const fingerprint = await this.getDeviceFingerprint(deviceId);
+    return !!fingerprint;
   }
 }
 

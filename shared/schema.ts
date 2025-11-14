@@ -160,6 +160,32 @@ export type InsertTrialConsultation = z.infer<typeof insertTrialConsultationSche
 export type TrialConsultation = typeof trialConsultations.$inferSelect;
 
 // ============================================
+// DEVICE FINGERPRINTS TABLE (Sample Consultation Tracking)
+// ============================================
+export const deviceFingerprints = pgTable("device_fingerprints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  deviceId: text("device_id").notNull().unique(), // Unique device fingerprint hash
+  sampleUsedAt: timestamp("sample_used_at").notNull(), // When the sample was used
+  ipAddress: varchar("ip_address"), // For additional tracking
+  userAgent: text("user_agent"), // Browser information
+  state: varchar("state", { length: 2 }), // State used in sample
+  situation: text("situation"), // Sample situation (truncated for storage)
+  response: text("response"), // Sample response provided
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("device_fingerprints_device_id_unique").on(table.deviceId),
+  index("device_fingerprints_ip_idx").on(table.ipAddress),
+]);
+
+export const insertDeviceFingerprintSchema = createInsertSchema(deviceFingerprints).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDeviceFingerprint = z.infer<typeof insertDeviceFingerprintSchema>;
+export type DeviceFingerprint = typeof deviceFingerprints.$inferSelect;
+
+// ============================================
 // SAVED PROGRESS TABLE (Autosave System)
 // ============================================
 export const savedProgress = pgTable("saved_progress", {

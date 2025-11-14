@@ -16,6 +16,7 @@ import {
   searchPublicRecords,
   analyzePatternsAndLearn,
   analyzeActionability,
+  analyzeLegalIssue,
   searchLawsuitFormsAndRules,
   chatWithFormAssistant,
   researchRelevantStatutes,
@@ -4590,6 +4591,81 @@ For questions or support, contact: support@badblue.com
         res.status(500).json({
           message:
             "We encountered an error analyzing your situation. Please try again or contact support if the problem continues.",
+        });
+      }
+    },
+  );
+
+  // Sample Legal Consultation - Limited free consultation with device fingerprinting
+  // No authentication required - one sample per device
+  app.post(
+    "/api/sample-legal-consultation",
+    apiRateLimit,
+    async (req: any, res) => {
+      try {
+        const { state, situation, deviceFingerprint } = req.body;
+
+        if (!state || !situation || !deviceFingerprint) {
+          return res
+            .status(400)
+            .json({ message: "State, situation, and device fingerprint required" });
+        }
+
+        // Check if this device has already used the sample
+        const hasUsedSample = await storage.hasDeviceUsedSample(deviceFingerprint);
+        
+        if (hasUsedSample) {
+          return res.json({
+            alreadyUsed: true,
+            message: "This device has already used the free sample consultation. Please sign up for full access."
+          });
+        }
+
+        // Get IP address for tracking
+        const ipAddress = req.headers['x-forwarded-for'] || 
+                         req.connection.remoteAddress || 
+                         req.socket.remoteAddress || 
+                         '';
+
+        // Provide a shorter, sample analysis
+        const sampleAnalysis = await analyzeLegalIssue(
+          situation.substring(0, 1000), // Limit input length
+          state,
+          'BRIEF TRIAL CONSULTATION - Provide a concise sample analysis (4-6 sentences)'
+        );
+
+        // Store device fingerprint to prevent reuse
+        await storage.createDeviceFingerprint({
+          deviceId: deviceFingerprint,
+          sampleUsedAt: new Date(),
+          ipAddress: ipAddress.toString(),
+          userAgent: req.headers['user-agent'] || null,
+          state,
+          situation: situation.substring(0, 200), // Store truncated version
+          response: sampleAnalysis.substring(0, 500), // Store truncated response
+        });
+
+        // Format response with clear sample indication
+        const response = {
+          analysis: sampleAnalysis + "\n\nThis is a sample analysis. For comprehensive legal consultation including detailed statutes, case law, and actionable recommendations, sign up for full BadBlue access.",
+          isSample: true,
+          message: "Sample consultation complete. Sign up for full access to unlock all features."
+        };
+
+        res.json(response);
+      } catch (error: any) {
+        console.error("Error in sample legal consultation:", error);
+
+        // Check for duplicate device fingerprint error
+        if (error.message?.includes('duplicate key') || error.message?.includes('unique')) {
+          return res.json({
+            alreadyUsed: true,
+            message: "This device has already used the free sample consultation. Please sign up for full access."
+          });
+        }
+
+        res.status(500).json({
+          message: "Unable to provide sample consultation. Please try again or sign up for full access.",
         });
       }
     },
