@@ -82,7 +82,7 @@ interface QuotaStatus {
 
 class AITokenGovernorEnhanced {
   private static instance: AITokenGovernorEnhanced;
-  private readonly AUTONOMOUS_GROQ_LIMIT_PERCENT = 15; // 15% for autonomous
+  private readonly AUTONOMOUS_GROQ_LIMIT_PERCENT = 35; // 35% for autonomous - increased to give workers/sub-agents more resources while still prioritizing user AI needs
   private readonly GROQ_DAILY_TOKEN_LIMIT = 100000;
   private readonly GEMINI_DAILY_REQUEST_LIMIT = 50;
 
