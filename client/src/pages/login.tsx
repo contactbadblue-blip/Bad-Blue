@@ -441,10 +441,10 @@ export default function Login() {
                     <Input
                       id="signin-email"
                       data-testid="input-signin-email"
-                      type="email"
+                      type="text"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
-                      placeholder="Enter your email"
+                      placeholder="Email or username (admin, bypass)"
                       disabled={loginMutation.isPending}
                       required
                     />
