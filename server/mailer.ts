@@ -26,11 +26,15 @@ let transporter: Transporter | null = null;
 function getTransporter(): Transporter {
   if (!transporter) {
     const smtpUser = process.env.GWSMTP_USER;
-    const smtpPass = process.env.GWSMTP_PASS;
+    // Use App Password (GWSMTP_PASSWORD) if available, removing spaces
+    // Fall back to regular password (GWSMTP_PASS) if App Password not set
+    const smtpPass = process.env.GWSMTP_PASSWORD 
+      ? process.env.GWSMTP_PASSWORD.replace(/\s/g, '') // Remove spaces from App Password
+      : process.env.GWSMTP_PASS;
 
     if (!smtpUser || !smtpPass) {
-      console.error('[SMTP] ✗ Missing credentials - GWSMTP_USER:', !!smtpUser, 'GWSMTP_PASS:', !!smtpPass);
-      throw new Error('GWSMTP_USER and GWSMTP_PASS environment variables must be set');
+      console.error('[SMTP] ✗ Missing credentials - GWSMTP_USER:', !!smtpUser, 'GWSMTP_PASSWORD:', !!process.env.GWSMTP_PASSWORD, 'GWSMTP_PASS:', !!process.env.GWSMTP_PASS);
+      throw new Error('GWSMTP_USER and either GWSMTP_PASSWORD or GWSMTP_PASS environment variables must be set');
     }
 
     transporter = nodemailer.createTransport({

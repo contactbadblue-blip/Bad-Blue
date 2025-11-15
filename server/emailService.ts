@@ -8,13 +8,19 @@ import * as schema from '@shared/schema';
 import { sendMail as sendViaSMTP } from './mailer';
 import { getBaseURL } from './platformConfig';
 
+// Use App Password (GWSMTP_PASSWORD) if available, removing spaces
+// Fall back to regular password (GWSMTP_PASS) if App Password not set
+const password = process.env.GWSMTP_PASSWORD 
+  ? process.env.GWSMTP_PASSWORD.replace(/\s/g, '') // Remove spaces from App Password
+  : process.env.GWSMTP_PASS;
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
   auth: {
     user: process.env.GWSMTP_USER,
-    pass: process.env.GWSMTP_PASS,
+    pass: password,
   },
 });
 
@@ -72,12 +78,14 @@ export async function sendEmail({
 }) {
   // Check SMTP credentials with detailed logging
   const hasUser = !!process.env.GWSMTP_USER;
-  const hasPass = !!process.env.GWSMTP_PASS;
+  // Check for App Password first, then fall back to regular password
+  const hasPass = !!process.env.GWSMTP_PASSWORD || !!process.env.GWSMTP_PASS;
   
   if (!hasUser || !hasPass) {
     console.error('[EMAIL] ✗ SMTP credentials check failed:');
     console.error('[EMAIL]   - GWSMTP_USER present:', hasUser);
-    console.error('[EMAIL]   - GWSMTP_PASS present:', hasPass);
+    console.error('[EMAIL]   - GWSMTP_PASSWORD present:', !!process.env.GWSMTP_PASSWORD);
+    console.error('[EMAIL]   - GWSMTP_PASS present:', !!process.env.GWSMTP_PASS);
     console.error('[EMAIL] Please verify these secrets are set in environment variables');
     return false;
   }
