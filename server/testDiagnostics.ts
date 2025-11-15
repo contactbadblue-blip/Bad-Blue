@@ -106,24 +106,29 @@ export async function runComprehensiveDiagnostics(): Promise<{
 
   // 3. EMAIL SMTP TEST
   console.log('[DIAGNOSTICS] Testing SMTP email service...');
-  if (!process.env.GWSMTP_USER || !process.env.GWSMTP_PASS) {
+  // Check for GWSMTP_PASSWORD first (App Password format), then fall back to GWSMTP_PASS
+  const password = process.env.GWSMTP_PASSWORD 
+    ? process.env.GWSMTP_PASSWORD.replace(/\s/g, '') // Remove spaces from App Password
+    : process.env.GWSMTP_PASS;
+
+  if (!process.env.GWSMTP_USER || !password) {
     results.push({
       service: 'Email Service (SMTP)',
       status: '✗',
       message: 'SMTP credentials not configured',
-      error: 'Missing GWSMTP_USER or GWSMTP_PASS'
+      error: 'Missing GWSMTP_USER or GWSMTP_PASSWORD/GWSMTP_PASS'
     });
-    recommendations.push('Set GWSMTP_USER and GWSMTP_PASS in environment variables');
+    recommendations.push('Set GWSMTP_USER and GWSMTP_PASSWORD (or GWSMTP_PASS) in environment variables');
   } else {
     try {
       const emailStart = Date.now();
       const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: false,
+        host: process.env.GWSMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.GWSMTP_PORT || '465'),
+        secure: true,
         auth: {
           user: process.env.GWSMTP_USER,
-          pass: process.env.GWSMTP_PASS,
+          pass: password,
         },
       });
       
@@ -136,7 +141,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
         message: 'SMTP connection verified',
         responseTime: emailTime,
         details: {
-          host: process.env.SMTP_HOST || 'smtp.gmail.com',
+          host: process.env.GWSMTP_HOST || 'smtp.gmail.com',
           user: process.env.GWSMTP_USER
         }
       });

@@ -2,27 +2,36 @@
 // Add GWSMTP_USER and GWSMTP_PASS in Replit Secrets
 
 import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import { db } from './db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@shared/schema';
 import { sendMail as sendViaSMTP } from './mailer';
 import { getBaseURL } from './platformConfig';
 
-// Use App Password (GWSMTP_PASSWORD) if available, removing spaces
-// Fall back to regular password (GWSMTP_PASS) if App Password not set
-const password = process.env.GWSMTP_PASSWORD 
-  ? process.env.GWSMTP_PASSWORD.replace(/\s/g, '') // Remove spaces from App Password
-  : process.env.GWSMTP_PASS;
+// Lazy initialize transporter
+let transporter: Transporter | null = null;
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.GWSMTP_USER,
-    pass: password,
-  },
-});
+function getTransporter(): Transporter {
+  if (!transporter) {
+    // Use App Password (GWSMTP_PASSWORD) if available, removing spaces
+    // Fall back to regular password (GWSMTP_PASS) if App Password not set
+    const password = process.env.GWSMTP_PASSWORD 
+      ? process.env.GWSMTP_PASSWORD.replace(/\s/g, '') // Remove spaces from App Password
+      : process.env.GWSMTP_PASS;
+
+    transporter = nodemailer.createTransporter({
+      host: process.env.GWSMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.GWSMTP_PORT || '465'),
+      secure: true,
+      auth: {
+        user: process.env.GWSMTP_USER,
+        pass: password,
+      },
+    });
+  }
+  return transporter;
+}
 
 async function getEmailSettings() {
   try {

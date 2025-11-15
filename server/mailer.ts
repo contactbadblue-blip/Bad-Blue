@@ -38,9 +38,9 @@ function getTransporter(): Transporter {
     }
 
     transporter = nodemailer.createTransport({
-      host: 'smtp-relay.gmail.com',
-      port: 587,
-      secure: false, // Use STARTTLS
+      host: process.env.GWSMTP_HOST || 'smtp.gmail.com',
+      port: 465,
+      secure: true, // Use SSL
       auth: {
         user: smtpUser,
         pass: smtpPass,
@@ -51,7 +51,7 @@ function getTransporter(): Transporter {
       },
     });
 
-    console.log('[SMTP] ✓ Transporter initialized for smtp-relay.gmail.com:587');
+    console.log('[SMTP] ✓ Transporter initialized for smtp.gmail.com:465');
     console.log('[SMTP] ✓ Using credentials for user:', smtpUser);
   }
 
