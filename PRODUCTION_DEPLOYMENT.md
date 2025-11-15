@@ -24,10 +24,10 @@ Your Badge Check application is ready to be published as a live website. Follow 
 
 **How to set it up:**
 1. Go to your Stripe Dashboard: https://dashboard.stripe.com/webhooks
-2. Create a new webhook endpoint with URL: `https://your-replit-app.replit.app/api/webhooks/stripe`
+2. Create a new webhook endpoint with URL: `https://bad-blue.com/api/webhooks/stripe`
 3. Select event: `checkout.session.completed`
 4. Copy the "Signing secret" (starts with `whsec_`)
-5. In Replit Secrets (Tools → Secrets), add:
+5. In Railway environment variables, add:
    - Key: `STRIPE_WEBHOOK_SECRET`
    - Value: `whsec_...` (your signing secret)
 
@@ -47,7 +47,7 @@ Your Badge Check application is ready to be published as a live website. Follow 
 **How to set it up:**
 1. Sign up at https://resend.com (free tier available)
 2. Create an API key
-3. In Replit Secrets, add:
+3. In Railway environment variables, add:
    - Key: `RESEND_API_KEY`
    - Value: Your API key from Resend
 
@@ -56,7 +56,7 @@ Your Badge Check application is ready to be published as a live website. Follow 
 ## 🌐 Deployment Steps
 
 ### 1. Configure Production Secrets (Before Publishing)
-Add the required secrets listed above in Replit's Secrets manager.
+Add the required secrets listed above in Railway's environment variables.
 
 ### 2. Test Your Application
 Before going live, test these critical flows:
@@ -75,10 +75,10 @@ Once you publish your app:
 2. In Stripe Dashboard → Webhooks, add endpoint:
    - URL: `https://YOUR-DOMAIN/api/webhooks/stripe`
    - Event: `checkout.session.completed`
-3. Copy the signing secret to `STRIPE_WEBHOOK_SECRET` in Replit Secrets
+3. Copy the signing secret to `STRIPE_WEBHOOK_SECRET` in Railway environment variables
 
-### 4. Publish Your App
-1. Click the **"Publish"** button in Replit
+### 4. Deploy Your App
+1. Deploy through Railway dashboard or CLI
 2. Choose **"Autoscale Deployment"** (recommended for web apps)
 3. Configure:
    - Machine: Select based on expected traffic (start small, can scale up)

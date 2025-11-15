@@ -1,7 +1,7 @@
-# BadBlue Platform Migration Guide
+# BadBlue Platform Deployment Guide
 ## 100% Platform-Independent Deployment to Railway, Heroku, or Any Host
 
-This guide ensures BadBlue can be deployed to **any** hosting platform beyond Replit with complete functionality.
+This guide ensures BadBlue can be deployed to **any** hosting platform with complete functionality.
 
 ---
 
@@ -61,18 +61,16 @@ GWSMTP_PASS=your-smtp-password
 
 ### **Object Storage** (Optional - gracefully degrades if unavailable)
 ```bash
-# Only needed if using Replit Object Storage
-DEFAULT_OBJECT_STORAGE_BUCKET_ID=your-bucket-id
-PUBLIC_OBJECT_SEARCH_PATHS=/public
-PRIVATE_OBJECT_DIR=.private
+# Object Storage (Optional - uses filesystem if not configured)
+# DEFAULT_OBJECT_STORAGE_BUCKET_ID=your-bucket-id
+# PUBLIC_OBJECT_SEARCH_PATHS=/public
+# PRIVATE_OBJECT_DIR=.private
 ```
 
-### **Replit OAuth** (Optional - falls back to local auth)
+### **OAuth Configuration** (Optional - uses local auth by default)
 ```bash
-# Only if deploying ON Replit with OAuth
-REPLIT_DOMAINS=your-repl.replit.app
-REPL_ID=your-repl-id
-ISSUER_URL=https://replit.com
+# OAuth is optional - system uses local authentication by default
+# Configure your OAuth provider if needed
 ```
 
 ---
@@ -80,7 +78,7 @@ ISSUER_URL=https://replit.com
 ## 📦 **Database Setup**
 
 ### **1. PostgreSQL Database**
-BadBlue uses PostgreSQL (Neon serverless on Replit). For other platforms:
+BadBlue uses PostgreSQL (any provider). For different platforms:
 
 **Railway:**
 ```bash

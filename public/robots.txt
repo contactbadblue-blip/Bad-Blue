@@ -74,6 +74,5 @@ Disallow: *.log
 Disallow: *.sql
 
 # Sitemap locations - professional police accountability platform
-Sitemap: https://badblue.com/sitemap.xml
 Sitemap: https://bad-blue.com/sitemap.xml
-Sitemap: https://badblue.replit.app/sitemap.xml
+Sitemap: https://badblue.com/sitemap.xml

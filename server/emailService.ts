@@ -1,5 +1,5 @@
 // Email service for BadBlue - SMTP only
-// Add GWSMTP_USER and GWSMTP_PASS in Replit Secrets
+// Add GWSMTP_USER and GWSMTP_PASS in environment variables
 
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';

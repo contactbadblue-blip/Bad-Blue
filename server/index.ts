@@ -8,10 +8,10 @@ dotenv.config();
 
 // Verify Stripe keys are configured
 if (!process.env.STRIPE_SECRET_KEY) {
-  console.error('[ENV] ⚠️ STRIPE_SECRET_KEY not set in Replit Secrets');
+  console.error('[ENV] ⚠️ STRIPE_SECRET_KEY not set in environment variables');
 }
 if (!process.env.VITE_STRIPE_PUBLIC_KEY) {
-  console.error('[ENV] ⚠️ VITE_STRIPE_PUBLIC_KEY not set in Replit Secrets');
+  console.error('[ENV] ⚠️ VITE_STRIPE_PUBLIC_KEY not set in environment variables');
 }
 
 import { createClient } from "@supabase/supabase-js";
