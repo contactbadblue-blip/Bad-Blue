@@ -22,11 +22,7 @@ const Landing = lazy(() => {
   return import("@/pages/landing");
 });
 const Login = lazy(() => import("@/pages/login"));
-const NotFound = lazy(() => import("@/pages/not-found"));
-
-// Secondary pages
-const ForgotPassword = lazy(() => import("@/pages/forgot-password"));
-const ResetPassword = lazy(() => import("@/pages/reset-password"));
+const NotFound = lazy(() => import("@/pages/not-found"))
 const Home = lazy(() => import("@/pages/home"));
 const Contact = lazy(() => import("@/pages/contact"));
 
@@ -93,8 +89,6 @@ function Router() {
         {/* Public routes */}
         <Route path="/landing" component={Landing} />
         <Route path="/login" component={Login} />
-        <Route path="/forgot-password" component={ForgotPassword} />
-        <Route path="/reset-password" component={ResetPassword} />
         <Route path="/contact" component={Contact} />
         <Route path="/support" component={Contact} />
         

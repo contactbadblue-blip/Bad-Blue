@@ -114,12 +114,6 @@ export interface IStorage {
   getAuthAccountByUserId(userId: string): Promise<AuthAccount | undefined>;
   updateAuthAccountLastLogin(id: string): Promise<AuthAccount>;
 
-  // Password reset operations
-  setPasswordResetToken(userId: string, hashedToken: string, expiry: Date): Promise<User>;
-  getUserByResetToken(hashedToken: string): Promise<User | undefined>;
-  clearPasswordResetToken(userId: string): Promise<User>;
-  updateAuthAccountPassword(userId: string, passwordHash: string, passwordSalt: string): Promise<AuthAccount>;
-
   // Admin access log operations (Security Audit)
   createAdminAccessLog(log: InsertAdminAccessLog): Promise<AdminAccessLog>;
   getAdminAccessLogs(limit?: number): Promise<AdminAccessLog[]>;
@@ -377,6 +371,7 @@ export class DatabaseStorage implements IStorage {
     return authAccount;
   }
 
+<<<<<<< HEAD
   // Password reset operations
   // Temporarily disabled due to database column issues - will be fixed later
   async setPasswordResetToken(userId: string, hashedToken: string, expiry: Date): Promise<User> {
@@ -398,19 +393,6 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateAuthAccountPassword(userId: string, passwordHash: string, passwordSalt: string): Promise<AuthAccount> {
-    const [authAccount] = await db
-      .update(authAccounts)
-      .set({
-        passwordHash,
-        passwordSalt,
-        updatedAt: new Date(),
-      })
-      .where(eq(authAccounts.userId, userId))
-      .returning();
-    if (!authAccount) throw new Error(`Auth account for user ${userId} not found`);
-    return authAccount;
-  }
 
   // Admin access log operations
   async createAdminAccessLog(logData: InsertAdminAccessLog): Promise<AdminAccessLog> {
