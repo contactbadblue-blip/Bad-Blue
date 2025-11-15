@@ -248,12 +248,6 @@ export async function createSubAgentTables() {
         resolved_at TIMESTAMP
       );
     `);
-    
-    // Add resolved_at column if it doesn't exist (for existing tables)
-    await db.execute(sql`
-      ALTER TABLE worker_alerts 
-      ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP;
-    `);
     console.log('[Migration] ✓ Created worker_alerts table');
 
     // Create indexes for worker_alerts
