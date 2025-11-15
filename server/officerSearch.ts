@@ -1,11 +1,11 @@
-import { GoogleGenerativeAI } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { EventEmitter } from "events";
 import { findOfficerInRoster, addOfficerToRoster, addDepartmentToRoster } from "./officerRoster";
 import { findDepartmentUrlsByCity, findDepartmentUrlsByState, getAllDepartmentUrls } from "./policeUrls";
 import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqStructuredResponse } from "./groq";
 
-let gemini: GoogleGenerativeAI | null = null;
+let gemini: GoogleGenAI | null = null;
 
 // In-memory cache for officer search results
 const searchCache = new Map<string, { result: OfficerSearchResult; timestamp: number }>();
@@ -43,12 +43,12 @@ setInterval(() => {
   }
 }, CLEANUP_INTERVAL);
 
-function getGeminiClient(): GoogleGenerativeAI {
+function getGeminiClient(): GoogleGenAI {
   if (!gemini) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    gemini = new GoogleGenAI(process.env.GEMINI_API_KEY);
   }
   return gemini;
 }
@@ -128,7 +128,7 @@ interface CategorySearchResult {
 }
 
 async function runCategorySearch(
-  client: GoogleGenerativeAI,
+  client: GoogleGenAI,
   officerName: string,
   city: string | undefined,
   state: string | undefined,
