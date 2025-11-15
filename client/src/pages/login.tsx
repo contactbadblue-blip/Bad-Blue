@@ -437,7 +437,7 @@ export default function Login() {
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email">Email or Username</Label>
                     <Input
                       id="signin-email"
                       data-testid="input-signin-email"
