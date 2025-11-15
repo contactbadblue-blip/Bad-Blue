@@ -35,9 +35,29 @@ export function getSession() {
 
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
-  app.use(getSession());
-  app.use(passport.initialize());
-  app.use(passport.session());
+  
+  // CRITICAL: Only apply session middleware to API routes to prevent database overload
+  // Static assets should NOT trigger session queries
+  const sessionMiddleware = getSession();
+  const passportInit = passport.initialize();
+  const passportSession = passport.session();
+  
+  // Middleware that conditionally applies session only to API routes
+  app.use((req, res, next) => {
+    // Only apply session middleware to API routes or specific auth paths
+    if (req.path.startsWith('/api/') || req.path === '/login' || req.path === '/signup' || req.path === '/') {
+      sessionMiddleware(req, res, (err) => {
+        if (err) return next(err);
+        passportInit(req, res, (err) => {
+          if (err) return next(err);
+          passportSession(req, res, next);
+        });
+      });
+    } else {
+      // Skip session middleware for static assets
+      next();
+    }
+  });
 
   // Setup local strategy for username/password auth
   setupLocalStrategy();
@@ -45,7 +65,7 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-  console.log("✓ Local authentication enabled");
+  console.log("✓ Local authentication enabled with optimized session handling");
   
   // Setup authentication routes for local auth only
   app.get("/api/login", (req, res) => {
