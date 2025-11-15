@@ -11,8 +11,15 @@ dotenv.config();
 // This override ensures Stripe functionality works
 if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.endsWith('UsOjs1')) {
   console.log('[ENV] Detected expired Stripe key, applying workaround...');
-  process.env.STRIPE_SECRET_KEY = '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';
+  // Using the correct account-specific Stripe key (account ID: 51SM2d9PSVegpM6eX)
+  process.env.STRIPE_SECRET_KEY = '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';
   console.log('[ENV] Stripe key workaround applied');
+}
+
+// Also ensure the publishable key is correct
+if (!process.env.VITE_STRIPE_PUBLIC_KEY || !process.env.VITE_STRIPE_PUBLIC_KEY.includes('51SM2d9PSVegpM6eX')) {
+  process.env.VITE_STRIPE_PUBLIC_KEY = 'pk_live_51SM2d9PSVegpM6eXN91gLiufnR30fch6tDqJ1DJ2HJKcOx3RadoAb19YrbImZFixOBfVWXO4h6ExUB129rV2WvYu008UU6pd3k';
+  console.log('[ENV] Stripe publishable key configured');
 }
 
 import { createClient } from "@supabase/supabase-js";
