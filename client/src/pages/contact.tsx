@@ -65,6 +65,13 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title="Contact BadBlue | Support & Questions"
+        description="Contact BadBlue support with questions about officer search, police complaint filing, FOIA requests, or technical issues."
+        extraMeta={[
+          { name: "robots", content: "noindex, nofollow" },
+        ]}
+      />
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
