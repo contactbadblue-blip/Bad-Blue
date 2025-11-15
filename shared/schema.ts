@@ -52,6 +52,10 @@ export const users = pgTable("users", {
   // Login tracking for admin panel
   lastLoginAt: timestamp("last_login_at"),
 
+  // Password reset fields
+  passwordResetToken: text("password_reset_token"), // Hashed token for security
+  passwordResetTokenExpiry: timestamp("password_reset_token_expiry"), // Token expiration time
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

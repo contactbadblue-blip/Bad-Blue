@@ -114,6 +114,12 @@ export interface IStorage {
   getAuthAccountByUserId(userId: string): Promise<AuthAccount | undefined>;
   updateAuthAccountLastLogin(id: string): Promise<AuthAccount>;
 
+  // Password reset operations
+  setPasswordResetToken(userId: string, hashedToken: string, expiry: Date): Promise<User>;
+  getUserByResetToken(hashedToken: string): Promise<User | undefined>;
+  clearPasswordResetToken(userId: string): Promise<User>;
+  updateAuthAccountPassword(userId: string, passwordHash: string, passwordSalt: string): Promise<AuthAccount>;
+
   // Admin access log operations (Security Audit)
   createAdminAccessLog(log: InsertAdminAccessLog): Promise<AdminAccessLog>;
   getAdminAccessLogs(limit?: number): Promise<AdminAccessLog[]>;
@@ -329,6 +335,60 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(authAccounts.id, id))
       .returning();
+    return authAccount;
+  }
+
+  // Password reset operations
+  async setPasswordResetToken(userId: string, hashedToken: string, expiry: Date): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        passwordResetToken: hashedToken,
+        passwordResetTokenExpiry: expiry,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!user) throw new Error(`User ${userId} not found`);
+    return user;
+  }
+
+  async getUserByResetToken(hashedToken: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(
+        eq(users.passwordResetToken, hashedToken),
+        gte(users.passwordResetTokenExpiry, new Date())
+      ));
+    return user;
+  }
+
+  async clearPasswordResetToken(userId: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        passwordResetToken: null,
+        passwordResetTokenExpiry: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!user) throw new Error(`User ${userId} not found`);
+    return user;
+  }
+
+  async updateAuthAccountPassword(userId: string, passwordHash: string, passwordSalt: string): Promise<AuthAccount> {
+    const [authAccount] = await db
+      .update(authAccounts)
+      .set({
+        passwordHash,
+        passwordSalt,
+        updatedAt: new Date(),
+      })
+      .where(eq(authAccounts.userId, userId))
+      .returning();
+    if (!authAccount) throw new Error(`Auth account for user ${userId} not found`);
     return authAccount;
   }
 
