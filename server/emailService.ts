@@ -39,6 +39,14 @@ function getTransporter(): Transporter {
   return transporter;
 }
 
+// Export transporter getter for external use
+export const emailTransporter = {
+  verify: async () => {
+    const tp = getTransporter();
+    return tp.verify();
+  }
+};
+
 async function getEmailSettings() {
   try {
     // Add timeout to prevent hanging on database connection issues
