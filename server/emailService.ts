@@ -629,7 +629,7 @@ Sent from Bad Blue Contact Form
 ${new Date().toLocaleString()}`;
 
     // Send to support email (admin)
-    const supportEmail = process.env.ADMIN_EMAIL || 'badgecheck@gmail.com';
+    const supportEmail = process.env.ADMIN_EMAIL || 'contact.badblue@gmail.com';
     console.log('[EMAIL] Sending to support email:', supportEmail);
 
     const success = await sendViaSMTP(
