@@ -26,7 +26,7 @@ function getTransporter(): Transporter {
 
     const businessEmail = process.env.GWSMTP_USER || 'contact.badblue@gmail.com';
     
-    transporter = nodemailer.createTransporter({
+    transporter = nodemailer.createTransport({
       host: process.env.GWSMTP_HOST || 'smtp.gmail.com',
       port: 465,
       secure: true, // Use SSL
