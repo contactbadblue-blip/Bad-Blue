@@ -88,9 +88,108 @@
       data-uuid="73ee02cf-feb5-452c-8278-67f664e77ed6" 
       src="data:text/javascript;base64,dmFyIHNjcmlwdCA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoInNjcmlwdCIpO3NjcmlwdC5zZXRBdHRyaWJ1dGUoIm5vd3Byb2NrZXQiLCAiIik7c2NyaXB0LnNldEF0dHJpYnV0ZSgibml0cm8tZXhjbHVkZSIsICIiKTtzY3JpcHQuc3JjID0gImh0dHBzOi8vZGFzaGJvYXJkLnNlYXJjaGF0bGFzLmNvbS9zY3JpcHRzL2R5bmFtaWNfb3B0aW1pemF0aW9uLmpzIjtzY3JpcHQuZGF0YXNldC51dWlkID0gIjczZWUwMmNmLWZlYjUtNDUyYy04Mjc4LTY3ZjY2NGU3N2VkNiI7c2NyaXB0LmlkID0gInNhLWR5bmFtaWMtb3B0aW1pemF0aW9uLWxvYWRlciI7ZG9jdW1lbnQuaGVhZC5hcHBlbmRDaGlsZChzY3JpcHQpOw=="></script>
 
+    <style>
+      /* Initial loading spinner styles */
+      #initial-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.3s ease-out;
+      }
+      
+      #initial-loader.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      
+      .spinner-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+      }
+      
+      .spinner {
+        width: 48px;
+        height: 48px;
+        border: 3px solid #e5e7eb;
+        border-top-color: #2563eb;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      .loading-text {
+        color: #1f2937;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 1.125rem;
+        font-weight: 500;
+        animation: pulse 2s ease-in-out infinite;
+      }
+      
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+      }
+      
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        #initial-loader {
+          background: #020817;
+        }
+        
+        .spinner {
+          border-color: #334155;
+          border-top-color: #f8fafc;
+        }
+        
+        .loading-text {
+          color: #f8fafc;
+        }
+      }
+    </style>
   </head>    
 <body>
+    <!-- Initial Loading Spinner - Shows immediately while React loads -->
+    <div id="initial-loader">
+      <div class="spinner-container">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading Bad Blue...</div>
+      </div>
+    </div>
+    
     <div id="root"></div>
+    
+    <script>
+      // Performance monitoring - start timing
+      window.appLoadStartTime = performance.now();
+      console.log('[Performance] Page load started at:', window.appLoadStartTime);
+      
+      // Remove loader when React is mounted
+      window.hideInitialLoader = function() {
+        const loader = document.getElementById('initial-loader');
+        if (loader) {
+          loader.classList.add('fade-out');
+          setTimeout(() => {
+            loader.style.display = 'none';
+            const loadTime = performance.now() - window.appLoadStartTime;
+            console.log('[Performance] React app ready. Total load time:', loadTime.toFixed(2) + 'ms');
+          }, 300);
+        }
+      };
+    </script>
+    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -7,15 +7,30 @@ import { useAuth } from "@/hooks/useAuth";
 import { ClientSessionProvider } from "@/contexts/ClientSessionContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { MaintenanceMode } from "@/components/MaintenanceMode";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { AuthLoadingSkeleton, PageSkeleton } from "@/components/ui/page-skeleton";
+
+// Performance monitoring
+if (typeof window !== 'undefined') {
+  console.log('[Performance] App component loading...');
+}
 
 // Lazy load all pages for better performance
-const NotFound = lazy(() => import("@/pages/not-found"));
-const Landing = lazy(() => import("@/pages/landing"));
+// Critical pages loaded with higher priority
+const Landing = lazy(() => {
+  console.log('[Performance] Loading Landing page chunk...');
+  return import("@/pages/landing");
+});
 const Login = lazy(() => import("@/pages/login"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+// Secondary pages
 const ForgotPassword = lazy(() => import("@/pages/forgot-password"));
 const ResetPassword = lazy(() => import("@/pages/reset-password"));
 const Home = lazy(() => import("@/pages/home"));
+const Contact = lazy(() => import("@/pages/contact"));
+
+// Feature pages - loaded on demand
 const OfficerInfo = lazy(() => import("@/pages/officer"));
 const ComplaintForm = lazy(() => import("@/pages/complaint-form"));
 const ComplaintDetail = lazy(() => import("@/pages/complaint-detail"));
@@ -25,6 +40,13 @@ const PetitionForm = lazy(() => import("@/pages/petition-form"));
 const PetitionDetail = lazy(() => import("@/pages/petition-detail"));
 const Petitions = lazy(() => import("@/pages/petitions"));
 const FOIARequestForm = lazy(() => import("@/pages/foia-request-form"));
+const Complaints = lazy(() => import("@/pages/complaints"));
+const History = lazy(() => import("@/pages/history"));
+const Confirmation = lazy(() => import("@/pages/confirmation"));
+const EvidenceHub = lazy(() => import("@/pages/evidence-hub"));
+const PetitionEdit = lazy(() => import("@/pages/petition-edit"));
+
+// Admin pages - lowest priority
 const AdminPetitions = lazy(() => import("@/pages/admin-petitions"));
 const AdminLawsuits = lazy(() => import("@/pages/admin-lawsuits"));
 const AdminComplaints = lazy(() => import("@/pages/admin-complaints"));
@@ -34,22 +56,19 @@ const AdminEmail = lazy(() => import("@/pages/admin-email"));
 const AdminWorkerLogs = lazy(() => import("@/pages/admin-worker-logs"));
 const AdminSubscriptions = lazy(() => import("@/pages/admin-subscriptions"));
 const AdminEvidenceHub = lazy(() => import("@/pages/admin-evidence-hub"));
-const PetitionEdit = lazy(() => import("@/pages/petition-edit"));
-const Complaints = lazy(() => import("@/pages/complaints"));
-const History = lazy(() => import("@/pages/history"));
-const Contact = lazy(() => import("@/pages/contact"));
-const Confirmation = lazy(() => import("@/pages/confirmation"));
-const EvidenceHub = lazy(() => import("@/pages/evidence-hub"));
 
-// Loading fallback component
-const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="text-lg">Loading...</div>
-  </div>
-);
+// Loading fallback component with better UX
+const PageLoader = () => <PageSkeleton />;
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  
+  // Performance monitoring for auth check
+  useEffect(() => {
+    if (!isLoading) {
+      console.log('[Performance] Auth check completed. User authenticated:', isAuthenticated);
+    }
+  }, [isLoading, isAuthenticated]);
   
   // Check for maintenance mode every 30 seconds
   const { data: maintenanceStatus } = useQuery<{ maintenanceMode: boolean }>({
@@ -58,12 +77,9 @@ function Router() {
     refetchIntervalInBackground: true,
   });
 
+  // Use better loading skeleton for auth loading
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+    return <AuthLoadingSkeleton />;
   }
   
   // Show maintenance mode screen if system is under maintenance
