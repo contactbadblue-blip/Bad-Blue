@@ -2720,5 +2720,36 @@
     "status": "success",
     "consecutiveFailures": 0,
     "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-15T22:56:30.784Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Connection terminated unexpectedly",
+    "consecutiveFailures": 1,
+    "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-15T23:11:31.032Z",
+    "check": "database_heartbeat",
+    "status": "restored",
+    "consecutiveFailures": 0,
+    "repairAttempts": 0,
+    "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-15T23:11:31.035Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0,
+    "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-15T23:26:30.785Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "read ECONNRESET",
+    "consecutiveFailures": 1,
+    "environment": "standard"
   }
 ]
