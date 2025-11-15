@@ -2697,5 +2697,13 @@
     "check": "database_repair",
     "status": "success",
     "repairAttempts": 0
+  },
+  {
+    "timestamp": "2025-11-15T22:33:07.950Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Database heartbeat timeout",
+    "consecutiveFailures": 1,
+    "environment": "standard"
   }
 ]
