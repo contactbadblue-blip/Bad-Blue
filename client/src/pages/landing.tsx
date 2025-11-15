@@ -155,78 +155,66 @@ export default function Landing() {
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-white text-5xl md:text-6xl font-bold leading-tight mb-6">
+          <h1 className="text-white text-4xl md:text-5xl font-bold leading-tight mb-8">
             Law Enforcement Accountability Service
           </h1>
-          <p className="text-white/90 text-xl md:text-2xl mb-8 leading-relaxed">
+          <p className="text-white/90 text-base md:text-lg mb-10 leading-relaxed max-w-3xl mx-auto">
             Convenient and affordable access to legal tools, including AI legal support, in-depth officer searches with detailed background reports, FOIA requests (auto submitted), circulation of persuasive petition for officer resignation, elaborate officer complaints (auto submitted) and efficient 1983 civil suits that include tort notice and cover sheet. All without the need to leave home.
           </p>
 
-          {/* Three-Tier Pricing */}
-          <div className="max-w-6xl mx-auto mb-8">
-            <div className="grid md:grid-cols-3 gap-4">
+          {/* Three-Tier Pricing - Simplified */}
+          <div className="max-w-5xl mx-auto mb-10">
+            <div className="grid md:grid-cols-3 gap-6">
               {/* Tier 1: Legal Consultation & Officer Search */}
-              <div className="bg-black/40 backdrop-blur-md rounded-lg p-6 border-2 border-primary/60">
-                <div className="text-white mb-4">
-                  <div className="text-sm text-white/80 leading-relaxed">Access to comprehensive legal consultation and in-depth officer search</div>
+              <div className="bg-black/40 backdrop-blur-md rounded-lg p-4 border border-white/30">
+                <div className="text-white mb-3">
+                  <div className="text-lg font-semibold mb-2">Core Services</div>
+                  <div className="text-xs text-white/70">Legal consultation & officer search</div>
                 </div>
-                <div className="space-y-2 mb-4">
-                  <Badge className="bg-white/20 text-white border-white/30">Legal Consultation</Badge>
-                  <Badge className="bg-white/20 text-white border-white/30 ml-2">Officer Search</Badge>
+                <div className="space-x-1">
+                  <Badge className="bg-white/15 text-white border-white/20 text-xs">FREE with signup</Badge>
                 </div>
               </div>
 
               {/* Tier 2: Additional Services */}
-              <div className="bg-black/40 backdrop-blur-md rounded-lg p-6 border border-white/30">
-                <div className="text-white mb-4">
-                  <div className="text-2xl font-bold mb-2">Additional Services</div>
+              <div className="bg-black/40 backdrop-blur-md rounded-lg p-4 border border-white/30">
+                <div className="text-white mb-3">
+                  <div className="text-lg font-semibold mb-2">Documents</div>
+                  <div className="text-xs text-white/70">FOIA, complaints & petitions</div>
                 </div>
-                <div className="space-y-2">
-                  <Badge className="bg-white/15 text-white border-white/20 text-xs">FOIA Request</Badge>
-                  <Badge className="bg-white/15 text-white border-white/20 ml-2 text-xs">Officer Complaint</Badge>
-                  <Badge className="bg-white/15 text-white border-white/20 ml-2 text-xs">Officer Resignation Petition</Badge>
-                </div>
+                <Badge className="bg-white/15 text-white border-white/20 text-xs">Per document pricing</Badge>
               </div>
 
               {/* Tier 3: Civil Lawsuits */}
-              <div className="bg-black/40 backdrop-blur-md rounded-lg p-6 border border-white/30">
-                <div className="text-white mb-4">
-                  <div className="text-2xl font-bold mb-2">Civil Lawsuits</div>
-                  <div className="text-xs text-white/80 leading-relaxed">Civilsuits tailored per your state's requirements, with relevant statutes, legal codes, and precedence. Choose between two options: The first is 'You file' the civilsuit, to save money, complete with filing instructions. The second is 'BadBlue files' the civilsuit, and the filing process is done for you, complete with coversheet.</div>
+              <div className="bg-black/40 backdrop-blur-md rounded-lg p-4 border border-white/30">
+                <div className="text-white mb-3">
+                  <div className="text-lg font-semibold mb-2">Lawsuits</div>
+                  <div className="text-xs text-white/70">State-specific civil suits</div>
                 </div>
-                <div className="space-y-2">
-                  <Badge className="bg-white/15 text-white border-white/20 text-xs">You File Civilsuit</Badge>
-                  <div className="space-y-1">
-                    <Badge className="bg-white/15 text-white border-white/20 ml-2 text-xs">BadBlue Files Civilsuit</Badge>
-                    <p className="text-xs text-red-400 font-medium ml-2">
-                      (less than the cost of a 2-hour consultation with a civil rights attorney)
-                    </p>
-                  </div>
-                </div>
+                <Badge className="bg-white/15 text-white border-white/20 text-xs">DIY or full service</Badge>
               </div>
             </div>
           </div>
 
-          {/* Legal Disclaimer Checkbox */}
-          <div className="mt-8 flex items-start gap-3 max-w-2xl mx-auto text-left px-4 relative z-10 bg-black/70 backdrop-blur-md rounded-lg p-6 border-2 border-yellow-400/60 shadow-xl">
+          {/* Legal Disclaimer Checkbox - Simplified */}
+          <div className="mt-10 flex items-start gap-3 max-w-xl mx-auto text-left px-4 relative z-10 bg-black/60 backdrop-blur-md rounded-lg p-4 border border-yellow-400/50">
             <Checkbox
               id="disclaimer"
               checked={disclaimerAccepted}
               onCheckedChange={(checked) => setDisclaimerAccepted(checked as boolean)}
-              className="mt-1 border-3 border-yellow-400 bg-white data-[state=checked]:bg-yellow-400 data-[state=checked]:text-black shrink-0 w-7 h-7 min-w-[1.75rem] shadow-lg"
+              className="mt-0.5 border-2 border-yellow-400 bg-white data-[state=checked]:bg-yellow-400 data-[state=checked]:text-black shrink-0 w-5 h-5 min-w-[1.25rem]"
               data-testid="checkbox-disclaimer"
             />
-            <label htmlFor="disclaimer" className="text-base text-white font-semibold leading-relaxed cursor-pointer block drop-shadow-lg">
-              I understand that BadBlue provides information from public records and does not constitute legal advice.
-              I will use this platform responsibly and in accordance with applicable laws.
+            <label htmlFor="disclaimer" className="text-sm text-white/90 leading-relaxed cursor-pointer block">
+              I understand that BadBlue provides public records and does not constitute legal advice. I will use this platform responsibly.
             </label>
           </div>
 
-          {/* CTA Button */}
-          <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center items-center px-4 relative z-10">
+          {/* CTA Button - Simplified */}
+          <div className="mt-6 flex justify-center px-4 relative z-10">
             <Button
-              size="lg"
-              className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-primary hover:bg-primary/90 backdrop-blur-sm border-2 border-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-500 w-full sm:w-auto min-h-[3rem] font-bold"
+              size="default"
+              className="text-base px-6 bg-primary hover:bg-primary/90 backdrop-blur-sm border border-white/50 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-500"
               onClick={() => window.location.href = "/login?signup=true"}
               disabled={!disclaimerAccepted}
               data-testid="button-get-started"
@@ -253,119 +241,74 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Value Proposition */}
-      <section className="py-16 px-4 bg-card mt-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-xl font-bold mb-3">Transparency Through Technology</h2>
-            <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-              Access the public information you have a right to know, with tools designed for accountability and transparency.
+      {/* Value Proposition - With more spacing */}
+      <section className="py-20 px-4 bg-card mt-16">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold mb-4">Transparency Through Technology</h2>
+            <p className="text-sm text-muted-foreground max-w-xl mx-auto">
+              Access public information with tools designed for accountability.
             </p>
           </div>
 
-          {/* Feature Overview Cards */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {/* Feature Overview Cards - Reduced to 4 key features */}
+          <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-3xl mx-auto">
             {/* Officer Search */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
                   <Search className="w-4 h-4 text-primary" />
                   Officer Search
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-xs text-muted-foreground">
-                  AI-powered search of officer public records including rank, training, incidents, cases, salary, and career history from official databases across all 50 states.
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  AI-powered search of officer public records across all 50 states.
                 </p>
               </CardContent>
             </Card>
 
             {/* LegalAI Consultation */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
                   <Scale className="w-4 h-4 text-primary" />
                   LegalAI Consultation
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-xs text-muted-foreground">
-                  Free legal research and plausibility scoring powered by AI to help you understand your rights and evaluate potential legal claims.
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Free legal research and evaluation of potential claims.
                 </p>
               </CardContent>
             </Card>
 
             {/* File Complaint */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
                   <FileText className="w-4 h-4 text-primary" />
-                  File Officer Complaint
+                  File Complaints
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-xs text-muted-foreground">
-                  Document police misconduct with automated routing to the appropriate Internal Affairs office or oversight authority.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Officer Resignation Petition */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="w-4 h-4 text-primary" />
-                  Officer Resignation Petition
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-xs text-muted-foreground">
-                  Create public petitions calling for officer resignation or departmental action. Petitions circulate for 90 days and are automatically delivered.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* FOIA Request */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Database className="w-4 h-4 text-primary" />
-                  FOIA Request
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-xs text-muted-foreground">
-                  Generate Freedom of Information Act requests with jurisdiction-specific templates and automatic submission to the proper authority.
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Document misconduct with automated routing to authorities.
                 </p>
               </CardContent>
             </Card>
 
             {/* Civil Rights Lawsuit */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
                   <Scale className="w-4 h-4 text-primary" />
-                  Civil Rights Lawsuit
+                  Civil Rights Lawsuits
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-xs text-muted-foreground">
-                  Generate federal civil rights lawsuits (42 USC § 1983) with state-specific legal templates, automated tort notices, and court filing instructions.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Secure Evidence Upload */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Upload className="w-4 h-4 text-primary" />
-                  Secure Evidence Upload
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-xs text-muted-foreground">
-                  Privacy-focused cloud storage for photos, videos, and documents with automated data cleanup for enhanced security.
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Generate federal lawsuits with state-specific templates.
                 </p>
               </CardContent>
             </Card>
@@ -373,22 +316,22 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Trust & Transparency */}
-      <section className="py-16 px-4 bg-card">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-6">Our Commitment to Accuracy</h2>
-          <div className="space-y-4 text-muted-foreground leading-relaxed">
+      {/* Trust & Transparency - Simplified */}
+      <section className="py-20 px-4 bg-card">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-2xl font-bold mb-6">Our Commitment</h2>
+          <div className="space-y-4 text-sm text-muted-foreground leading-relaxed">
             <p>
-              BadBlue aggregates information from publicly available records and databases maintained by law enforcement agencies. All information provided is sourced from official public records that citizens have the legal right to access.
+              BadBlue aggregates information from publicly available records maintained by law enforcement agencies.
             </p>
             <p>
-              We are committed to accuracy and transparency. If you believe any information is incorrect or needs updating, please{" "}
+              If you believe any information needs updating, please{" "}
               <a href="/contact" className="text-primary hover:underline">
                 contact us
               </a>.
             </p>
-            <p className="text-sm pt-4">
-              By using BadBlue, you agree to use the information responsibly and in accordance with applicable laws. This service is provided for transparency and accountability purposes.
+            <p className="text-xs pt-4 text-muted-foreground/80">
+              Use information responsibly and in accordance with applicable laws.
             </p>
           </div>
         </div>

@@ -292,76 +292,54 @@ export default function Login() {
           </div>
         </div>
 
-        {/* How It Works */}
-        <div className="max-w-5xl mx-auto">
+        {/* How It Works - Simplified */}
+        <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">How BadBlue Works</h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              BadBlue empowers citizens to hold law enforcement accountable through AI-powered complaint filing and lawsuit drafting. Here's how our platform makes justice accessible.
+            <h2 className="text-2xl font-bold mb-4">How BadBlue Works</h2>
+            <p className="text-base text-muted-foreground max-w-2xl mx-auto">
+              AI-powered complaint filing and lawsuit drafting to make justice accessible.
             </p>
           </div>
 
-          <div className="space-y-8">
-            {/* Step 1: Sign In */}
-            <Card className="border-primary/20">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xl flex-shrink-0">
+          <div className="space-y-6">
+            {/* Step 1: Sign In - Simplified */}
+            <Card className="border-muted">
+              <CardContent className="pt-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0">
                     1
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-2xl font-semibold mb-2">Sign In & Get Free Access</h3>
-                    <p className="text-muted-foreground mb-4">Get FREE access to legal consultation and officer search</p>
-                    <p className="text-muted-foreground mb-3">
-                      Create an account or sign in using your email. After signing in, you get immediate FREE access to LegalAI Consultation and comprehensive officer search.
+                    <h3 className="text-lg font-semibold mb-1">Sign In & Get Free Access</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Create an account to get FREE legal consultation and officer search.
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Step 2: Choose Your Service */}
-            <Card className="border-primary/20">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xl flex-shrink-0">
+            {/* Step 2: Choose Your Service - Simplified */}
+            <Card className="border-muted">
+              <CardContent className="pt-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0">
                     2
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-2xl font-semibold mb-4">Choose Your Service</h3>
-                    
-                    {/* Tier 1: Platform Access - FREE */}
-                    <div className="border-2 border-primary/40 rounded-lg p-4 mb-4 bg-primary/5">
-                      <p className="text-sm text-muted-foreground mb-3">FREE access to comprehensive legal consultation and in-depth officer search for all signed-in users</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary">Legal Consultation - FREE</Badge>
-                        <Badge variant="secondary">Officer Search - FREE</Badge>
+                    <h3 className="text-lg font-semibold mb-2">Choose Your Service</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Free core services plus optional documents and lawsuits.
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="secondary" className="text-xs">FREE: Legal Consultation</Badge>
+                        <Badge variant="secondary" className="text-xs">FREE: Officer Search</Badge>
                       </div>
-                    </div>
-
-                    {/* Tier 2: Additional Services */}
-                    <div className="border rounded-lg p-4 mb-4">
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline" className="text-xs">FOIA Request</Badge>
-                        <Badge variant="outline" className="text-xs">Officer Complaint</Badge>
-                        <Badge variant="outline" className="text-xs">Officer Resignation Petition</Badge>
-                      </div>
-                    </div>
-
-                    {/* Tier 3: Civil Lawsuits */}
-                    <div className="border rounded-lg p-4">
-                      <h4 className="font-semibold mb-2">Civil Lawsuits</h4>
-                      <p className="text-xs text-muted-foreground mb-3">Civilsuits tailored per your state's requirements, with relevant statutes, legal codes, and precedence. Choose between two options: The first is 'You file' the civilsuit, to save money, complete with filing instructions. The second is 'BadBlue files' the civilsuit, and the filing process is done for you, complete with coversheet.</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline" className="text-xs">You File Civilsuit</Badge>
-                      </div>
-                      <div className="mt-2 space-y-1">
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="outline" className="text-xs">BadBlue Files Civilsuit</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          (Includes filing fees)
-                        </p>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className="text-xs">FOIA</Badge>
+                        <Badge variant="outline" className="text-xs">Complaints</Badge>
+                        <Badge variant="outline" className="text-xs">Lawsuits</Badge>
                       </div>
                     </div>
                   </div>
@@ -369,82 +347,68 @@ export default function Login() {
               </CardContent>
             </Card>
 
-            {/* Step 3: LegalAI Consultation */}
-            <Card className="border-primary/20">
-              <CardContent className="pt-6">
+            {/* Step 3: LegalAI Consultation - Simplified */}
+            <Card className="border-muted">
+              <CardContent className="pt-5">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xl flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0">
                     3
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-2xl font-semibold mb-2">Get LegalAI Consultation</h3>
-                    <p className="text-muted-foreground mb-4">Comprehensive legal research & analysis included</p>
-                    <p className="text-muted-foreground mb-3">
-                      Start by describing your incident to our LegalAI Consultation system. It researches federal and state statutes, relevant case law, analyzes your case for legal actionability, provides plausibility scoring, and recommends whether to file a complaint, lawsuit, or officer resignation petition.
+                    <h3 className="text-lg font-semibold mb-1">Get LegalAI Consultation</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Describe your incident. AI analyzes laws and recommends next steps.
                     </p>
-                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                      <p className="text-sm text-blue-900 dark:text-blue-100">
-                        <strong>AI-Powered Analysis:</strong> Our advanced AI identifies applicable laws, statutes, and legal precedents relevant to your specific situation.
-                      </p>
-                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Step 4: Upload Evidence & AI Analysis */}
-            <Card className="border-primary/20">
-              <CardContent className="pt-6">
+            {/* Step 4: Upload Evidence - Simplified */}
+            <Card className="border-muted">
+              <CardContent className="pt-5">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xl flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0">
                     4
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-2xl font-semibold mb-2">Upload Supporting Evidence & AI-Powered Badge Analysis</h3>
-                    <p className="text-muted-foreground mb-4">Strengthen your case with photos, videos, and documents</p>
-                    <p className="text-muted-foreground mb-3">
-                      Upload up to 10 files including photos of injuries, body cam footage, medical records, witness statements, or badge photos. Our AI can analyze badge images to extract badge number, department name, officer rank, and identification details—even from blurry or partial photos. All evidence is stored securely with private access controls.
+                    <h3 className="text-lg font-semibold mb-1">Upload Evidence</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Add photos, videos, and documents. AI can identify badges and officers.
                     </p>
-                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                      <p className="text-sm text-blue-900 dark:text-blue-100">
-                        <strong>Security:</strong> All evidence files are encrypted and only accessible by you.
-                      </p>
-                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Step 5: Review & Pay */}
-            <Card className="border-primary/20">
-              <CardContent className="pt-6">
+            {/* Step 5: Review & Pay - Simplified */}
+            <Card className="border-muted">
+              <CardContent className="pt-5">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xl flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0">
                     5
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-2xl font-semibold mb-2">Review & Pay Securely</h3>
-                    <p className="text-muted-foreground mb-4">Preview everything before submission</p>
-                    <p className="text-muted-foreground mb-3">
-                      Review all details, officer information, incident description, and evidence files before proceeding. Then complete your secure payment via Stripe.
+                    <h3 className="text-lg font-semibold mb-1">Review & Pay</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Review details and complete secure payment via Stripe.
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Step 6: Processing & Email */}
-            <Card className="border-primary/20">
-              <CardContent className="pt-6">
+            {/* Step 6: Get Your Documents - Simplified */}
+            <Card className="border-muted">
+              <CardContent className="pt-5">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xl flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0">
                     6
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-2xl font-semibold mb-2">Automatic Processing & Email Confirmation</h3>
-                    <p className="text-muted-foreground mb-4">We handle the routing and send you a complete copy</p>
-                    <p className="text-muted-foreground mb-3">
-                      Immediately after payment, you'll receive a comprehensive email containing a complete copy of your complaint or lawsuit document, submission details, and next steps for filing.
+                    <h3 className="text-lg font-semibold mb-1">Get Your Documents</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Receive complete documents via email with filing instructions.
                     </p>
                   </div>
                 </div>
@@ -453,25 +417,25 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Login Card - Moved to bottom */}
-        <Card className="max-w-md mx-auto mb-16">
-          <CardContent className="pt-8 pb-8">
-            <div className="text-center mb-6">
-              <h1 className="text-3xl font-bold mb-2">Sign In</h1>
-              <p className="text-muted-foreground">
-                Get started with BadBlue
+        {/* Login Card - Simplified with more spacing */}
+        <Card className="max-w-md mx-auto mt-8 mb-16">
+          <CardContent className="pt-10 pb-10 px-8">
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold mb-2">Welcome</h1>
+              <p className="text-sm text-muted-foreground">
+                Sign in or create an account
               </p>
             </div>
 
             <Tabs defaultValue={defaultTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="signin" data-testid="tab-signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup" data-testid="tab-signup">Sign Up</TabsTrigger>
               </TabsList>
 
-              {/* Sign In Form */}
+              {/* Sign In Form - With more spacing */}
               <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
+                <form onSubmit={handleSignIn} className="space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="signin-email">Email</Label>
                     <Input
@@ -520,9 +484,9 @@ export default function Login() {
                 </form>
               </TabsContent>
 
-              {/* Sign Up Form */}
+              {/* Sign Up Form - With more spacing */}
               <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
+                <form onSubmit={handleSignUp} className="space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="signup-firstName">First Name</Label>
                     <Input
@@ -559,9 +523,6 @@ export default function Login() {
                       disabled={registerMutation.isPending}
                       required
                     />
-                    <p className="text-xs text-muted-foreground">
-                      We'll use this to sign you in and send important updates
-                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
@@ -571,7 +532,7 @@ export default function Login() {
                       type="password"
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
-                      placeholder="Choose a password (min 8 characters)"
+                      placeholder="Min 8 characters"
                       disabled={registerMutation.isPending}
                       required
                     />
