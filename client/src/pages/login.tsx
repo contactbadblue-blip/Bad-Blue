@@ -444,7 +444,7 @@ export default function Login() {
                       type="text"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
-                      placeholder="Email or username (admin, bypass)"
+                      placeholder="Enter your email or username"
                       disabled={loginMutation.isPending}
                       required
                     />
