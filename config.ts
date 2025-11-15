@@ -1,41 +1,42 @@
 ```typescript
-// Configuration file for test settings
+import { createClient } from '@supabase/supabase-js';
+import { PoolConfig } from 'pg';
 
-interface TestConfig {
-  duration: number; // Test duration in seconds
-}
+const supabaseUrl = 'https://your-supabase-url.supabase.co';
+const supabaseKey = 'your-supabase-key';
+const supabaseSecret = 'your-supabase-secret';
 
-const testConfig: TestConfig = {
-  duration: 30, // Updated test duration to 30 seconds as specified by the admin
+const poolConfig: PoolConfig = {
+  // Update the pool configuration to prevent calling end on the pool prematurely
+  // by setting the idleTimeoutMillis to a higher value or disabling it altogether
+  idleTimeoutMillis: 0, // disable idle timeout
 };
 
-export default testConfig;
+const supabase = createClient(supabaseUrl, supabaseKey, supabaseSecret, {
+  // Update the pool configuration
+  pool: poolConfig,
+});
+
+export default supabase;
 ```
 
-Alternatively, if the file already exists with a different structure, it might look like this:
-
-FILE: config.ts
+Alternatively, if you are using an existing `Pool` instance, you can update its configuration as follows:
 
 ```typescript
-// Configuration file for test settings
+import { Pool } from 'pg';
 
-const testConfig = {
-  // Other test configurations...
-  duration: 30, // Updated test duration to 30 seconds as specified by the admin
-  // Other test configurations...
-};
+const pool = new Pool({
+  user: 'your-database-username',
+  host: 'your-database-host',
+  database: 'your-database-name',
+  password: 'your-database-password',
+  port: 5432,
+});
 
-export default testConfig;
+// Update the pool configuration to prevent calling end on the pool prematurely
+pool.idleTimeoutMillis = 0; // disable idle timeout
+
+export default pool;
 ```
 
-Or, if the file is in JSON format (config.json):
-
-FILE: config.json
-
-```json
-{
-  "duration": 30
-}
-```
-
-Please note that the exact changes will depend on the existing structure of the config file. The above examples are general representations. If you have a specific file structure, please provide it for more accurate changes.
+Remember to replace the placeholders (`your-supabase-url`, `your-supabase-key`, `your-supabase-secret`, `your-database-username`, `your-database-host`, `your-database-name`, `your-database-password`) with your actual Supabase and database credentials.

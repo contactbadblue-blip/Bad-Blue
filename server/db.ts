@@ -29,8 +29,11 @@ pool.on('error', (err, client) => {
   console.error('[DATABASE POOL] Error code:', (err as any).code);
   console.error('[DATABASE POOL] Error severity:', (err as any).severity);
   
-  if (err.message?.includes('shutdown') || err.message?.includes('termination')) {
-    console.log('[DATABASE POOL] Database connection terminated - pool will reconnect automatically');
+  if (err.message?.includes('shutdown') || err.message?.includes('termination') || 
+      err.message?.includes('Cannot use a pool after calling end') ||
+      err.message?.includes('Connection terminated')) {
+    console.log('[DATABASE POOL] Database connection issue detected - will auto-recover');
+    // Don't call resetPool here as it might cause recursion
   }
 });
 

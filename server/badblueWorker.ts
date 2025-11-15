@@ -859,24 +859,21 @@ class BadBlueWorker {
         try {
           console.log('[BadBlue Worker] Testing AI service connectivity...');
 
-          // Test Gemini
+          // Test Gemini - ONLY verify key exists, do NOT make API calls
+          // Worker/Sub-Agent should use only Groq (35% quota limit)
           const geminiKey = process.env.GEMINI_API_KEY;
           if (geminiKey) {
-            try {
-              const { GoogleGenAI } = await import('@google/genai');
-              const gemini = new GoogleGenAI(geminiKey);
-              const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
-              await model.generateContent('OK');
-              console.log('[BadBlue Worker] ✓ Gemini AI service operational');
-            } catch (geminiError: any) {
-              console.log('[BadBlue Worker] ❌ Gemini AI service failed');
-              const isRateLimitError = geminiError.message.includes('rate limit') || geminiError.message.includes('quota') || geminiError.status === 429;
+            // DO NOT consume Gemini quota - only validate key format
+            if (geminiKey.length > 20 && geminiKey.startsWith('AI')) {
+              console.log('[BadBlue Worker] ✓ Gemini API key configured (not tested to preserve quota for users)');
+            } else {
+              console.log('[BadBlue Worker] ⚠ Gemini API key present but may be invalid format');
               issues.push({
                 timestamp: new Date().toISOString(),
                 functionAffected: 'Gemini AI Service',
-                cause: `Gemini API test failed: ${geminiError.message}`,
-                systemState: isRateLimitError ? 'working' : 'not_working',
-                severity: isRateLimitError ? Severity.NOTICE : Severity.SERIOUS,
+                cause: 'Gemini API key may be malformed',
+                systemState: 'unknown',
+                severity: Severity.WARNING,
               });
             }
           } else {

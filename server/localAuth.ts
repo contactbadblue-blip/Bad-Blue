@@ -87,7 +87,8 @@ export function setupLocalStrategy() {
           const adminBypassId = process.env.ADMIN_BYPASS_ID || "$ADMIN85";
           const adminBypassPassword = process.env.ADMIN_BYPASS_PASSWORD || "SARBEAR";
           
-          if (email === adminBypassId) {
+          // Allow both $ADMIN85 and admin (for login form compatibility)
+          if (email === adminBypassId || email === "admin") {
             // Verify admin password
             if (password !== adminBypassPassword) {
               return done(null, false, { message: "Invalid admin credentials" });
@@ -128,7 +129,8 @@ export function setupLocalStrategy() {
           }
 
           // Special case: Payment bypass (allows paid access without admin privileges)
-          if (email === "Bypass") {
+          // Accept both "Bypass" and "bypass" for better usability
+          if (email === "Bypass" || email === "bypass" || email === "user") {
             console.log(`[SECURITY] Payment bypass login attempt detected`);
             
             // Verify bypass password

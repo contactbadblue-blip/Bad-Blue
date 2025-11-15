@@ -6,12 +6,8 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-// Force override Stripe key if it's the old expired one
-if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.endsWith('UsOjs1')) {
-  console.log('[ENV] Detected old Stripe key, forcing update...');
-  process.env.STRIPE_SECRET_KEY = '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';
-  console.log('[ENV] Stripe key updated successfully');
-}
+// Stripe key should be updated in Replit Secrets panel
+// Temporary workaround removed - use proper Secrets management
 
 import { createClient } from "@supabase/supabase-js";
 import type { Request, Response } from "express";
