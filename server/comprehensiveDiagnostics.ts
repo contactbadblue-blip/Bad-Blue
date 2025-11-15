@@ -283,30 +283,6 @@ class ComprehensiveDiagnostics {
       }
     });
 
-    // Test password reset functionality
-    await this.runTest(category, 'Password Reset Tokens', async () => {
-      try {
-        const usersWithTokens = await db.select({ count: sql<number>`count(*)` })
-          .from(schema.users)
-          .where(sql`password_reset_token IS NOT NULL`);
-        
-        const expiredTokens = await db.select({ count: sql<number>`count(*)` })
-          .from(schema.users)
-          .where(sql`password_reset_token IS NOT NULL AND password_reset_expires < NOW()`);
-
-        return { 
-          status: 'PASS', 
-          message: 'Password reset system operational',
-          details: {
-            activeTokens: usersWithTokens[0].count,
-            expiredTokens: expiredTokens[0].count
-          }
-        };
-      } catch (error: any) {
-        return { status: 'FAIL', message: 'Failed to check password reset', error: error.message };
-      }
-    });
-
     // Test session management
     await this.runTest(category, 'Session Management', async () => {
       try {

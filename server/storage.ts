@@ -218,7 +218,7 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Helper to generate user returning columns (excluding problematic password_reset fields)
+  // Helper to generate user returning columns
   private getUserReturningColumns() {
     return {
       id: users.id,
@@ -233,9 +233,6 @@ export class DatabaseStorage implements IStorage {
       lastLoginAt: users.lastLoginAt,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
-      // Return null for password reset fields without referencing them
-      passwordResetToken: sql<string | null>`NULL`,
-      passwordResetTokenExpiry: sql<Date | null>`NULL`,
     };
   }
 
@@ -279,9 +276,7 @@ export class DatabaseStorage implements IStorage {
         access_paid_at as "accessPaidAt",
         last_login_at as "lastLoginAt",
         created_at as "createdAt",
-        updated_at as "updatedAt",
-        NULL as "passwordResetToken",
-        NULL as "passwordResetTokenExpiry"
+        updated_at as "updatedAt"
     `;
     
     const result = await db.execute(query);
@@ -370,29 +365,6 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return authAccount;
   }
-
-<<<<<<< HEAD
-  // Password reset operations
-  // Temporarily disabled due to database column issues - will be fixed later
-  async setPasswordResetToken(userId: string, hashedToken: string, expiry: Date): Promise<User> {
-    // For now, just return the user without updating password reset fields
-    const user = await this.getUser(userId);
-    if (!user) throw new Error(`User ${userId} not found`);
-    return user;
-  }
-
-  async getUserByResetToken(hashedToken: string): Promise<User | undefined> {
-    // Password reset is temporarily disabled - return undefined
-    return undefined;
-  }
-
-  async clearPasswordResetToken(userId: string): Promise<User> {
-    // For now, just return the user without clearing password reset fields
-    const user = await this.getUser(userId);
-    if (!user) throw new Error(`User ${userId} not found`);
-    return user;
-  }
-
 
   // Admin access log operations
   async createAdminAccessLog(logData: InsertAdminAccessLog): Promise<AdminAccessLog> {
@@ -763,6 +735,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const query = db.select({
         id: publicEvidence.id,
+        userId: publicEvidence.userId,
         fileName: publicEvidence.fileName,
         fileType: publicEvidence.fileType,
         fileUrl: publicEvidence.fileUrl,
@@ -772,10 +745,8 @@ export class DatabaseStorage implements IStorage {
         incidentDate: publicEvidence.incidentDate,
         description: publicEvidence.description,
         uploadedAt: publicEvidence.uploadedAt,
-        uploadedBy: users.firstName,
       })
       .from(publicEvidence)
-      .leftJoin(users, eq(publicEvidence.userId, users.id))
       .orderBy(desc(publicEvidence.uploadedAt));
 
       if (fileType) {
@@ -831,16 +802,12 @@ export class DatabaseStorage implements IStorage {
 
   async updatePetitionPayment(
     petitionId: string,
-    paymentId: string,
-    paymentStatus: string,
-    amountPaid: number
+    paymentId: string
   ) {
     return await db
       .update(petitions)
       .set({
         paymentId,
-        paymentStatus,
-        amountPaid,
         updatedAt: new Date(),
       })
       .where(eq(petitions.id, petitionId));
