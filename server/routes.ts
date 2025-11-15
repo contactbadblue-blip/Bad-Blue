@@ -6380,6 +6380,93 @@ For questions or support, contact: support@badblue.com
     }
   });
 
+  // ============================================
+  // COMPREHENSIVE DIAGNOSTICS ENDPOINT
+  // ============================================
+  
+  // Full system diagnostics - protected endpoint (admin or bypass account)
+  app.get("/api/diagnostics/full", async (req: any, res) => {
+    try {
+      // Check authentication - allow admin-bypass or authenticated admin users
+      const isAuthenticatedRequest = req.isAuthenticated?.();
+      const userId = req.user?.claims?.sub || req.user?.id;
+      
+      // Check for bypass credentials in Basic auth header
+      const authHeader = req.headers.authorization;
+      let isBypassAuth = false;
+      
+      if (authHeader && authHeader.startsWith('Basic ')) {
+        const credentials = Buffer.from(authHeader.slice(6), 'base64').toString();
+        const [username, password] = credentials.split(':');
+        isBypassAuth = (username === 'Bypass' && password === 'Payment');
+      }
+      
+      // Require either authenticated admin, admin-bypass user, or bypass credentials
+      if (!isAuthenticatedRequest && !isBypassAuth) {
+        return res.status(401).json({ 
+          message: "Authentication required",
+          hint: "Use admin account or Bypass/Payment credentials"
+        });
+      }
+      
+      if (isAuthenticatedRequest && userId !== "admin-bypass" && !isBypassAuth) {
+        // Additional check for admin role if needed
+        const user = await storage.getUser(userId);
+        if (!user || !user.hasPaidForAccess) {
+          return res.status(403).json({ 
+            message: "Access denied",
+            hint: "Admin privileges required"
+          });
+        }
+      }
+
+      console.log('[DIAGNOSTICS] Running comprehensive system diagnostics...');
+      
+      // Import and run comprehensive diagnostics
+      const { runComprehensiveDiagnostics } = await import('./comprehensiveDiagnostics');
+      const report = await runComprehensiveDiagnostics();
+      
+      // Log summary to console
+      console.log(`[DIAGNOSTICS] Complete: ${report.summary.passed}/${report.summary.total} passed`);
+      console.log(`[DIAGNOSTICS] Failed: ${report.summary.failed}, Warnings: ${report.summary.warnings}`);
+      
+      // Return comprehensive report
+      res.json({
+        success: report.summary.failed === 0,
+        report,
+        message: report.summary.failed === 0 
+          ? `All systems operational (${report.summary.passed}/${report.summary.total} tests passed)`
+          : `System issues detected (${report.summary.failed} failures, ${report.summary.warnings} warnings)`,
+      });
+      
+    } catch (error: any) {
+      console.error('[DIAGNOSTICS] Error running diagnostics:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to run diagnostics",
+        error: error.message 
+      });
+    }
+  });
+  
+  // Quick health check endpoint (public, lightweight)
+  app.get("/api/health", async (req, res) => {
+    try {
+      // Just check database connectivity
+      await db.execute(sql`SELECT 1`);
+      res.json({ 
+        status: 'ok',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      res.status(503).json({ 
+        status: 'error',
+        message: 'Database unavailable',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Worker and Sub-Agent Comprehensive Testing Endpoints
   app.post("/api/admin/run-comprehensive-tests", adminAuthMiddleware, async (req, res) => {
     try {

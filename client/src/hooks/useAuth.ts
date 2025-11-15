@@ -10,7 +10,7 @@ export function useAuth() {
     retry: false,
     // Optimize auth query with caching
     staleTime: 5 * 60 * 1000, // 5 minutes - data is considered fresh
-    cacheTime: 10 * 60 * 1000, // 10 minutes - keep in cache
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache (gcTime replaces cacheTime in v5)
     refetchOnMount: false, // Don't refetch if we have cached data
     refetchOnWindowFocus: false, // Disable refetch on window focus
     refetchOnReconnect: false, // Disable refetch on reconnect

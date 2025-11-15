@@ -130,6 +130,14 @@ app.use((req, res, next) => {
     console.error('Failed to create Sub-Agent tables:', error);
   }
 
+  // Run Token Metrics table migrations
+  try {
+    const { createTokenMetricsTables } = await import('./migrations/createTokenMetrics');
+    await createTokenMetricsTables();
+  } catch (error) {
+    console.error('Failed to create Token Metrics tables:', error);
+  }
+
   // Start BadBlue Worker
   const { badblueWorker } = await import('./badblueWorker');
   badblueWorker.initialize().catch((error) => {
