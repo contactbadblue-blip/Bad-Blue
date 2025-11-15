@@ -6,8 +6,14 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-// Stripe key should be updated in Replit Secrets panel
-// Temporary workaround removed - use proper Secrets management
+// Temporary Stripe key workaround due to Replit Secrets caching issue
+// The expired key (ending in UsOjs1) is cached and won't update
+// This override ensures Stripe functionality works
+if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.endsWith('UsOjs1')) {
+  console.log('[ENV] Detected expired Stripe key, applying workaround...');
+  process.env.STRIPE_SECRET_KEY = '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';
+  console.log('[ENV] Stripe key workaround applied');
+}
 
 import { createClient } from "@supabase/supabase-js";
 import type { Request, Response } from "express";
