@@ -10,7 +10,7 @@ function getGeminiClient(): GoogleGenAI {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    // Note: Using Google Gemini - the newest model is gemini-2.5-flash (released 2025)
+    // Note: Using Google Gemini - the newest model is gemini-1.5-flash
     gemini = new GoogleGenAI(process.env.GEMINI_API_KEY);
   }
   return gemini;
@@ -184,9 +184,9 @@ Results Format:
 
 Apply your expert analysis even if image quality is poor. Extract whatever information IS visible and clearly state what is NOT visible.`;
 
-    // Using Gemini 1.5 Pro for vision capabilities
+    // Using Gemini 1.5 Flash for vision capabilities  
     const model = client.getGenerativeModel({ 
-      model: "gemini-1.5-pro",
+      model: "gemini-1.5-flash",
       generationConfig: {
         responseMimeType: "application/json",
       }

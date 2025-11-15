@@ -412,12 +412,12 @@ class ComprehensiveDiagnostics {
       }
 
       try {
-        const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+        const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
         
         // Simple test prompt
         const result = await model.generateContent('Respond with OK if working');
-        const response = await result.response;
+        const response = result.response;
         const text = response.text();
 
         if (text && text.length > 0) {
@@ -567,12 +567,12 @@ class ComprehensiveDiagnostics {
       }
 
       try {
-        const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+        const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
         
         const startTime = Date.now();
         const result = await model.generateContent('What is 2+2? Answer with just the number.');
-        const response = await result.response;
+        const response = result.response;
         const text = response.text();
         const responseTime = Date.now() - startTime;
 
