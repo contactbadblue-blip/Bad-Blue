@@ -1,8 +1,12 @@
-// Database setup - optimized for Supabase PostgreSQL
+// Database setup - optimized for Supabase PostgreSQL and Railway
 // Optimized for 500+ concurrent users
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
+
+// Detect deployment environment
+const isRailway = process.env.RAILWAY_ENVIRONMENT === 'production' || !!process.env.RAILWAY_PROJECT_ID;
+const isProduction = process.env.NODE_ENV === 'production' || isRailway;
 
 // Use Supabase database URL if available, otherwise fall back to DATABASE_URL
 const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
@@ -13,15 +17,43 @@ if (!databaseUrl) {
   );
 }
 
+// Railway-specific connection configuration
+const getPoolConfig = () => {
+  const baseConfig = {
+    connectionString: databaseUrl,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: isRailway ? 30000 : 10000, // Longer timeout for Railway
+  };
+
+  // Railway production needs more conservative pool settings
+  if (isRailway) {
+    return {
+      ...baseConfig,
+      max: 20,  // Reduced from 100 for Railway's proxy
+      min: 2,   // Reduced from 10
+      ssl: process.env.PGSSLMODE !== 'disable' ? { 
+        rejectUnauthorized: false,
+        // Railway might need additional SSL config
+        ...(process.env.DATABASE_SSL_CERT ? { ca: process.env.DATABASE_SSL_CERT } : {})
+      } : false,
+      // Railway-specific: handle connection through their proxy
+      statement_timeout: 30000,
+      query_timeout: 30000,
+      application_name: 'badblue-railway',
+    };
+  }
+
+  // Default configuration for Replit/local
+  return {
+    ...baseConfig,
+    max: 100,
+    min: 10,
+    ssl: { rejectUnauthorized: false },
+  };
+};
+
 // Module-level pool and drizzle instance (use 'let' so they can be reassigned during repairs)
-export let pool = new Pool({ 
-  connectionString: databaseUrl,
-  max: 100,
-  min: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-  ssl: { rejectUnauthorized: false },
-});
+export let pool = new Pool(getPoolConfig());
 
 // Global error handler to prevent unhandled error crashes
 pool.on('error', (err, client) => {
@@ -37,7 +69,7 @@ pool.on('error', (err, client) => {
   }
 });
 
-console.log('[DATABASE] Connection pool created - ready for queries');
+console.log(`[DATABASE] Connection pool created - ready for queries (${isRailway ? 'Railway' : 'Standard'} mode)`);
 
 export let db = drizzle(pool, { schema });
 
@@ -72,14 +104,8 @@ export async function resetPool(): Promise<void> {
         throw new Error('DATABASE_URL not available for pool reset');
       }
 
-      pool = new Pool({
-        connectionString: newDatabaseUrl,
-        max: 100,
-        min: 10,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
-        ssl: { rejectUnauthorized: false },
-      });
+      // Use the same configuration function for consistency
+      pool = new Pool(getPoolConfig());
 
       // Re-attach error handler to new pool
       pool.on('error', (err, client) => {

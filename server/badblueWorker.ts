@@ -134,39 +134,109 @@ class BadBlueWorker {
 
   async initialize() {
     console.log('[BadBlue Worker] Initializing background worker system...');
+    
+    // Detect Railway environment
+    const isRailway = process.env.RAILWAY_ENVIRONMENT === 'production' || !!process.env.RAILWAY_PROJECT_ID;
+    
+    if (isRailway) {
+      console.log('[BadBlue Worker] Running in Railway production environment - adjusted settings applied');
+    }
+
+    // Register graceful shutdown handlers for Railway/production
+    this.registerShutdownHandlers();
 
     // Ensure data directory exists
     await this.ensureDataDirectory();
 
-    // Initialize autonomous search controller
-    const { searchController } = await import('./autonomousSearchController');
-    await searchController.initialize();
+    // Initialize autonomous search controller only if not Railway (to avoid quota issues)
+    if (!isRailway) {
+      const { searchController } = await import('./autonomousSearchController');
+      await searchController.initialize();
+    } else {
+      console.log('[BadBlue Worker] Skipping autonomous search controller in Railway environment');
+    }
 
     // Schedule 30-minute critical monitoring (rate limits, database, Stripe, email)
     this.scheduleCriticalMonitoring();
 
-    // Schedule 15-minute database heartbeat (runs independently)
+    // Schedule database heartbeat (5 mins for Railway, 15 for others)
     this.scheduleDatabaseHeartbeat();
 
-    // Schedule 6-hour diagnostic cycle
-    this.scheduleDiagnostics();
+    // Only schedule heavy background tasks if not Railway
+    if (!isRailway) {
+      // Schedule 6-hour diagnostic cycle
+      this.scheduleDiagnostics();
 
-    // Schedule daily 2:00 AM UTC repair cycle
-    this.scheduleDailyRepair();
+      // Schedule daily 2:00 AM UTC repair cycle
+      this.scheduleDailyRepair();
 
-    // Schedule weekly 2:00 AM UTC comprehensive system test
-    this.scheduleWeeklyTest();
+      // Schedule weekly 2:00 AM UTC comprehensive system test
+      this.scheduleWeeklyTest();
 
-    // Schedule weekly automated backup (Sundays at 3:00 AM UTC, after weekly test)
-    this.scheduleWeeklyBackup();
+      // Schedule weekly automated backup (Sundays at 3:00 AM UTC, after weekly test)
+      this.scheduleWeeklyBackup();
+    } else {
+      console.log('[BadBlue Worker] Heavy background tasks disabled in Railway environment');
+    }
 
     console.log('[BadBlue Worker] ✓ Background worker system active');
+    console.log(`[BadBlue Worker] - Environment: ${isRailway ? 'Railway Production' : 'Standard'}`);
     console.log('[BadBlue Worker] - Critical monitoring: Every 30 minutes (rate limits, AI, payments, email)');
-    console.log('[BadBlue Worker] - Database heartbeat: Every 15 minutes (lightweight connectivity check)');
-    console.log('[BadBlue Worker] - Diagnostic cycle: Every 6 hours (background process - no user interruption)');
-    console.log('[BadBlue Worker] - Daily repair: 8:30 PM UTC (enters maintenance mode)');
-    console.log('[BadBlue Worker] - Comprehensive weekly test: Every Sunday 8:30 PM UTC (enters maintenance mode)');
-    console.log('[BadBlue Worker] - Weekly backup: Every Sunday 9:00 PM UTC (backs up code + database)');
+    console.log(`[BadBlue Worker] - Database heartbeat: Every ${isRailway ? '5' : '15'} minutes (lightweight connectivity check)`);
+    
+    if (!isRailway) {
+      console.log('[BadBlue Worker] - Diagnostic cycle: Every 6 hours (background process - no user interruption)');
+      console.log('[BadBlue Worker] - Daily repair: 8:30 PM UTC (enters maintenance mode)');
+      console.log('[BadBlue Worker] - Comprehensive weekly test: Every Sunday 8:30 PM UTC (enters maintenance mode)');
+      console.log('[BadBlue Worker] - Weekly backup: Every Sunday 9:00 PM UTC (backs up code + database)');
+    }
+  }
+  
+  private registerShutdownHandlers() {
+    const gracefulShutdown = async (signal: string) => {
+      console.log(`[BadBlue Worker] Received ${signal} signal - initiating graceful shutdown...`);
+      
+      // Clear all intervals
+      if (this.diagnosticInterval) clearInterval(this.diagnosticInterval);
+      if (this.repairSchedule) clearTimeout(this.repairSchedule);
+      if (this.weeklyTestSchedule) clearTimeout(this.weeklyTestSchedule);
+      if (this.backupSchedule) clearTimeout(this.backupSchedule);
+      if (this.databaseHeartbeatInterval) clearInterval(this.databaseHeartbeatInterval);
+      if (this.criticalMonitoringInterval) clearInterval(this.criticalMonitoringInterval);
+      
+      // Wait for any ongoing operations to complete
+      const maxWaitTime = 5000; // 5 seconds max wait
+      const startTime = Date.now();
+      
+      while ((this.isDiagnosticInProgress || this.isRepairInProgress) && 
+             (Date.now() - startTime < maxWaitTime)) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      console.log('[BadBlue Worker] ✓ Graceful shutdown complete');
+      process.exit(0);
+    };
+    
+    // Handle SIGTERM (Railway/Docker) and SIGINT (Ctrl-C)
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error) => {
+      console.error('[BadBlue Worker] Uncaught exception:', error);
+      // Don't exit in production - let the process recover
+      if (process.env.NODE_ENV !== 'production') {
+        process.exit(1);
+      }
+    });
+    
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('[BadBlue Worker] Unhandled promise rejection:', reason);
+      // Don't exit in production - let the process recover
+      if (process.env.NODE_ENV !== 'production') {
+        process.exit(1);
+      }
+    });
   }
 
   private async ensureDataDirectory() {
@@ -308,13 +378,27 @@ class BadBlueWorker {
   private scheduleDatabaseHeartbeat() {
     console.log('[BadBlue Worker] Starting 15-minute database heartbeat...');
     
+    // Detect Railway environment
+    const isRailway = process.env.RAILWAY_ENVIRONMENT === 'production' || !!process.env.RAILWAY_PROJECT_ID;
+    const heartbeatInterval = isRailway ? 5 * 60 * 1000 : 15 * 60 * 1000; // 5 mins for Railway, 15 for others
+    
     const runHeartbeat = async () => {
       try {
-        const { db } = await import('./db');
-        const { sql } = await import('drizzle-orm');
+        // Add timeout for Railway environments
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Database heartbeat timeout')), isRailway ? 20000 : 10000);
+        });
         
-        // Test connection with simple lightweight query
-        await db.execute(sql`SELECT 1`);
+        const dbPromise = (async () => {
+          const { db } = await import('./db');
+          const { sql } = await import('drizzle-orm');
+          
+          // Test connection with simple lightweight query
+          await db.execute(sql`SELECT 1`);
+        })();
+        
+        // Race between query and timeout
+        await Promise.race([dbPromise, timeoutPromise]);
         
         // Reset failure counter on success
         if (this.consecutiveDbFailures > 0) {
@@ -328,6 +412,7 @@ class BadBlueWorker {
             status: 'restored',
             consecutiveFailures: 0,
             repairAttempts: 0,
+            environment: isRailway ? 'railway' : 'standard',
           });
         }
         
@@ -336,10 +421,11 @@ class BadBlueWorker {
           check: 'database_heartbeat',
           status: 'success',
           consecutiveFailures: 0,
+          environment: isRailway ? 'railway' : 'standard',
         });
       } catch (error: any) {
         this.consecutiveDbFailures++;
-        console.log(`[BadBlue Worker] ❌ Database heartbeat failed (${this.consecutiveDbFailures} consecutive failures)`);
+        console.log(`[BadBlue Worker] ❌ Database heartbeat failed (${this.consecutiveDbFailures} consecutive failures) - ${error.message}`);
         
         await this.logHealthMetric({
           timestamp: new Date().toISOString(),
@@ -347,18 +433,21 @@ class BadBlueWorker {
           status: 'failed',
           error: error.message,
           consecutiveFailures: this.consecutiveDbFailures,
+          environment: isRailway ? 'railway' : 'standard',
         });
         
-        if (this.consecutiveDbFailures >= 3) {
-          console.log('[BadBlue Worker] 🚨 ALERT: 3 consecutive database failures - initiating auto-repair');
+        // Be less aggressive with repairs in Railway (wait for 5 failures instead of 3)
+        const repairThreshold = isRailway ? 5 : 3;
+        if (this.consecutiveDbFailures >= repairThreshold) {
+          console.log(`[BadBlue Worker] 🚨 ALERT: ${repairThreshold} consecutive database failures - initiating auto-repair`);
+          await this.repairDatabaseConnection();
         }
-        
-        await this.repairDatabaseConnection();
       }
     };
     
-    runHeartbeat();
-    this.databaseHeartbeatInterval = setInterval(runHeartbeat, 15 * 60 * 1000);
+    // Initial heartbeat after a delay to let the app start up
+    setTimeout(runHeartbeat, isRailway ? 30000 : 10000);
+    this.databaseHeartbeatInterval = setInterval(runHeartbeat, heartbeatInterval);
   }
 
   private async repairDatabaseConnection(): Promise<boolean> {

@@ -2632,5 +2632,18 @@
     "check": "database_heartbeat",
     "status": "success",
     "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-15T21:33:09.673Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0
+  },
+  {
+    "timestamp": "2025-11-15T21:35:50.989Z",
+    "check": "database_heartbeat",
+    "status": "success",
+    "consecutiveFailures": 0,
+    "environment": "standard"
   }
 ]
