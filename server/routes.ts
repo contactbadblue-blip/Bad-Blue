@@ -2462,6 +2462,25 @@ For questions or support, contact: support@badblue.com
     }
   });
 
+  // TEMPORARY: Diagnostic endpoint without authentication for testing
+  app.get("/api/test/diagnostics", async (req: any, res) => {
+    console.log('[DIAGNOSTICS] Running comprehensive diagnostic test (no auth)...');
+    try {
+      // Use the comprehensive test that actually calls services
+      const { runComprehensiveDiagnostics } = await import('./testDiagnostics');
+      const result = await runComprehensiveDiagnostics();
+      
+      // Return the comprehensive diagnostic result directly
+      res.json(result);
+    } catch (error: any) {
+      console.error('[DIAGNOSTICS] Error:', error);
+      res.status(500).json({
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  });
+
   // Run full system diagnostics (comprehensive test of database, AI, APIs, etc)
   app.get("/api/admin/system-diagnostics", isAuthenticated, async (req: any, res) => {
     try {
