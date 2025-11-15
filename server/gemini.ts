@@ -184,9 +184,9 @@ Results Format:
 
 Apply your expert analysis even if image quality is poor. Extract whatever information IS visible and clearly state what is NOT visible.`;
 
-    // Using Gemini 1.5 Flash for vision capabilities  
+    // Using Gemini 2.5 Flash for vision capabilities  
     const response = await client.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: [
         {
           role: "user",
@@ -375,9 +375,9 @@ Respond with a JSON object containing:
       ? `${conversationText}\n\nUser: ${userMessage}`
       : `User: ${userMessage}`;
 
-    // Using Gemini 1.5 Flash for fast conversational responses
+    // Using Gemini 2.5 Flash for fast conversational responses
     const response = await client.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: [
         {
           role: "user",

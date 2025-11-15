@@ -388,13 +388,19 @@ class ComprehensiveDiagnostics {
       }
 
       try {
-        const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         
         // Simple test prompt
-        const result = await model.generateContent('Respond with OK if working');
-        const response = result.response;
-        const text = response.text();
+        const result = await genAI.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: 'Respond with OK if working' }]
+            }
+          ]
+        });
+        const text = result.text;
 
         if (text && text.length > 0) {
           return { 
@@ -543,13 +549,19 @@ class ComprehensiveDiagnostics {
       }
 
       try {
-        const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         
         const startTime = Date.now();
-        const result = await model.generateContent('What is 2+2? Answer with just the number.');
-        const response = result.response;
-        const text = response.text();
+        const result = await genAI.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: 'What is 2+2? Answer with just the number.' }]
+            }
+          ]
+        });
+        const text = result.text;
         const responseTime = Date.now() - startTime;
 
         if (text && text.includes('4')) {

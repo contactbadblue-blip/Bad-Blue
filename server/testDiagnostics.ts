@@ -169,12 +169,18 @@ export async function runComprehensiveDiagnostics(): Promise<{
   } else {
     try {
       const geminiStart = Date.now();
-      const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
-      const result = await model.generateContent('Respond with just "OK" if working');
-      const response = result.response;
-      const text = response.text();
+      const result = await genAI.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: 'Respond with just "OK" if working' }]
+          }
+        ]
+      });
+      const text = result.text;
       const geminiTime = Date.now() - geminiStart;
       
       if (text && text.length > 0) {
@@ -184,7 +190,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
           message: 'Gemini API working correctly',
           responseTime: geminiTime,
           details: {
-            model: 'gemini-1.5-pro',
+            model: 'gemini-2.5-flash',
             responseLength: text.length
           }
         });
