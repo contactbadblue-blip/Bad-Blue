@@ -45,10 +45,6 @@ function getTransporter(): Transporter {
         user: smtpUser,
         pass: smtpPass,
       },
-      tls: {
-        // Only disable cert validation in development
-        rejectUnauthorized: process.env.NODE_ENV === 'production',
-      },
     });
 
     console.log('[SMTP] ✓ Transporter initialized for smtp.gmail.com:465');

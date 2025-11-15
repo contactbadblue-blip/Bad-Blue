@@ -16,32 +16,24 @@ function getTransporter(): Transporter {
   if (!transporter) {
     // Use App Password (GWSMTP_PASSWORD) if available, removing spaces
     // Fall back to regular password (GWSMTP_PASS) if App Password not set
-    let password = process.env.GWSMTP_PASSWORD 
+    const password = process.env.GWSMTP_PASSWORD 
       ? process.env.GWSMTP_PASSWORD.replace(/\s/g, '') // Remove spaces from App Password
       : process.env.GWSMTP_PASS;
     
-    // Handle the new App Password format - hardcoded fallback
-    if (!password || password === 'kjbqdrpmcfwcacnr') {
-      // Use the new App Password provided by user
-      password = 'coaysrnewcfaropi';
+    if (!password) {
+      throw new Error('GWSMTP_PASSWORD or GWSMTP_PASS environment variable must be set');
     }
 
-    // Try multiple authentication approaches for Google Workspace
     const businessEmail = process.env.GWSMTP_USER || 'contact.badblue@gmail.com';
-    const adminEmail = 'brclink1985@gmail.com'; // The managing account
     
-    // First try: Authenticate as business email with App Password
     transporter = nodemailer.createTransporter({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // Use STARTTLS
+      host: process.env.GWSMTP_HOST || 'smtp.gmail.com',
+      port: 465,
+      secure: true, // Use SSL
       auth: {
-        user: businessEmail, // Try business email first
-        pass: password,      // App Password
+        user: businessEmail,
+        pass: password,
       },
-      tls: {
-        ciphers: 'SSLv3'
-      }
     });
   }
   return transporter;
