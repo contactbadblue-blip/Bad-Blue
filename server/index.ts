@@ -54,6 +54,25 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // CRITICAL: Verify database connection FIRST before anything else
+  console.log('[STARTUP] Verifying database connection...');
+  try {
+    const { db } = await import('./db');
+    await db.execute('SELECT 1');
+    console.log('[STARTUP] ✓ Database connection verified');
+  } catch (error: any) {
+    console.error('[STARTUP] ❌ Database connection failed:', error.message);
+    console.log('[STARTUP] Attempting to reset database pool...');
+    try {
+      const { resetPool } = await import('./db');
+      await resetPool();
+      console.log('[STARTUP] ✓ Database pool reset successful');
+    } catch (resetError) {
+      console.error('[STARTUP] ❌ Database pool reset failed:', resetError);
+      console.error('[STARTUP] Server starting anyway - Worker will attempt repair');
+    }
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
