@@ -863,12 +863,10 @@ class BadBlueWorker {
           const geminiKey = process.env.GEMINI_API_KEY;
           if (geminiKey) {
             try {
-              const { GoogleGenAI } = await import('@google/genai');
-              const gemini = new GoogleGenAI({ apiKey: geminiKey });
-              await gemini.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: 'OK',
-              });
+              const { GoogleGenerativeAI } = await import('@google/genai');
+              const gemini = new GoogleGenerativeAI(geminiKey);
+              const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
+              await model.generateContent('OK');
               console.log('[BadBlue Worker] ✓ Gemini AI service operational');
             } catch (geminiError: any) {
               console.log('[BadBlue Worker] ❌ Gemini AI service failed');

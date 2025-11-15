@@ -11,7 +11,7 @@ function getGeminiClient(): GoogleGenAI {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
     // Note: Using Google Gemini - the newest model is gemini-2.5-flash (released 2025)
-    gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    gemini = new GoogleGenAI(process.env.GEMINI_API_KEY);
   }
   return gemini;
 }
@@ -184,25 +184,25 @@ Results Format:
 
 Apply your expert analysis even if image quality is poor. Extract whatever information IS visible and clearly state what is NOT visible.`;
 
-    // Using Gemini 2.5 Pro for vision capabilities
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-pro",
-      config: {
-        systemInstruction: systemPrompt,
+    // Using Gemini 1.5 Pro for vision capabilities
+    const model = client.getGenerativeModel({ 
+      model: "gemini-1.5-pro",
+      generationConfig: {
         responseMimeType: "application/json",
-      },
-      contents: [
-        {
-          inlineData: {
-            data: imageData,
-            mimeType: "image/jpeg",
-          },
-        },
-        userPrompt,
-      ],
+      }
     });
+    
+    const response = await model.generateContent([
+      {
+        inlineData: {
+          data: imageData,
+          mimeType: "image/jpeg",
+        },
+      },
+      userPrompt,
+    ]);
 
-    const rawJson = response.text;
+    const rawJson = response.response.text();
     if (!rawJson) {
       throw new Error("Empty response from Gemini");
     }
@@ -369,18 +369,19 @@ Respond with a JSON object containing:
       ? `${conversationText}\n\nUser: ${userMessage}`
       : `User: ${userMessage}`;
 
-    // Using Gemini 2.5 Flash for fast conversational responses
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: {
-        systemInstruction: systemPrompt,
+    // Using Gemini 1.5 Flash for fast conversational responses
+    const model = client.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      generationConfig: {
         responseMimeType: "application/json",
         temperature: 0.7,
-      },
-      contents: fullPrompt,
+      }
     });
+    const response = await model.generateContent(
+      fullPrompt
+    );
 
-    const content = response.text;
+    const content = response.response.text();
     if (!content) {
       throw new Error('No response from Gemini');
     }

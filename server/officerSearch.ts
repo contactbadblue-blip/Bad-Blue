@@ -1,11 +1,11 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/genai";
 import { EventEmitter } from "events";
 import { findOfficerInRoster, addOfficerToRoster, addDepartmentToRoster } from "./officerRoster";
 import { findDepartmentUrlsByCity, findDepartmentUrlsByState, getAllDepartmentUrls } from "./policeUrls";
 import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqStructuredResponse } from "./groq";
 
-let gemini: GoogleGenAI | null = null;
+let gemini: GoogleGenerativeAI | null = null;
 
 // In-memory cache for officer search results
 const searchCache = new Map<string, { result: OfficerSearchResult; timestamp: number }>();
@@ -43,12 +43,12 @@ setInterval(() => {
   }
 }, CLEANUP_INTERVAL);
 
-function getGeminiClient(): GoogleGenAI {
+function getGeminiClient(): GoogleGenerativeAI {
   if (!gemini) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   }
   return gemini;
 }
@@ -128,7 +128,7 @@ interface CategorySearchResult {
 }
 
 async function runCategorySearch(
-  client: GoogleGenAI,
+  client: GoogleGenerativeAI,
   officerName: string,
   city: string | undefined,
   state: string | undefined,
@@ -136,21 +136,10 @@ async function runCategorySearch(
   categoryPrompt: string
 ): Promise<CategorySearchResult> {
   // First pass: comprehensive search
-  const response1 = await client.models.generateContent({
-    model: "gemini-2.0-flash-thinking-exp",
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: categoryPrompt }]
-      }
-    ],
-    config: {
-      temperature: 0.0,
-      tools: [{ googleSearch: {} }]
-    },
-  });
+  const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const response1 = await model.generateContent(categoryPrompt);
 
-  const text1 = response1.text || "";
+  const text1 = response1.response.text() || "";
   
   // Build location string for verification
   const locationStr = [city, county, state].filter(Boolean).join(', ') || 'federal/unknown location';
@@ -169,21 +158,9 @@ Now, perform a VERIFICATION AND EXPANSION search:
 
 Focus on accuracy over speed. Triple-check all facts.`;
 
-  const response2 = await client.models.generateContent({
-    model: "gemini-2.0-flash-thinking-exp",
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: verificationPrompt }]
-      }
-    ],
-    config: {
-      temperature: 0.0,
-      tools: [{ googleSearch: {} }]
-    },
-  });
+  const response2 = await model.generateContent(verificationPrompt);
 
-  const text2 = response2.text || "";
+  const text2 = response2.response.text() || "";
   
   // Combine both passes for maximum accuracy
   const combinedText = `${text1}\n\n[VERIFICATION AND EXPANSION]:\n${text2}`;
