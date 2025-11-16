@@ -675,7 +675,7 @@ Submitted: ${new Date().toLocaleString()}`;
     return success;
   } catch (error) {
     console.error(
-      "[EMAIL] Error in sendComplaintToVenue:",
+      "[EMAIL] Error in sendTortNoticeToAgency:",
       error
     );
     return false;
