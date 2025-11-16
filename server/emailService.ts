@@ -65,49 +65,24 @@ export const emailTransporter = {
 
 async function getEmailSettings() {
   try {
-    const settingsPromise = Promise.all([
-      db
-        .select()
-        .from(schema.appSettings)
-        .where(eq(schema.appSettings.key, "support_from_email"))
-        .limit(1),
-      db
-        .select()
-        .from(schema.appSettings)
-        .where(eq(schema.appSettings.key, "support_from_name"))
-        .limit(1),
-    ]);
-
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Database query timeout")), 2000)
-    );
-
-    const [fromEmailResults, fromNameResults] = (await Promise.race([
-      settingsPromise,
-      timeoutPromise,
-    ])) as any[];
-
-    const fromEmailSetting = fromEmailResults?.[0];
-    const fromNameSetting = fromNameResults?.[0];
-
-    const fromEmail =
-      process.env.EMAIL_FROM ||
-      fromEmailSetting?.value ||
-      "noreply@trenuxae.resend.app";
-    const fromName = fromNameSetting?.value || "BadBlue";
-
-    return { fromEmail, fromName };
+    // First check if Resend connection has a from_email configured
+    const credentials = await getResendCredentials();
+    if (credentials.fromEmail && credentials.fromEmail !== DEFAULT_FROM) {
+      const emailParts = credentials.fromEmail.match(/<(.+)>/);
+      const email = emailParts ? emailParts[1] : credentials.fromEmail;
+      const nameParts = credentials.fromEmail.match(/^([^<]+)/);
+      const name = nameParts ? nameParts[1].trim() : "BadBlue";
+      return { fromEmail: email, fromName: name };
+    }
   } catch (error: any) {
-    console.error(
-      "[EMAIL] Error loading email settings from database, using default:",
-      error.message || error
-    );
-    return {
-      fromEmail:
-        process.env.EMAIL_FROM || "noreply@trenuxae.resend.app",
-      fromName: "BadBlue",
-    };
+    console.log("[EMAIL] Using default settings (Resend connection check failed)");
   }
+
+  // Default: Always use BadBlue <noreply@bad-blue.com>
+  return {
+    fromEmail: "noreply@bad-blue.com",
+    fromName: "BadBlue",
+  };
 }
 
 async function getFromAddress(): Promise<string> {
