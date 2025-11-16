@@ -1,22 +1,3 @@
-// Copyright (c) 2025 Robert “RJDC” Clinkenbeard. All rights reserved.
-// Unauthorized copying, modification, distribution, or use of this file,
-// via any medium, is strictly prohibited without express written permission.
-
-// Load environment variables from .env file
-import * as dotenv from 'dotenv';
-dotenv.config();
-
-// Verify Stripe keys are configured
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.error('[ENV] ⚠️ STRIPE_SECRET_KEY not set in environment variables');
-}
-if (!process.env.VITE_STRIPE_PUBLIC_KEY) {
-  console.error('[ENV] ⚠️ VITE_STRIPE_PUBLIC_KEY not set in environment variables');
-}
-
-import { createClient } from "@supabase/supabase-js";
-import type { Request, Response } from "express";
-
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -66,25 +47,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // CRITICAL: Verify database connection FIRST before anything else
-  console.log('[STARTUP] Verifying database connection...');
-  try {
-    const { db } = await import('./db');
-    await db.execute('SELECT 1');
-    console.log('[STARTUP] ✓ Database connection verified');
-  } catch (error: any) {
-    console.error('[STARTUP] ❌ Database connection failed:', error.message);
-    console.log('[STARTUP] Attempting to reset database pool...');
-    try {
-      const { resetPool } = await import('./db');
-      await resetPool();
-      console.log('[STARTUP] ✓ Database pool reset successful');
-    } catch (resetError) {
-      console.error('[STARTUP] ❌ Database pool reset failed:', resetError);
-      console.error('[STARTUP] Server starting anyway - Worker will attempt repair');
-    }
-  }
-
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -93,19 +55,6 @@ app.use((req, res, next) => {
 
     res.status(status).json({ message });
     throw err;
-  });
-
-  // Serve static SEO and public files before Vite middleware
-  app.use(express.static("public"));
-  
-  app.get("/robots.txt", (_req, res) => {
-    res.type("text/plain");
-    res.sendFile("robots.txt", { root: "public" });
-  });
-
-  app.get("/sitemap.xml", (_req, res) => {
-    res.type("application/xml");
-    res.sendFile("sitemap.xml", { root: "public" });
   });
 
   // importantly only setup vite in development and after
@@ -129,34 +78,4 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
-
-  // Initialize persistence manager on startup
-  const { persistenceManager } = await import('./persistenceManager');
-  await persistenceManager.start();
-
-  // Run Sub-Agent table migrations
-  try {
-    const { createSubAgentTables } = await import('./migrations/createSubAgentTables');
-    await createSubAgentTables();
-  } catch (error) {
-    console.error('Failed to create Sub-Agent tables:', error);
-  }
-
-  // Run Token Metrics table migrations
-  try {
-    const { createTokenMetricsTables } = await import('./migrations/createTokenMetrics');
-    await createTokenMetricsTables();
-  } catch (error) {
-    console.error('Failed to create Token Metrics tables:', error);
-  }
-
-  // Start BadBlue Worker
-  const { badblueWorker } = await import('./badblueWorker');
-  badblueWorker.initialize().catch((error) => {
-    console.error('Failed to start BadBlue Worker:', error);
-  });
-
-  // Initialize AI Sub-Agent autonomous improvements
-  const { initializeAutonomousImprovements } = await import('./aiSubAgent');
-  await initializeAutonomousImprovements();
 })();
