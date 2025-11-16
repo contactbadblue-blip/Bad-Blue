@@ -32,8 +32,6 @@ import {
   sendComplaintToVenue,
   sendTortNoticeToAgency,
   sendAdminTestEmail,
-  sendPetitionZipEmail,
-  sendUserEmail,
 } from "./emailService";
 import { evidenceStorage, EvidenceNotFoundError, AccessDeniedError } from "./evidenceStorage";
 import { ObjectPermission } from "./objectAcl";
