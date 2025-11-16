@@ -1,5 +1,5 @@
-// Email service for BadBlue - Resend API only
-// Requires RESEND_API_KEY and EMAIL_FROM environment variables
+// Email service for BadBlue - Uses Resend integration
+// Uses Replit Resend connection for authentication
 
 import { Resend } from "resend";
 import { db } from "./db";
@@ -7,17 +7,57 @@ import { eq, sql } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import { getBaseURL } from "./platformConfig";
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
-
 // This must be a sender that Resend accepts (e.g. verified domain)
-const DEFAULT_FROM = process.env.EMAIL_FROM || "BadBlue <noreply@bad-blue.com>";
+const DEFAULT_FROM = "BadBlue <noreply@bad-blue.com>";
+
+let connectionSettings: any;
+
+async function getResendCredentials() {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY 
+    ? 'repl ' + process.env.REPL_IDENTITY 
+    : process.env.WEB_REPL_RENEWAL 
+    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
+    : null;
+
+  if (!xReplitToken) {
+    throw new Error('Authentication token not found');
+  }
+
+  connectionSettings = await fetch(
+    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
+    {
+      headers: {
+        'Accept': 'application/json',
+        'X_REPLIT_TOKEN': xReplitToken
+      }
+    }
+  ).then(res => res.json()).then(data => data.items?.[0]);
+
+  if (!connectionSettings || !connectionSettings.settings.api_key) {
+    throw new Error('Resend not connected');
+  }
+  
+  return {
+    apiKey: connectionSettings.settings.api_key,
+    fromEmail: connectionSettings.settings.from_email || DEFAULT_FROM
+  };
+}
+
+// Get Resend client (creates new instance each time with fresh credentials)
+async function getResendClient() {
+  const { apiKey } = await getResendCredentials();
+  return new Resend(apiKey);
+}
 
 export const emailTransporter = {
   verify: async () => {
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY is not set");
+    try {
+      await getResendCredentials();
+      return true;
+    } catch (error) {
+      throw new Error("Resend connection not configured");
     }
-    return true;
   },
 };
 
@@ -82,22 +122,23 @@ async function sendWithResend(
   text?: string,
   fromOverride?: string
 ): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) {
-    console.error("[EMAIL] RESEND_API_KEY not set");
+  try {
+    const resend = await getResendClient();
+    const from = fromOverride || DEFAULT_FROM;
+
+    const result = await resend.emails.send({
+      from,
+      to,
+      subject,
+      html: html || undefined,
+      text: text || undefined,
+    });
+
+    return !!(result as any)?.data?.id;
+  } catch (error: any) {
+    console.error("[EMAIL] Failed to send email:", error.message);
     return false;
   }
-
-  const from = fromOverride || DEFAULT_FROM;
-
-  const result = await resend.emails.send({
-    from,
-    to,
-    subject,
-    ...(html ? { html } : {}),
-    ...(text ? { text } : {}),
-  });
-
-  return !!result?.id;
 }
 
 // --- Public generic send ----------------------------------------------------

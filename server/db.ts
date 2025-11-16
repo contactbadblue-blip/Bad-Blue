@@ -1,6 +1,7 @@
 // Database setup - optimized for Supabase PostgreSQL and Railway
 // Optimized for 500+ concurrent users
-import { Pool } from 'pg';
+import pg from 'pg';
+const { Pool } = pg;
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
