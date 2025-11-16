@@ -76,6 +76,11 @@ export default function AdminEmail() {
   const [emailMessage, setEmailMessage] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  
+  // Custom email to any address
+  const [customToEmail, setCustomToEmail] = useState("");
+  const [customSubject, setCustomSubject] = useState("");
+  const [customMessage, setCustomMessage] = useState("");
 
   // Check authentication and admin status
   const { data: user, isLoading: isLoadingUser } = useQuery<User>({
@@ -200,6 +205,30 @@ export default function AdminEmail() {
     },
   });
 
+  // Send custom email mutation
+  const sendCustomEmailMutation = useMutation({
+    mutationFn: async (data: { to: string; subject: string; message: string }) => {
+      const res = await apiRequest('/api/admin/send-custom-email', 'POST', data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email Sent",
+        description: `Email successfully sent to ${customToEmail}`,
+      });
+      setCustomToEmail("");
+      setCustomSubject("");
+      setCustomMessage("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Send Failed",
+        description: error.message || "Failed to send email",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSaveSettings = async () => {
     if (!fromEmail || !fromName) {
       toast({
@@ -282,6 +311,34 @@ export default function AdminEmail() {
   const handleSearch = () => {
     setPage(1);
     queryClient.invalidateQueries({ queryKey: ['/api/admin/users/logins'] });
+  };
+
+  const handleSendCustomEmail = () => {
+    if (!customToEmail || !customSubject || !customMessage) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all fields: To, Subject, and Message",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customToEmail)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    sendCustomEmailMutation.mutate({
+      to: customToEmail,
+      subject: customSubject,
+      message: customMessage,
+    });
   };
 
   if (isLoadingUser) {
@@ -425,7 +482,94 @@ export default function AdminEmail() {
           </CardContent>
         </Card>
 
-        {/* Section B: User Logins */}
+        {/* Section B: Send Email to Any Address */}
+        <Card data-testid="card-send-custom-email">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Send Email to Any Address
+            </CardTitle>
+            <CardDescription>
+              Send an email to any recipient address (not just users in the database)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-md bg-muted p-3">
+              <p className="text-sm text-muted-foreground">
+                From: BadBlue &lt;noreply@bad-blue.com&gt;
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="customToEmail">To</Label>
+              <Input
+                id="customToEmail"
+                data-testid="input-custom-to-email"
+                type="email"
+                value={customToEmail}
+                onChange={(e) => setCustomToEmail(e.target.value)}
+                placeholder="recipient@example.com"
+                disabled={sendCustomEmailMutation.isPending}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="customSubject">Subject</Label>
+              <Input
+                id="customSubject"
+                data-testid="input-custom-subject"
+                value={customSubject}
+                onChange={(e) => setCustomSubject(e.target.value)}
+                placeholder="Email subject line"
+                disabled={sendCustomEmailMutation.isPending}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="customMessage">Message</Label>
+              <Textarea
+                id="customMessage"
+                data-testid="textarea-custom-message"
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                placeholder="Type your message here..."
+                rows={8}
+                disabled={sendCustomEmailMutation.isPending}
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                data-testid="button-send-custom-email"
+                onClick={handleSendCustomEmail}
+                disabled={sendCustomEmailMutation.isPending || !customToEmail || !customSubject || !customMessage}
+              >
+                {sendCustomEmailMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Email
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {sendCustomEmailMutation.isSuccess && (
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                <CheckCircle2 className="h-4 w-4" />
+                <p className="text-sm font-medium">
+                  Email sent successfully to {customToEmail}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Section C: User Logins */}
         <Card data-testid="card-user-logins">
           <CardHeader>
             <CardTitle>User Login Activity</CardTitle>
