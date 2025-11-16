@@ -1,50 +1,24 @@
-// Email service for BadBlue - SMTP only
-// Add GWSMTP_USER and GWSMTP_PASS in environment variables
+// Email service for BadBlue - Resend API
+// Requires RESEND_API_KEY and EMAIL_FROM environment variables
 
-import nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 import { db } from './db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@shared/schema';
-import { sendMail as sendViaSMTP } from './mailer';
 import { getBaseURL } from './platformConfig';
 
+const resend = new Resend(process.env.RESEND_API_KEY!);
+const DEFAULT_FROM = process.env.EMAIL_FROM || 'BadBlue <noreply@trenuxae.resend.app>';
 // Lazy initialize transporter
 let transporter: Transporter | null = null;
 
-function getTransporter(): Transporter {
-  if (!transporter) {
-    // Use App Password (GWSMTP_PASSWORD) if available, removing spaces
-    // Fall back to regular password (GWSMTP_PASS) if App Password not set
-    const password = process.env.GWSMTP_PASSWORD 
-      ? process.env.GWSMTP_PASSWORD.replace(/\s/g, '') // Remove spaces from App Password
-      : process.env.GWSMTP_PASS;
-    
-    if (!password) {
-      throw new Error('GWSMTP_PASSWORD or GWSMTP_PASS environment variable must be set');
-    }
-
-    const businessEmail = process.env.GWSMTP_USER || 'contact.badblue@gmail.com';
-    
-    transporter = nodemailer.createTransport({
-      host: process.env.GWSMTP_HOST || 'smtp.gmail.com',
-      port: 465,
-      secure: true, // Use SSL
-      auth: {
-        user: businessEmail,
-        pass: password,
-      },
-    });
-  }
-  return transporter;
-}
-
-// Export transporter getter for external use
 export const emailTransporter = {
   verify: async () => {
-    const tp = getTransporter();
-    return tp.verify();
-  }
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error('RESEND_API_KEY is not set');
+    }
+    return true;
+  },
 };
 
 async function getEmailSettings() {
@@ -88,6 +62,26 @@ async function getEmailSettings() {
   }
 }
 
+async function sendWithResend(
+  to: string,
+  subject: string,
+  html?: string,
+  text?: string,
+  fromOverride?: string,
+): Promise<boolean> {
+  const from = fromOverride || DEFAULT_FROM;
+
+  const result = await resend.emails.send({
+    from,
+    to,
+    subject,
+    ...(html ? { html } : {}),
+    ...(text ? { text } : {}),
+  });
+
+  return !!result?.id;
+}
+
 export async function sendEmail({
   to,
   subject,
@@ -99,40 +93,18 @@ export async function sendEmail({
   html: string;
   from?: string;
 }) {
-  // Check SMTP credentials with detailed logging
-  const hasUser = !!process.env.GWSMTP_USER;
-  // Check for App Password first, then fall back to regular password
-  const hasPass = !!process.env.GWSMTP_PASSWORD || !!process.env.GWSMTP_PASS;
-  
-  if (!hasUser || !hasPass) {
-    console.error('[EMAIL] ✗ SMTP credentials check failed:');
-    console.error('[EMAIL]   - GWSMTP_USER present:', hasUser);
-    console.error('[EMAIL]   - GWSMTP_PASSWORD present:', !!process.env.GWSMTP_PASSWORD);
-    console.error('[EMAIL]   - GWSMTP_PASS present:', !!process.env.GWSMTP_PASS);
-    console.error('[EMAIL] Please verify these secrets are set in environment variables');
-    return false;
-  }
-  
-  console.log('[EMAIL] ✓ SMTP credentials verified - proceeding to send email');
-
-  // Load settings from database if from address not provided
   if (!from) {
     const settings = await getEmailSettings();
     from = `${settings.fromName} <${settings.fromEmail}>`;
   }
 
-  // Use the existing sendViaSMTP function for sending
-  const success = await sendViaSMTP(to, subject, html, undefined, from);
-
-  if (success) {
-    console.log(`[EMAIL] ✓ Email sent to ${to}`);
-  } else {
-    console.error(`[EMAIL] ✗ Failed to send email to ${to}`);
-  }
-
-  return success;
-}
-
+  const success = await sendWithResend(
+  data.email,
+  'Welcome to Bad Blue - Police Accountability Platform',
+  undefined,
+  textContent,
+  fromAddress
+);
 
 interface WelcomeEmailData {
   firstName: string;
@@ -375,13 +347,13 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<boolean>
     const fromAddress = await getFromAddress();
     const textContent = composeWelcomeEmailText(data);
 
-    const success = await sendViaSMTP(
-      data.email,
-      'Welcome to Bad Blue - Police Accountability Platform',
-      undefined, // No HTML
-      textContent,
-      fromAddress
-    );
+    const success = await sendWithResend(
+  data.to,
+  data.subject,
+  undefined,
+  data.message,
+  fromAddress
+);
 
     if (success) {
       console.log(`[EMAIL] Welcome email sent to ${data.email}`);
@@ -518,11 +490,6 @@ export async function sendContactFormEmail(data: {
   try {
     console.log('[EMAIL] Preparing to send contact form email...');
 
-    // Check SMTP credentials
-    if (!process.env.GWSMTP_USER || !process.env.GWSMTP_PASS) {
-      console.error('[EMAIL] SMTP credentials not configured (GWSMTP_USER or GWSMTP_PASS missing)');
-      return false;
-    }
 
     const fromAddress = await getFromAddress();
     console.log('[EMAIL] Using from address:', fromAddress);
@@ -545,13 +512,13 @@ ${new Date().toLocaleString()}`;
     const supportEmail = process.env.ADMIN_EMAIL || 'contact.badblue@gmail.com';
     console.log('[EMAIL] Sending to support email:', supportEmail);
 
-    const success = await sendViaSMTP(
-      supportEmail,
-      `Contact Form: ${data.subject}`,
-      undefined,
-      messageText,
-      fromAddress
-    );
+    const success = await sendWithResend(
+  supportEmail,
+  `Contact Form: ${data.subject}`,
+  undefined,
+  messageText,
+  fromAddress
+);
 
     if (success) {
       console.log(`[EMAIL] ✓ Contact form sent successfully from ${data.email}`);
@@ -609,13 +576,13 @@ Please provide a case number and acknowledgment of receipt to the complainant at
 
 Submitted: ${new Date().toLocaleString()}`;
 
-    const success = await sendViaSMTP(
-      data.venueEmail,
-      `Formal Complaint - ${data.officerName} - ${data.incidentDate}`,
-      undefined,
-      complaintText,
-      fromAddress
-    );
+    const success = await sendWithResend(
+  data.venueEmail,
+  `Formal Complaint: ${data.complaintType} - ${data.officerName}`,
+  undefined,
+  complaintText,
+  fromAddress
+);
 
     if (success) {
       console.log(`[EMAIL] Complaint sent to ${data.venueEmail}`);
