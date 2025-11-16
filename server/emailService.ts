@@ -9,8 +9,6 @@ import { getBaseURL } from './platformConfig';
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
 const DEFAULT_FROM = process.env.EMAIL_FROM || 'BadBlue <noreply@trenuxae.resend.app>';
-// Lazy initialize transporter
-let transporter: Transporter | null = null;
 
 export const emailTransporter = {
   verify: async () => {
@@ -628,13 +626,13 @@ Please acknowledge receipt to the claimant at ${data.claimantEmail}.
 
 Submitted: ${new Date().toLocaleString()}`;
 
-    const success = await sendViaSMTP(
-      data.agencyEmail,
-      `Tort Claim Notice - ${data.claimantName}`,
-      undefined,
-      noticeText,
-      fromAddress
-    );
+    const success = await sendWithResend(
+  data.agencyEmail,
+  `Tort Claim Notice - ${data.claimantName}`,
+  undefined,   // no HTML
+  noticeText,
+  fromAddress
+);
 
     if (success) {
       console.log(`[EMAIL] Tort notice sent to ${data.agencyEmail}`);
