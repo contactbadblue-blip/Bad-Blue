@@ -651,7 +651,7 @@ DESCRIPTION OF INCIDENT:
 ${data.description}
 
 ---
-This complaint was filed through Bad Blue (badblue.com), a police accountability platform.
+This complaint was filed through Bad Blue (bad-blue.com), a police accountability platform.
 Please provide a case number and acknowledgment of receipt to the complainant at ${data.submitterEmail}.
 
 Submitted: ${new Date().toLocaleString()}`;
@@ -705,7 +705,7 @@ Claimant Contact Information:
 ${data.claimantName}
 ${data.claimantEmail}
 
-This notice was prepared and submitted through Bad Blue (badblue.com).
+This notice was prepared and submitted through Bad Blue (bad-blue.com).
 Please acknowledge receipt to the claimant at ${data.claimantEmail}.
 
 Submitted: ${new Date().toLocaleString()}`;
