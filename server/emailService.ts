@@ -1,63 +1,79 @@
-// Email service for BadBlue - Resend API
+// Email service for BadBlue - Resend API only
 // Requires RESEND_API_KEY and EMAIL_FROM environment variables
 
-import { Resend } from 'resend';
-import { db } from './db';
-import { eq } from 'drizzle-orm';
-import * as schema from '@shared/schema';
-import { getBaseURL } from './platformConfig';
+import { Resend } from "resend";
+import { db } from "./db";
+import { eq, sql } from "drizzle-orm";
+import * as schema from "@shared/schema";
+import { getBaseURL } from "./platformConfig";
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
-const DEFAULT_FROM = process.env.EMAIL_FROM || 'BadBlue <noreply@trenuxae.resend.app>';
+
+// This must be a sender that Resend accepts (e.g. verified domain)
+const DEFAULT_FROM =
+  process.env.EMAIL_FROM || "BadBlue <noreply@trenuxae.resend.app>";
 
 export const emailTransporter = {
   verify: async () => {
     if (!process.env.RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY is not set');
+      throw new Error("RESEND_API_KEY is not set");
     }
     return true;
   },
 };
 
+// --- Shared helpers ---------------------------------------------------------
+
 async function getEmailSettings() {
   try {
-    // Add timeout to prevent hanging on database connection issues
     const settingsPromise = Promise.all([
-      db.select()
+      db
+        .select()
         .from(schema.appSettings)
-        .where(eq(schema.appSettings.key, 'support_from_email'))
+        .where(eq(schema.appSettings.key, "support_from_email"))
         .limit(1),
-      db.select()
+      db
+        .select()
         .from(schema.appSettings)
-        .where(eq(schema.appSettings.key, 'support_from_name'))
-        .limit(1)
+        .where(eq(schema.appSettings.key, "support_from_name"))
+        .limit(1),
     ]);
 
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Database query timeout')), 2000)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Database query timeout")), 2000)
     );
 
-    const [fromEmailResults, fromNameResults] = await Promise.race([
+    const [fromEmailResults, fromNameResults] = (await Promise.race([
       settingsPromise,
-      timeoutPromise
-    ]) as any[];
+      timeoutPromise,
+    ])) as any[];
 
     const fromEmailSetting = fromEmailResults?.[0];
     const fromNameSetting = fromNameResults?.[0];
 
-    // Always use contact.badblue@gmail.com as primary sender
-    return {
-      fromEmail: 'contact.badblue@gmail.com',
-      fromName: 'BadBlue',
-    };
+    const fromEmail =
+      process.env.EMAIL_FROM ||
+      fromEmailSetting?.value ||
+      "noreply@trenuxae.resend.app";
+    const fromName = fromNameSetting?.value || "BadBlue";
+
+    return { fromEmail, fromName };
   } catch (error: any) {
-    console.error('[EMAIL] Error loading email settings from database, using default:', error.message || error);
-    // Always use contact.badblue@gmail.com as primary sender
+    console.error(
+      "[EMAIL] Error loading email settings from database, using default:",
+      error.message || error
+    );
     return {
-      fromEmail: 'contact.badblue@gmail.com',
-      fromName: 'BadBlue',
+      fromEmail:
+        process.env.EMAIL_FROM || "noreply@trenuxae.resend.app",
+      fromName: "BadBlue",
     };
   }
+}
+
+async function getFromAddress(): Promise<string> {
+  const settings = await getEmailSettings();
+  return `${settings.fromName} <${settings.fromEmail}>`;
 }
 
 async function sendWithResend(
@@ -65,8 +81,13 @@ async function sendWithResend(
   subject: string,
   html?: string,
   text?: string,
-  fromOverride?: string,
+  fromOverride?: string
 ): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) {
+    console.error("[EMAIL] RESEND_API_KEY not set");
+    return false;
+  }
+
   const from = fromOverride || DEFAULT_FROM;
 
   const result = await resend.emails.send({
@@ -79,6 +100,8 @@ async function sendWithResend(
 
   return !!result?.id;
 }
+
+// --- Public generic send ----------------------------------------------------
 
 export async function sendEmail({
   to,
@@ -96,13 +119,18 @@ export async function sendEmail({
     from = `${settings.fromName} <${settings.fromEmail}>`;
   }
 
-  const success = await sendWithResend(
-  data.email,
-  'Welcome to Bad Blue - Police Accountability Platform',
-  undefined,
-  textContent,
-  fromAddress
-);
+  const success = await sendWithResend(to, subject, html, undefined, from);
+
+  if (success) {
+    console.log(`[EMAIL] ✓ Email sent to ${to}`);
+  } else {
+    console.error(`[EMAIL] ✗ Failed to send email to ${to}`);
+  }
+
+  return success;
+}
+
+// --- Types ------------------------------------------------------------------
 
 interface WelcomeEmailData {
   firstName: string;
@@ -112,17 +140,17 @@ interface WelcomeEmailData {
 interface PurchaseConfirmationData {
   firstName: string;
   email: string;
-  type: 'complaint' | 'lawsuit' | 'full_access' | 'petition' | 'foia';
+  type: "complaint" | "lawsuit" | "full_access" | "petition" | "foia";
   amount: number;
   officerName?: string;
   incidentDate?: string;
   state?: string;
-  document?: string; // The generated document text (lawsuit, petition, FOIA, etc.)
+  document?: string;
   submissionVenue?: string;
   submissionEmail?: string;
   submissionAddress?: string;
-  filingInstructions?: string; // For user-filed lawsuits
-  serviceName?: string; // Human-readable service name
+  filingInstructions?: string;
+  serviceName?: string;
 }
 
 interface AdminEmailData {
@@ -131,39 +159,8 @@ interface AdminEmailData {
   message: string;
 }
 
-/**
- * Get dynamic from address from database settings or environment fallbacks
- */
-async function getFromAddress(): Promise<string> {
-  try {
-    const { sql } = await import('drizzle-orm');
+// --- Email body builders ----------------------------------------------------
 
-    // Add timeout protection
-    const settingsPromise = db.query.appSettings.findMany({
-      where: sql`key IN ('support_from_email', 'support_from_name')`,
-    });
-
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Database query timeout')), 2000)
-    );
-
-    const settings = await Promise.race([
-      settingsPromise,
-      timeoutPromise
-    ]) as any[];
-
-    // Always use contact.badblue@gmail.com as primary sender
-    return `BadBlue <contact.badblue@gmail.com>`;
-  } catch (error: any) {
-    console.error('[EMAIL] Error fetching from address settings, using default:', error.message || error);
-    // Always use contact.badblue@gmail.com as primary sender
-    return `BadBlue <contact.badblue@gmail.com>`;
-  }
-}
-
-/**
- * Compose welcome email as plain text
- */
 function composeWelcomeEmailText(data: WelcomeEmailData): string {
   const baseUrl = getBaseURL();
   return `Hello ${data.firstName},
@@ -213,9 +210,6 @@ Sincerely,
 BadBlue`;
 }
 
-/**
- * Compose purchase confirmation email as plain text
- */
 function composeConfirmationEmailText(data: PurchaseConfirmationData): string {
   const baseUrl = getBaseURL();
   let email = `Hello ${data.firstName},
@@ -224,80 +218,126 @@ Thank you for your purchase!
 
 `;
 
-  // Service description based on type
   switch (data.type) {
-    case 'complaint':
-      email += `SERVICE PURCHASED: Police Complaint Filing ($${(data.amount / 100).toFixed(2)})
+    case "complaint":
+      email += `SERVICE PURCHASED: Police Complaint Filing ($${(
+        data.amount / 100
+      ).toFixed(2)})
 
-You have successfully filed a formal complaint against ${data.officerName || 'the officer(s)'} for the incident on ${data.incidentDate || '[date]'}.
+You have successfully filed a formal complaint against ${
+        data.officerName || "the officer(s)"
+      } for the incident on ${data.incidentDate || "[date]"}.
 
 SUBMISSION DETAILS:
-Venue: ${data.submissionVenue || 'Not specified'}
-Email: ${data.submissionEmail || 'Not specified'}
-Address: ${data.submissionAddress || 'Not specified'}
+Venue: ${data.submissionVenue || "Not specified"}
+Email: ${data.submissionEmail || "Not specified"}
+Address: ${data.submissionAddress || "Not specified"}
 
 Your complaint has been automatically submitted to the appropriate oversight agency. You should receive a case number or acknowledgment within 5-10 business days.
 
 `;
       break;
 
-    case 'petition':
-      email += `SERVICE PURCHASED: Civil Rights Petition ($${(data.amount / 100).toFixed(2)})
+    case "petition":
+      email += `SERVICE PURCHASED: Civil Rights Petition ($${(
+        data.amount / 100
+      ).toFixed(2)})
 
 You have successfully created a petition to demand accountability and policy change.
 
 PETITION TEXT:
-${data.document ? '---BEGIN PETITION---\n' + data.document + '\n---END PETITION---\n' : 'Petition text not available'}
+${
+  data.document
+    ? "---BEGIN PETITION---\n" +
+      data.document +
+      "\n---END PETITION---\n"
+    : "Petition text not available"
+}
 
 This petition will be circulated to gather community support. Share it with others who believe in police accountability and civil rights protection.
 
 `;
       break;
 
-    case 'foia':
-      email += `SERVICE PURCHASED: FOIA Records Request ($${(data.amount / 100).toFixed(2)})
+    case "foia":
+      email += `SERVICE PURCHASED: FOIA Records Request ($${(
+        data.amount / 100
+      ).toFixed(2)})
 
 Your Freedom of Information Act request has been prepared and is ready for submission.
 
 FOIA REQUEST:
-${data.document ? '---BEGIN FOIA REQUEST---\n' + data.document + '\n---END FOIA REQUEST---\n' : 'FOIA request text not available'}
+${
+  data.document
+    ? "---BEGIN FOIA REQUEST---\n" +
+      data.document +
+      "\n---END FOIA REQUEST---\n"
+    : "FOIA request text not available"
+}
 
-${data.submissionEmail ? `This request has been submitted to: ${data.submissionEmail}\n` : ''}
-${data.submissionAddress ? `Mailing address: ${data.submissionAddress}\n` : ''}
+${
+  data.submissionEmail
+    ? `This request has been submitted to: ${data.submissionEmail}\n`
+    : ""
+}${
+        data.submissionAddress
+          ? `Mailing address: ${data.submissionAddress}\n`
+          : ""
+      }
 
 The agency has 20 business days to respond to your request. You may receive a tracking number or acknowledgment letter.
 
 `;
       break;
 
-    case 'lawsuit':
+    case "lawsuit":
       if (data.filingInstructions) {
-        // User-filed lawsuit (DIY)
-        email += `SERVICE PURCHASED: DIY Lawsuit Assistance ($${(data.amount / 100).toFixed(2)})
+        email += `SERVICE PURCHASED: DIY Lawsuit Assistance ($${(
+          data.amount / 100
+        ).toFixed(2)})
 
-You have received complete instructions and documentation to file your own civil rights lawsuit in ${data.state || 'your state'}.
+You have received complete instructions and documentation to file your own civil rights lawsuit in ${
+          data.state || "your state"
+        }.
 
 FILING INSTRUCTIONS:
 ${data.filingInstructions}
 
 YOUR LAWSUIT DOCUMENT:
-${data.document ? '---BEGIN LAWSUIT---\n' + data.document + '\n---END LAWSUIT---\n' : 'Lawsuit document not available'}
+${
+  data.document
+    ? "---BEGIN LAWSUIT---\n" +
+      data.document +
+      "\n---END LAWSUIT---\n"
+    : "Lawsuit document not available"
+}
 
 Please follow the instructions carefully and ensure all documents are filed within the required timeframes. Consider consulting with a local attorney if you have questions about the filing process.
 
 `;
       } else {
-        // Full-service lawsuit
-        email += `SERVICE PURCHASED: Full-Service Lawsuit Filing ($${(data.amount / 100).toFixed(2)})
+        email += `SERVICE PURCHASED: Full-Service Lawsuit Filing ($${(
+          data.amount / 100
+        ).toFixed(2)})
 
 Bad Blue has prepared and will file your civil rights lawsuit on your behalf.
 
 YOUR LAWSUIT:
-${data.document ? '---BEGIN LAWSUIT---\n' + data.document + '\n---END LAWSUIT---\n' : 'Lawsuit document not available'}
+${
+  data.document
+    ? "---BEGIN LAWSUIT---\n" +
+      data.document +
+      "\n---END LAWSUIT---\n"
+    : "Lawsuit document not available"
+}
 
 FILING DETAILS:
-Court: ${data.submissionVenue || 'Not specified'}
-${data.submissionAddress ? `Address: ${data.submissionAddress}\n` : ''}
+Court: ${data.submissionVenue || "Not specified"}
+${
+  data.submissionAddress
+    ? `Address: ${data.submissionAddress}\n`
+    : ""
+}
 
 We will handle all filing procedures and provide you with confirmation once your lawsuit has been submitted to the court. You will receive the case number and further instructions via email.
 
@@ -305,8 +345,7 @@ We will handle all filing procedures and provide you with confirmation once your
       }
       break;
 
-    case 'full_access':
-      // DEPRECATED: Full access payments are no longer needed - these features are now FREE for all signed-in users
+    case "full_access":
       email += `SERVICE UPDATE: LegalAI Consultation & Officer Search (FREE for signed-in users)
 
 Officer search and legal consultation are now FREE for all signed-in users.
@@ -327,7 +366,31 @@ Log in to your account to access these free features: ${baseUrl}
 
   email += `
 WHAT'S NEXT:
-${data.type === 'complaint' ? '- Monitor your email for acknowledgment from the oversight agency\n- Keep records of all communications\n- Follow up if you don\'t hear back within 10 business days' : ''}${data.type === 'petition' ? '- Share your petition with community members and advocacy groups\n- Track signatures and support\n- Consider organizing public awareness campaigns' : ''}${data.type === 'foia' ? '- Wait for agency response (typically 20 business days)\n- Review provided documents carefully\n- Submit follow-up requests if needed' : ''}${data.type === 'lawsuit' && data.filingInstructions ? '- Review all filing instructions carefully\n- Gather required documents and fees\n- File within applicable statute of limitations\n- Consider consulting a local attorney' : ''}${data.type === 'lawsuit' && !data.filingInstructions ? '- Await filing confirmation from Bad Blue\n- Expect case number within 5-7 business days\n- Prepare for potential court proceedings' : ''}${data.type === 'full_access' ? '- Log in to access free LegalAI tools and Officer Search\n- Analyze your case using our AI consultation\n- Search for officer information\n- Consider our paid services for complaints and lawsuits if needed' : ''}
+${
+  data.type === "complaint"
+    ? "- Monitor your email for acknowledgment from the oversight agency\n- Keep records of all communications\n- Follow up if you don't hear back within 10 business days"
+    : ""
+}${
+    data.type === "petition"
+      ? "- Share your petition with community members and advocacy groups\n- Track signatures and support\n- Consider organizing public awareness campaigns"
+      : ""
+  }${
+    data.type === "foia"
+      ? "- Wait for agency response (typically 20 business days)\n- Review provided documents carefully\n- Submit follow-up requests if needed"
+      : ""
+  }${
+    data.type === "lawsuit" && data.filingInstructions
+      ? "- Review all filing instructions carefully\n- Gather required documents and fees\n- File within applicable statute of limitations\n- Consider consulting a local attorney"
+      : ""
+  }${
+    data.type === "lawsuit" && !data.filingInstructions
+      ? "- Await filing confirmation from Bad Blue\n- Expect case number within 5-7 business days\n- Prepare for potential court proceedings"
+      : ""
+  }${
+    data.type === "full_access"
+      ? "- Log in to access free LegalAI tools and Officer Search\n- Analyze your case using our AI consultation\n- Search for officer information\n- Consider our paid services for complaints and lawsuits if needed"
+      : ""
+  }
 
 If you have any questions or need further assistance, please contact our support team.
 
@@ -337,83 +400,97 @@ Bad Blue`;
   return email;
 }
 
-/**
- * Send welcome email to new user
- */
-export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<boolean> {
+// --- Concrete send functions -----------------------------------------------
+
+export async function sendWelcomeEmail(
+  data: WelcomeEmailData
+): Promise<boolean> {
   try {
     const fromAddress = await getFromAddress();
     const textContent = composeWelcomeEmailText(data);
 
     const success = await sendWithResend(
-  data.to,
-  data.subject,
-  undefined,
-  data.message,
-  fromAddress
-);
-
-    if (success) {
-      console.log(`[EMAIL] Welcome email sent to ${data.email}`);
-    } else {
-      console.error(`[EMAIL] Failed to send welcome email to ${data.email}`);
-    }
-
-    return success;
-  } catch (error) {
-    console.error('[EMAIL] Error in sendWelcomeEmail:', error);
-    return false;
-  }
-}
-
-/**
- * Send purchase confirmation email
- */
-export async function sendPurchaseConfirmationEmail(data: PurchaseConfirmationData): Promise<boolean> {
-  try {
-    const fromAddress = await getFromAddress();
-    const textContent = composeConfirmationEmailText(data);
-
-    const subject = `Purchase Confirmation - ${
-      data.type === 'complaint' ? 'Police Complaint' :
-      data.type === 'petition' ? 'Civil Rights Petition' :
-      data.type === 'foia' ? 'FOIA Records Request' :
-      data.type === 'lawsuit' ? (data.filingInstructions ? 'DIY Lawsuit Assistance' : 'Full-Service Lawsuit') :
-      'LegalAI Access'
-    }`;
-
-    const success = await sendViaSMTP(
       data.email,
-      subject,
-      undefined, // No HTML
+      "Welcome to Bad Blue - Police Accountability Platform",
+      undefined,
       textContent,
       fromAddress
     );
 
     if (success) {
-      console.log(`[EMAIL] Confirmation email sent to ${data.email} for ${data.type}`);
+      console.log(`[EMAIL] Welcome email sent to ${data.email}`);
     } else {
-      console.error(`[EMAIL] Failed to send confirmation email to ${data.email}`);
+      console.error(
+        `[EMAIL] Failed to send welcome email to ${data.email}`
+      );
     }
 
     return success;
   } catch (error) {
-    console.error('[EMAIL] Error in sendPurchaseConfirmationEmail:', error);
+    console.error("[EMAIL] Error in sendWelcomeEmail:", error);
     return false;
   }
 }
 
-/**
- * Send admin-composed email to user
- */
-export async function sendAdminEmail(data: AdminEmailData): Promise<boolean> {
+export async function sendPurchaseConfirmationEmail(
+  data: PurchaseConfirmationData
+): Promise<boolean> {
+  try {
+    const fromAddress = await getFromAddress();
+    const textContent = composeConfirmationEmailText(data);
+
+    const subject = `Purchase Confirmation - ${
+      data.type === "complaint"
+        ? "Police Complaint"
+        : data.type === "petition"
+        ? "Civil Rights Petition"
+        : data.type === "foia"
+        ? "FOIA Records Request"
+        : data.type === "lawsuit"
+        ? data.filingInstructions
+          ? "DIY Lawsuit Assistance"
+          : "Full-Service Lawsuit"
+        : "LegalAI Access"
+    }`;
+
+    const success = await sendWithResend(
+      data.email,
+      subject,
+      undefined,
+      textContent,
+      fromAddress
+    );
+
+    if (success) {
+      console.log(
+        `[EMAIL] Confirmation email sent to ${data.email} for ${data.type}`
+      );
+    } else {
+      console.error(
+        `[EMAIL] Failed to send confirmation email to ${data.email}`
+      );
+    }
+
+    return success;
+  } catch (error) {
+    console.error(
+      "[EMAIL] Error in sendPurchaseConfirmationEmail:",
+      error
+    );
+    return false;
+  }
+}
+
+export async function sendAdminEmail(
+  data: AdminEmailData
+): Promise<boolean> {
   try {
     const fromAddress = await getFromAddress();
 
-    const success = await sendViaSMTP(
+    const success = await sendWithResend(
       data.to,
       data.subject,
-      undefined, // No HTML
+      undefined,
       data.message,
       fromAddress
     );
@@ -421,28 +498,29 @@ export async function sendAdminEmail(data: AdminEmailData): Promise<boolean> {
     if (success) {
       console.log(`[EMAIL] Admin email sent to ${data.to}`);
     } else {
-      console.error(`[EMAIL] Failed to send admin email to ${data.to}`);
+      console.error(
+        `[EMAIL] Failed to send admin email to ${data.to}`
+      );
     }
 
     return success;
   } catch (error) {
-    console.error('[EMAIL] Error in sendAdminEmail:', error);
+    console.error("[EMAIL] Error in sendAdminEmail:", error);
     return false;
   }
 }
 
-/**
- * Send test email (for admin testing)
- */
-export async function sendTestEmail(toEmail: string): Promise<boolean> {
+export async function sendTestEmail(
+  toEmail: string
+): Promise<boolean> {
   try {
     const fromAddress = await getFromAddress();
     const testMessage = `This is a test email from Bad Blue.
 
-This email confirms that your SMTP configuration is working correctly.
+This email confirms that your Resend configuration is working correctly.
 
 System Information:
-- SMTP Server: smtp-relay.gmail.com:587
+- Email Provider: Resend
 - From Address: ${fromAddress}
 - Sent: ${new Date().toLocaleString()}
 
@@ -451,10 +529,10 @@ If you received this email, your email system is functioning properly.
 Sincerely,
 Bad Blue`;
 
-    const success = await sendViaSMTP(
+    const success = await sendWithResend(
       toEmail,
-      'Bad Blue - Test Email',
-      undefined, // No HTML
+      "Bad Blue - Test Email",
+      undefined,
       testMessage,
       fromAddress
     );
@@ -462,12 +540,14 @@ Bad Blue`;
     if (success) {
       console.log(`[EMAIL] Test email sent to ${toEmail}`);
     } else {
-      console.error(`[EMAIL] Failed to send test email to ${toEmail}`);
+      console.error(
+        `[EMAIL] Failed to send test email to ${toEmail}`
+      );
     }
 
     return success;
   } catch (error) {
-    console.error('[EMAIL] Error in sendTestEmail:', error);
+    console.error("[EMAIL] Error in sendTestEmail:", error);
     return false;
   }
 }
@@ -475,9 +555,6 @@ Bad Blue`;
 // Alias for backward compatibility
 export const sendAdminTestEmail = sendTestEmail;
 
-/**
- * Send contact form submission to support email
- */
 export async function sendContactFormEmail(data: {
   type: string;
   name: string;
@@ -486,11 +563,10 @@ export async function sendContactFormEmail(data: {
   message: string;
 }): Promise<boolean> {
   try {
-    console.log('[EMAIL] Preparing to send contact form email...');
-
+    console.log("[EMAIL] Preparing to send contact form email...");
 
     const fromAddress = await getFromAddress();
-    console.log('[EMAIL] Using from address:', fromAddress);
+    console.log("[EMAIL] Using from address:", fromAddress);
 
     const messageText = `Contact Form Submission
 
@@ -506,34 +582,38 @@ ${data.message}
 Sent from Bad Blue Contact Form
 ${new Date().toLocaleString()}`;
 
-    // Send to support email (admin)
-    const supportEmail = process.env.ADMIN_EMAIL || 'contact.badblue@gmail.com';
-    console.log('[EMAIL] Sending to support email:', supportEmail);
+    const supportEmail =
+      process.env.ADMIN_EMAIL || "contact.badblue@gmail.com";
+    console.log("[EMAIL] Sending to support email:", supportEmail);
 
     const success = await sendWithResend(
-  supportEmail,
-  `Contact Form: ${data.subject}`,
-  undefined,
-  messageText,
-  fromAddress
-);
+      supportEmail,
+      `Contact Form: ${data.subject}`,
+      undefined,
+      messageText,
+      fromAddress
+    );
 
     if (success) {
-      console.log(`[EMAIL] ✓ Contact form sent successfully from ${data.email}`);
+      console.log(
+        `[EMAIL] ✓ Contact form sent successfully from ${data.email}`
+      );
     } else {
-      console.error(`[EMAIL] ✗ Failed to send contact form from ${data.email}`);
+      console.error(
+        `[EMAIL] ✗ Failed to send contact form from ${data.email}`
+      );
     }
 
     return success;
   } catch (error: any) {
-    console.error('[EMAIL] Error in sendContactFormEmail:', error.message || error);
+    console.error(
+      "[EMAIL] Error in sendContactFormEmail:",
+      error.message || error
+    );
     return false;
   }
 }
 
-/**
- * Send complaint to oversight venue
- */
 export async function sendComplaintToVenue(data: {
   venueEmail: string;
   complaintType: string;
@@ -554,7 +634,9 @@ export async function sendComplaintToVenue(data: {
 
 Complaint Type: ${data.complaintType}
 Date of Incident: ${data.incidentDate}
-Location: ${data.city}, ${data.state}${data.county ? ` (${data.county} County)` : ''}
+Location: ${data.city}, ${data.state}${
+      data.county ? ` (${data.county} County)` : ""
+    }
 
 SUBJECT OFFICER:
 Name: ${data.officerName}
@@ -575,29 +657,31 @@ Please provide a case number and acknowledgment of receipt to the complainant at
 Submitted: ${new Date().toLocaleString()}`;
 
     const success = await sendWithResend(
-  data.venueEmail,
-  `Formal Complaint: ${data.complaintType} - ${data.officerName}`,
-  undefined,
-  complaintText,
-  fromAddress
-);
+      data.venueEmail,
+      `Formal Complaint: ${data.complaintType} - ${data.officerName}`,
+      undefined,
+      complaintText,
+      fromAddress
+    );
 
     if (success) {
       console.log(`[EMAIL] Complaint sent to ${data.venueEmail}`);
     } else {
-      console.error(`[EMAIL] Failed to send complaint to ${data.venueEmail}`);
+      console.error(
+        `[EMAIL] Failed to send complaint to ${data.venueEmail}`
+      );
     }
 
     return success;
   } catch (error) {
-    console.error('[EMAIL] Error in sendComplaintToVenue:', error);
+    console.error(
+      "[EMAIL] Error in sendComplaintToVenue:",
+      error
+    );
     return false;
   }
 }
 
-/**
- * Send tort notice to agency
- */
 export async function sendTortNoticeToAgency(data: {
   agencyEmail: string;
   agencyName: string;
@@ -627,117 +711,27 @@ Please acknowledge receipt to the claimant at ${data.claimantEmail}.
 Submitted: ${new Date().toLocaleString()}`;
 
     const success = await sendWithResend(
-  data.agencyEmail,
-  `Tort Claim Notice - ${data.claimantName}`,
-  undefined,   // no HTML
-  noticeText,
-  fromAddress
-);
+      data.agencyEmail,
+      `Tort Claim Notice - ${data.claimantName}`,
+      undefined,
+      noticeText,
+      fromAddress
+    );
 
     if (success) {
       console.log(`[EMAIL] Tort notice sent to ${data.agencyEmail}`);
     } else {
-      console.error(`[EMAIL] Failed to send tort notice to ${data.agencyEmail}`);
+      console.error(
+        `[EMAIL] Failed to send tort notice to ${data.agencyEmail}`
+      );
     }
 
     return success;
   } catch (error) {
-    console.error('[EMAIL] Error in sendTortNoticeToAgency:', error);
-    return false;
-  }
-}
-
-/**
- * Send petition ZIP file to user
- */
-export async function sendPetitionZipEmail(
-  email: string,
-  petitionTitle: string,
-  zipBuffer: Buffer,
-  zipFilename: string
-): Promise<boolean> {
-  try {
-    const fromAddress = await getFromAddress();
-    const messageText = `Your petition materials for "${petitionTitle}" are attached.
-
-The ZIP file contains:
-- Petition document (PDF)
-- Signature collection sheets
-- Distribution instructions
-
-Please review all materials before circulating your petition.
-
-If you have any questions, please contact our support team.
-
-Sincerely,
-Bad Blue`;
-
-    // Convert ZIP buffer to base64
-    const attachment = {
-      filename: zipFilename,
-      content: zipBuffer.toString('base64'),
-      contentType: 'application/zip',
-    };
-
-    const success = await sendViaSMTP(
-      email,
-      `Your Petition Materials - ${petitionTitle}`,
-      undefined,
-      messageText,
-      fromAddress,
-      [attachment]
+    console.error(
+      "[EMAIL] Error in sendTortNoticeToAgency:",
+      error
     );
-
-    if (success) {
-      console.log(`[EMAIL] Petition ZIP sent to ${email}`);
-    } else {
-      console.error(`[EMAIL] Failed to send petition ZIP to ${email}`);
-    }
-
-    return success;
-  } catch (error) {
-    console.error('[EMAIL] Error in sendPetitionZipEmail:', error);
     return false;
   }
-}
-
-/**
- * Send custom email to user with attachments
- */
-export async function sendUserEmail(
-  toEmail: string,
-  subject: string,
-  message: string,
-  attachments?: Array<{ filename: string; content: Buffer; contentType: string }>
-): Promise<boolean> {
-  try {
-    const fromAddress = await getFromAddress();
-
-    // Convert attachments to base64 format if provided
-    const formattedAttachments = attachments?.map(att => ({
-      filename: att.filename,
-      content: att.content.toString('base64'),
-      contentType: att.contentType,
-    })) || [];
-
-    const success = await sendViaSMTP(
-      toEmail,
-      subject,
-      undefined,
-      message,
-      fromAddress,
-      formattedAttachments
-    );
-
-    if (success) {
-      console.log(`[EMAIL] Custom email sent to ${toEmail}`);
-    } else {
-      console.error(`[EMAIL] Failed to send custom email to ${toEmail}`);
-    }
-
-    return success;
-  } catch (error) {
-    console.error('[EMAIL] Error in sendUserEmail:', error);
-    return false;
-  }
-}
+      }
