@@ -10,7 +10,7 @@ import { getBaseURL } from "./platformConfig";
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
 // This must be a sender that Resend accepts (e.g. verified domain)
-const DEFAULT_FROM = process.env.EMAIL_FROM || "EMAIL_FROM = BadBlue <noreply@bad-blue.com>";
+const DEFAULT_FROM = process.env.EMAIL_FROM || "EMAIL_FROM || "BadBlue <noreply@trenuxae.resend.app>";
 
 export const emailTransporter = {
   verify: async () => {
