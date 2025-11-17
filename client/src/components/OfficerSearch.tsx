@@ -1,247 +1,3 @@
-ue="county">County Sheriff/Deputy</SelectItem>
-                      <SelectItem value="state">State Trooper/Agent</SelectItem>
-                      <SelectItem value="federal">Federal Agent (FBI, DEA, ATF, Marshal)</SelectItem>
-                      <SelectItem value="special_agent">Special Agent</SelectItem>
-                      <SelectItem value="custom">Custom Search</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {officerType === "city" && (
-                    <p className="text-sm text-muted-foreground">
-                      Requires: State + City
-                    </p>
-                  )}
-                  {officerType === "county" && (
-                    <p className="text-sm text-muted-foreground">
-                      Requires: State + County
-                    </p>
-                  )}
-                  {officerType === "state" && (
-                    <p className="text-sm text-muted-foreground">
-                      Requires: State only
-                    </p>
-                  )}
-                  {officerType === "federal" && (
-                    <p className="text-sm text-muted-foreground">
-                      Optional: City (leave state/county blank for federal agencies)
-                    </p>
-                  )}
-                  {officerType === "custom" && (
-                    <p className="text-sm text-muted-foreground">
-                      Requires: At least one location field (state, city, or county)
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="select-state">
-                    State {officerType === "federal" || officerType === "custom" ? "(Optional)" : ""}
-                  </Label>
-                  <Select 
-                    value={state} 
-                    onValueChange={setState}
-                    disabled={officerType === "federal"}
-                  >
-                    <SelectTrigger id="select-state" data-testid="select-state">
-                      <SelectValue placeholder={
-                        officerType === "federal" 
-                          ? "Not applicable for federal officers" 
-                          : "Select state"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {US_STATES.map((s) => (
-                        <SelectItem key={s.code} value={s.code}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {(officerType === "city" || officerType === "federal" || officerType === "custom") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="input-city">
-                      City {officerType === "custom" ? "(Optional)" : ""}
-                    </Label>
-                    <Input
-                      id="input-city"
-                      data-testid="input-city"
-                      placeholder="Enter city (e.g., Los Angeles)"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                    />
-                  </div>
-                )}
-
-                {(officerType === "county" || officerType === "custom") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="input-county">
-                      County {officerType === "custom" ? "(Optional)" : ""}
-                    </Label>
-                    <Input
-                      id="input-county"
-                      data-testid="input-county"
-                      placeholder="Enter county (e.g., Los Angeles County)"
-                      value={county}
-                      onChange={(e) => setCounty(e.target.value)}
-                    />
-                  </div>
-                )}
-
-                <div className="flex gap-4">
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={searchMutation.isPending}
-                    className="flex-1"
-                    size="lg"
-                    data-testid="button-search"
-                  >
-                    {searchMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {progress ? `${progress.stageName}...` : "Searching..."}
-                      </>
-                    ) : (
-                      <>
-                        <Search className="w-4 h-4 mr-2" />
-                        Search Officer Records
-                      </>
-                    )}
-                  </Button>
-                  {onBack && (
-                    <Button
-                      variant="outline"
-                      onClick={onBack}
-                      data-testid="button-back"
-                    >
-                      Go Back
-                    </Button>
-                  )}
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Search Results */}
-                <div className="space-y-6">
-                  {/* Officer Info Header */}
-                  <div className="border-2 rounded-lg p-6 bg-card">
-                    <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
-                      <div>
-                        <h3 className="text-2xl font-bold" data-testid="text-officer-name">
-                          {searchResults.name || officerName}
-                        </h3>
-                        {searchResults.rank && (
-                          <Badge className="mt-2" data-testid="badge-rank">
-                            {searchResults.rank}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <MapPin className="w-4 h-4" />
-                          <span>
-                            {[
-                              county,
-                              city,
-                              state ? US_STATES.find(s => s.code === state)?.name : null
-                            ].filter(Boolean).join(', ') || 'Federal/Unknown Location'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Summary */}
-                  {searchResults.summary && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Shield className="w-5 h-5" />
-                          Comprehensive Officer Report
-                        </CardTitle>
-                        <CardDescription>
-                          Based on publicly available information from official sources
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="prose dark:prose-invert max-w-none">
-                          <div className="whitespace-pre-wrap text-sm" data-testid="text-summary">
-                            {searchResults.summary}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Sources */}
-                  {searchResults.sources && searchResults.sources.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <ExternalLink className="w-5 h-5" />
-                          Sources ({searchResults.sources.length})
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {searchResults.sources.map((source: string, index: number) => (
-                            <a
-                              key={index}
-                              href={source}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block text-sm text-primary hover:underline break-all"
-                              data-testid={`link-source-${index}`}
-                            >
-                              {source}
-                            </a>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSearchResults(null);
-                        setOfficerName("");
-                        setOfficerType("custom");
-                        setState("");
-                        setCity("");
-                        setCounty("");
-                        setProgress(null);
-                        setSearchId(null);
-                        if (eventSourceRef.current) {
-                          eventSourceRef.current.close();
-                          eventSourceRef.current = null;
-                        }
-                      }}
-                      data-testid="button-new-search"
-                    >
-                      New Search
-                    </Button>
-                    {onBack && (
-                      <Button
-                        variant="outline"
-                        onClick={onBack}
-                        data-testid="button-back-results"
-                      >
-                        Back to Home
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-    </div>
-  );
-}
 /**
  * Real Officer Search Service with seamless Gemini → Groq fallback at 85% rate limits
  * Uses your existing Gemini + Groq AI provider configuration
@@ -250,16 +6,14 @@ ue="county">County Sheriff/Deputy</SelectItem>
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { 
   generateText, 
-  generateJSON, 
   createTaskMetadata, 
   UsageContext, 
   TaskPriority, 
   TaskComplexity,
-  canAutonomousProceed,
-  getAutonomousRescheduleInfo 
+  canAutonomousProceed
 } from './aiProvider';
 
-// Types (keeping your existing types)
+// Types
 export type OfficerType = "city" | "county" | "state" | "federal" | "special_agent" | "custom";
 export type SearchSource = 'database' | 'known_urls' | 'registered_sources' | 'web_search';
 export type DataConfidence = 'verified' | 'high' | 'medium' | 'low';
@@ -857,14 +611,19 @@ export class OfficerSearchService {
   private async createBasicOfficerRecord(request: OfficerSearchRequest): Promise<OfficerRecord> {
     // Implementation for creating basic record
     // ... (basic record creation)
-    return {} as OfficerRecord;
+    return {
+      id: `temp-${Date.now()}`,
+      name: request.officerName,
+      department: this.getDepartmentQuery(request),
+      employment_status: 'active',
+      data_source: 'search_service',
+      confidence: 'medium',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    } as OfficerRecord;
   }
 
   private countSourcesWithResults(results: PromiseSettledResult<any>[]): number {
-    return results.filter(result => 
-      result.status === 'fulfilled' && 
-      result.value && 
-      (Array.isArray(results: PromiseSettledResult<any>[]): number {
     return results.filter(result => 
       result.status === 'fulfilled' && 
       result.value && 
@@ -933,4 +692,3 @@ export function createOfficerSearchService(
 }
 
 export default OfficerSearchService;
-```
