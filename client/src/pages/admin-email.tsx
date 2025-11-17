@@ -333,13 +333,6 @@ export default function AdminEmail() {
       });
       return;
     }
-
-    sendCustomEmailMutation.mutate({
-      to: customToEmail,
-      subject: customSubject,
-      message: customMessage,
-      });
-    };
   
   if (isLoadingUser) {
     return (
@@ -407,7 +400,6 @@ export default function AdminEmail() {
                   placeholder="no-reply@mail.badblue.app"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Email address configured in Google Workspace SMTP relay
                 </p>
               </div>
             </div>
