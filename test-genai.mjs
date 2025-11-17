@@ -17,8 +17,20 @@ try {
   console.log('Instance type:', typeof genAI);
   console.log('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(genAI)));
   
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-  console.log('Model created successfully');
+  const { GoogleGenAI } = await import("@google/genai");
+
+const client = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY!,
+});
+
+const response = await client.models.generateContent({
+  model: "gemini-2.0-flash",   // or "gemini-1.5-pro", whichever you use
+  contents: searchQuery,
+});
+
+// New SDK response format:
+const resultText = response.text;
+return resultText;
   
   const result = await model.generateContent('Respond with just "OK" if working');
   const response = await result.response;
