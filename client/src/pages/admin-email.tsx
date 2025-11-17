@@ -402,7 +402,7 @@ export default function AdminEmail() {
                 <p className="text-xs text-muted-foreground">
                 </p>
               </div>
-            </div>
+            
 
             <div className="flex gap-2">
               <Button
