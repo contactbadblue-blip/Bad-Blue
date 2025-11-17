@@ -8,7 +8,7 @@
  * - All usage tracked in database with proper context
  */
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getGroqClient } from './groq';
 import { 
   aiTokenGovernor, 
@@ -164,14 +164,14 @@ export async function getAutonomousRescheduleInfo(): Promise<{
 // Private helper functions
 
 // Lazy initialization of Gemini client
-let geminiClient: GoogleGenAI | null = null;
+let geminiClient: GoogleGenerativeAI | null = null;
 
-function getGeminiClient(): GoogleGenAI {
+function getGeminiClient(): GoogleGenerativeAI {
   if (!geminiClient) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    geminiClient = new GoogleGenAI(process.env.GEMINI_API_KEY);
+    geminiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   }
   return geminiClient;
 }
@@ -183,17 +183,8 @@ async function callGemini(
 ): Promise<string> {
   try {
     const gemini = getGeminiClient();
-    const result = await gemini.models.generateContent({
-  model: options.model || "gemini-1.5-flash",
-  contents: prompt,
-});
-
-    const fullPrompt = options.systemPrompt 
-      ? `${options.systemPrompt}\n\n${prompt}`
-      : prompt;
-
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+    const model = gemini.getGenerativeModel({ 
+      model: options.model || "gemini-1.5-flash",
       generationConfig: {
         temperature: options.temperature || 0.7,
         maxOutputTokens: maxTokens,
@@ -201,7 +192,12 @@ async function callGemini(
       }
     });
 
-    const response = result.response;
+    const fullPrompt = options.systemPrompt 
+      ? `${options.systemPrompt}\n\n${prompt}`
+      : prompt;
+
+    const result = await model.generateContent(fullPrompt);
+    const response = await result.response;
     const text = response.text();
     
     if (!text) {
@@ -354,4 +350,4 @@ export async function searchOfficerData(
     TaskComplexity.COMPREHENSIVE
   );
   return generateJSON(task, prompt, options);
-}
+                               }
