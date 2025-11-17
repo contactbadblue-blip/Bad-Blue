@@ -452,35 +452,32 @@ export default function AdminEmail() {
             </div>
 
             {(saveSettingsMutation.isSuccess || testEmailMutation.isSuccess) && (
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                <CheckCircle2 className="h-4 w-4" />
-                <p className="text-sm font-medium">
-                  {saveSettingsMutation.isSuccess && "Settings saved successfully"}
-                  {testEmailMutation.isSuccess && "Test email sent successfully"}
-                </p>
-              </div>
-            
-          </CardContent>
-        </Card>
-        )}
-        
-       {/* Section B: Send Email to Any Address */}
-        <Card data-testid="card-send-custom-email">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5" />
-              Send Email to Any Address
-            </CardTitle>
-            <CardDescription>
-              Send an email to any recipient address (not just users in the database)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-md bg-muted p-3">
-              <p className="text-sm text-muted-foreground">
-                From: BadBlue &lt;noreply@bad-blue.com&gt;
-              </p>
-            </div>
+  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+    <CheckCircle2 className="h-4 w-4" />
+    <p className="text-sm font-medium">
+      {saveSettingsMutation.isSuccess && "Settings saved successfully"}
+      {testEmailMutation.isSuccess && "Test email sent successfully"}
+    </p>
+  </div>
+)}
+
+{/* Section B: Send Email to Any Address */}
+<Card data-testid="card-send-custom-email">
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2">
+      <Send className="h-5 w-5" />
+      Send Email to Any Address
+    </CardTitle>
+    <CardDescription>
+      Send an email to any recipient address (not just users in the database)
+    </CardDescription>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="rounded-md bg-muted p-3">
+      <p className="text-sm text-muted-foreground">
+        From: BadBlue &lt;noreply@bad-blue.com&gt;
+      </p>
+    </div>
 
             <div className="space-y-2">
               <Label htmlFor="customToEmail">To</Label>
