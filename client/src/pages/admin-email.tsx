@@ -459,10 +459,10 @@ export default function AdminEmail() {
                   {testEmailMutation.isSuccess && "Test email sent successfully"}
                 </p>
               </div>
-            )}
         </CardContent>
         </Card>
-
+        })
+        
        {/* Section B: Send Email to Any Address */}
         <Card data-testid="card-send-custom-email">
           <CardHeader>
