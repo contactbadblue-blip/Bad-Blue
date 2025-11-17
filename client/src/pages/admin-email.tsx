@@ -461,7 +461,7 @@ export default function AdminEmail() {
               </div>
         </CardContent>
         </Card>
-        })
+        )}
         
        {/* Section B: Send Email to Any Address */}
         <Card data-testid="card-send-custom-email">
