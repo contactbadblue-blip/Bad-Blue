@@ -183,12 +183,14 @@ async function callGemini(
 ): Promise<string> {
   try {
     const gemini = getGeminiClient();
+    
+    // Use Gemini 1.5 Flash as the best free tier model (most capable free option)
+    const modelName = options.model || "gemini-1.5-flash";
     const model = gemini.getGenerativeModel({ 
-      model: options.model || "gemini-1.5-flash",
+      model: modelName,
       generationConfig: {
         temperature: options.temperature || 0.7,
         maxOutputTokens: maxTokens,
-        responseMimeType: options.useJSON ? 'application/json' : 'text/plain',
       }
     });
 
@@ -196,7 +198,12 @@ async function callGemini(
       ? `${options.systemPrompt}\n\n${prompt}`
       : prompt;
 
-    const result = await model.generateContent(fullPrompt);
+    // For JSON responses, add explicit instruction
+    const finalPrompt = options.useJSON 
+      ? `${fullPrompt}\n\nPlease respond with valid JSON only, no markdown formatting.`
+      : fullPrompt;
+
+    const result = await model.generateContent(finalPrompt);
     const response = await result.response;
     const text = response.text();
     
@@ -207,6 +214,16 @@ async function callGemini(
     return text;
   } catch (error: any) {
     console.error('[AI Provider] Gemini error:', error);
+    
+    // Provide more specific error messages
+    if (error.message?.includes('API_KEY_INVALID')) {
+      throw new Error('Invalid Gemini API key. Please check your GEMINI_API_KEY environment variable.');
+    } else if (error.message?.includes('quota')) {
+      throw new Error('Gemini API quota exceeded. Please try again later or use a different provider.');
+    } else if (error.message?.includes('rate_limit')) {
+      throw new Error('Gemini API rate limit exceeded. Please slow down your requests.');
+    }
+    
     throw error;
   }
 }
@@ -350,4 +367,4 @@ export async function searchOfficerData(
     TaskComplexity.COMPREHENSIVE
   );
   return generateJSON(task, prompt, options);
-                               }
+}
