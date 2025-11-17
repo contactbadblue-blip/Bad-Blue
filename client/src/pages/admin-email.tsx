@@ -460,7 +460,7 @@ export default function AdminEmail() {
                 </p>
               </div>
             )}
-          </CardContent>
+        </CardContent>
         </Card>
 
        {/* Section B: Send Email to Any Address */}
