@@ -183,9 +183,10 @@ async function callGemini(
 ): Promise<string> {
   try {
     const gemini = getGeminiClient();
-    const model = gemini.getGenerativeModel({ 
-      model: options.model || 'gemini-1.5-flash',
-    });
+    const result = await gemini.models.generateContent({
+  model: options.model || "gemini-1.5-flash",
+  contents: prompt,
+});
 
     const fullPrompt = options.systemPrompt 
       ? `${options.systemPrompt}\n\n${prompt}`
