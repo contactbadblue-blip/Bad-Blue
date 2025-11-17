@@ -136,11 +136,24 @@ async function runCategorySearch(
   categoryPrompt: string
 ): Promise<CategorySearchResult> {
   // First pass: comprehensive search
-  const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
-  const response1 = await model.generateContent(categoryPrompt);
+  (Gemini via @google/genai)
+  const response1 = await client.models.generateContent({
+    model: "gemini-1.5-flash", // or "gemini-2.5-flash" if you've upgraded
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: categoryPrompt }],
+      },
+    ],
+  });
 
-  const text1 = response1.response.text() || "";
+  const text1 = response1.text ?? "";
   
+return {
+  narrative: text2 || text1,
+  sources: [text1, text2],
+};
+
   // Build location string for verification
   const locationStr = [city, county, state].filter(Boolean).join(', ') || 'federal/unknown location';
   
@@ -158,9 +171,17 @@ Now, perform a VERIFICATION AND EXPANSION search:
 
 Focus on accuracy over speed. Triple-check all facts.`;
 
-  const response2 = await model.generateContent(verificationPrompt);
+  const response2 = await client.models.generateContent({
+  model: "gemini-1.5-flash",
+  contents: [
+    {
+      role: "user",
+      parts: [{ text: verificationPrompt }],
+    },
+  ],
+});
 
-  const text2 = response2.response.text() || "";
+const text2 = response2.text ?? "";
   
   // Combine both passes for maximum accuracy
   const combinedText = `${text1}\n\n[VERIFICATION AND EXPANSION]:\n${text2}`;
