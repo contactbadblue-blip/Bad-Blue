@@ -14,9 +14,6 @@ if (!process.env.VITE_STRIPE_PUBLIC_KEY) {
   console.error('[ENV] ⚠️ VITE_STRIPE_PUBLIC_KEY not set in environment variables');
 }
 
-import { createClient } from "@supabase/supabase-js";
-import type { Request, Response } from "express";
-
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
