@@ -1,11 +1,9 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { EventEmitter } from "events";
 import { findOfficerInRoster, addOfficerToRoster, addDepartmentToRoster } from "./officerRoster";
 import { findDepartmentUrlsByCity, findDepartmentUrlsByState, getAllDepartmentUrls } from "./policeUrls";
 import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqStructuredResponse } from "./groq";
-
-let gemini: GoogleGenerativeAI | null = null;
+import { generateText, createTaskMetadata, UsageContext, TaskPriority, TaskComplexity } from "./aiProvider";
 
 // In-memory cache for officer search results
 const searchCache = new Map<string, { result: OfficerSearchResult; timestamp: number }>();
@@ -42,16 +40,6 @@ setInterval(() => {
     console.log(`[Officer Search Cache] Cleaned up ${removedCount} expired entries`);
   }
 }, CLEANUP_INTERVAL);
-
-function getGeminiClient(): GoogleGenerativeAI {
-  if (!gemini) {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
-    }
-    gemini = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return gemini;
-}
 
 function getCacheKey(officerName: string, city?: string, state?: string, county?: string, officerType?: string): string {
   return `${officerName.toLowerCase().trim()}|${city ? city.toLowerCase().trim() : ''}|${state ? state.toUpperCase() : ''}|${county ? county.toLowerCase().trim() : ''}|${officerType || 'custom'}`;
@@ -128,25 +116,22 @@ interface CategorySearchResult {
 }
 
 async function runCategorySearch(
-  client: GoogleGenerativeAI,
   officerName: string,
   city: string | undefined,
   state: string | undefined,
   county: string | undefined,
   categoryPrompt: string
 ): Promise<CategorySearchResult> {
-  // First pass: comprehensive search (Gemini via @google/genai)
-  const response1 = await client.models.generateContent({
-    model: "gemini-1.5-flash", // or "gemini-2.5-flash" if you've upgraded
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: categoryPrompt }],
-      },
-    ],
-  });
+  // Create task metadata for officer search (user-triggered, critical, comprehensive)
+  const task = createTaskMetadata(
+    'officer-category-search',
+    UsageContext.USER,
+    TaskPriority.CRITICAL_USER,
+    TaskComplexity.COMPREHENSIVE
+  );
 
-  const text1 = response1.text ?? "";
+  // First pass: comprehensive search using 4-way AI collaboration
+  const text1 = await generateText(categoryPrompt, task);
   
   // Build location string for verification
   const locationStr = [city, county, state].filter(Boolean).join(', ') || 'federal/unknown location';
@@ -165,74 +150,20 @@ Now, perform a VERIFICATION AND EXPANSION search:
 
 Focus on accuracy over speed. Triple-check all facts.`;
 
-  const response2 = await client.models.generateContent({
-  model: "gemini-1.5-flash",
-  contents: [
-    {
-      role: "user",
-      parts: [{ text: verificationPrompt }],
-    },
-  ],
-});
-
-const text2 = response2.text ?? "";
+  // Use same task metadata for verification pass
+  const text2 = await generateText(verificationPrompt, task);
   
   // Combine both passes for maximum accuracy
   const combinedText = `${text1}\n\n[VERIFICATION AND EXPANSION]:\n${text2}`;
   
-  // Extract sources from both responses
+  // Extract sources from responses (basic URL extraction from text)
   const sources: string[] = [];
   
-  // Extract from first response
+  // Simple URL extraction from combined text
   try {
-    const candidate1 = response1.candidates?.[0];
-    if (candidate1?.groundingMetadata?.groundingChunks) {
-      for (const chunk of candidate1.groundingMetadata.groundingChunks) {
-        if (chunk.web?.uri) {
-          sources.push(chunk.web.uri);
-        }
-      }
-    }
-    
-    if (candidate1?.groundingMetadata?.groundingSupports) {
-      for (const support of candidate1.groundingMetadata.groundingSupports) {
-        if (support.groundingChunkIndices) {
-          for (const idx of support.groundingChunkIndices) {
-            const chunk = candidate1.groundingMetadata.groundingChunks?.[idx];
-            if (chunk?.web?.uri) {
-              sources.push(chunk.web.uri);
-            }
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.log('[Officer Search] Could not extract grounding metadata from first pass:', e);
-  }
-  
-  // Extract from second response
-  try {
-    const candidate2 = response2.candidates?.[0];
-    if (candidate2?.groundingMetadata?.groundingChunks) {
-      for (const chunk of candidate2.groundingMetadata.groundingChunks) {
-        if (chunk.web?.uri) {
-          sources.push(chunk.web.uri);
-        }
-      }
-    }
-    
-    if (candidate2?.groundingMetadata?.groundingSupports) {
-      for (const support of candidate2.groundingMetadata.groundingSupports) {
-        if (support.groundingChunkIndices) {
-          for (const idx of support.groundingChunkIndices) {
-            const chunk = candidate2.groundingMetadata.groundingChunks?.[idx];
-            if (chunk?.web?.uri) {
-              sources.push(chunk.web.uri);
-            }
-          }
-        }
-      }
-    }
+    const urlPattern = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/g;
+    const urls = combinedText.match(urlPattern) || [];
+    sources.push(...urls);
   } catch (e) {
     console.log('[Officer Search] Could not extract grounding metadata from second pass:', e);
   }
@@ -419,7 +350,6 @@ export async function searchOfficerInformation(
     console.log(`[Officer Search] Starting 2-stage comprehensive search for: ${officerName} in ${location}${officerTypeStr}`);
     emitProgress(0, 'Starting', `Searching for ${officerName}...`);
     
-    const client = getGeminiClient();
     const allSources = new Set<string>();
     const categoryResults: CategorySearchResult[] = [];
     
@@ -539,7 +469,7 @@ ${officerType === 'special_agent' ? '- Federal Special Agent directories and cre
 
 Cite at least 6 distinct sources with URLs. Write a comprehensive narrative (450-500 words) with specific dates, positions, and credentials. Start with: "${officerName} serves as..."`;
 
-    const careerTrainingResult = await runCategorySearch(client, officerName, city, state, county, careerTrainingPrompt);
+    const careerTrainingResult = await runCategorySearch(officerName, city, state, county, careerTrainingPrompt);
     categoryResults.push(careerTrainingResult);
     for (const s of careerTrainingResult.sources) allSources.add(s);
     
@@ -591,7 +521,7 @@ Search these sources:
 
 Cite at least 6 distinct sources with URLs. Write a comprehensive narrative (450-500 words) covering all significant incidents, cases, and community activities. Be thorough and specific with dates and details.`;
 
-    const casesCommunityResult = await runCategorySearch(client, officerName, city, state, county, casesCommunityPrompt);
+    const casesCommunityResult = await runCategorySearch(officerName, city, state, county, casesCommunityPrompt);
     categoryResults.push(casesCommunityResult);
     for (const s of casesCommunityResult.sources) allSources.add(s);
     
