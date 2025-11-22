@@ -2772,43 +2772,5 @@
     "status": "success",
     "consecutiveFailures": 0,
     "environment": "standard"
-  },
-  {
-    "timestamp": "2025-11-15T23:51:04.986Z",
-    "check": "database_heartbeat",
-    "status": "success",
-    "consecutiveFailures": 0,
-    "environment": "standard"
-  },
-  {
-    "timestamp": "2025-11-16T00:06:04.985Z",
-    "check": "database_heartbeat",
-    "status": "failed",
-    "error": "Connection terminated unexpectedly",
-    "consecutiveFailures": 1,
-    "environment": "standard"
-  },
-  {
-    "timestamp": "2025-11-16T00:21:04.986Z",
-    "check": "database_heartbeat",
-    "status": "failed",
-    "error": "Connection terminated unexpectedly",
-    "consecutiveFailures": 2,
-    "environment": "standard"
-  },
-  {
-    "timestamp": "2025-11-16T00:44:48.209Z",
-    "check": "database_heartbeat",
-    "status": "success",
-    "consecutiveFailures": 0,
-    "environment": "standard"
-  },
-  {
-    "timestamp": "2025-11-17T04:27:59.483Z",
-    "check": "database_heartbeat",
-    "status": "failed",
-    "error": "Connection terminated unexpectedly",
-    "consecutiveFailures": 1,
-    "environment": "standard"
   }
 ]

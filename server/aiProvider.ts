@@ -183,28 +183,25 @@ async function callGemini(
 ): Promise<string> {
   try {
     const gemini = getGeminiClient();
-    const gemini = getGeminiClient(); // same as before
+    const model = gemini.getGenerativeModel({ 
+      model: options.model || 'gemini-1.5-flash',
+    });
 
-const fullPrompt = options.systemPrompt
-  ? `${options.systemPrompt}\n\n${prompt}`
-  : prompt;
+    const fullPrompt = options.systemPrompt 
+      ? `${options.systemPrompt}\n\n${prompt}`
+      : prompt;
 
-const result = await gemini.models.generateContent({
-  model: options.model || "gemini-1.5-flash",
-  contents: [
-    {
-      role: "user",
-      parts: [{ text: fullPrompt }],
-    },
-  ],
-  generationConfig: {
-    temperature: options.temperature ?? 0.7,
-    maxOutputTokens: maxTokens,
-    responseMimeType: options.useJSON ? "application/json" : "text/plain",
-  },
-});
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+      generationConfig: {
+        temperature: options.temperature || 0.7,
+        maxOutputTokens: maxTokens,
+        responseMimeType: options.useJSON ? 'application/json' : 'text/plain',
+      }
+    });
 
-return result.text ?? "";
+    const response = result.response;
+    const text = response.text();
     
     if (!text) {
       throw new Error('Empty response from Gemini');
