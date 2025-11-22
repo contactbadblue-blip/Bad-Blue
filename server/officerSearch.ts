@@ -131,7 +131,8 @@ async function runCategorySearch(
   );
 
   // First pass: comprehensive search using 4-way AI collaboration
-  const text1 = await generateText(categoryPrompt, task);
+  const response1 = await generateText(task, categoryPrompt);
+  const text1 = response1.content;
   
   // Build location string for verification
   const locationStr = [city, county, state].filter(Boolean).join(', ') || 'federal/unknown location';
@@ -151,7 +152,8 @@ Now, perform a VERIFICATION AND EXPANSION search:
 Focus on accuracy over speed. Triple-check all facts.`;
 
   // Use same task metadata for verification pass
-  const text2 = await generateText(verificationPrompt, task);
+  const response2 = await generateText(task, verificationPrompt);
+  const text2 = response2.content;
   
   // Combine both passes for maximum accuracy
   const combinedText = `${text1}\n\n[VERIFICATION AND EXPANSION]:\n${text2}`;

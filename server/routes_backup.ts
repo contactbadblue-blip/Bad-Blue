@@ -774,7 +774,7 @@ Submit to: ${venue}
 /**
  * Generates a formal complaint document with required template sections
  */
-function generateComplaintDocument(
+export function generateComplaintDocument(
   state: string,
   complaintType: string,
   officerName: string,
@@ -886,7 +886,7 @@ interface FOIAGenerationResult {
   statutoryDeadline: string;
 }
 
-async function generateFOIALetter(
+export async function generateFOIALetter(
   state: string,
   agencyType: string,
   departmentName: string,

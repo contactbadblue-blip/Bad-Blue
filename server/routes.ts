@@ -25,13 +25,15 @@ import {
   redraftOffenseDescription,
 } from "./legalAI";
 import { searchOfficer, searchOfficerInformation, searchProgressEmitter, type SearchProgress } from "./officerSearch";
-import { checkDeviceSearchLimit, recordDeviceSearch, getClientIp } from "./deviceRateLimit";
+import { checkDeviceSearchLimit, recordDeviceSearch, getClientIp, getOrCreateDeviceId } from "./deviceRateLimit";
 import {
   sendPurchaseConfirmationEmail,
   sendContactFormEmail,
   sendComplaintToVenue,
   sendTortNoticeToAgency,
   sendAdminTestEmail,
+  sendPetitionZipEmail,
+  sendUserEmail,
 } from "./emailService";
 import { evidenceStorage, EvidenceNotFoundError, AccessDeniedError } from "./evidenceStorage";
 import { ObjectPermission } from "./objectAcl";
@@ -47,7 +49,7 @@ import {
   autosaveRateLimit,
 } from "./rateLimit";
 import { setupAuth, isAuthenticated, adminAuthMiddleware } from "./auth";
-import { asyncHandler, notFoundHandler, errorHandler } from "./errorHandler";
+import { asyncHandler, notFoundHandler, errorHandler, ErrorTypes } from "./errorHandler";
 import { getBaseURL } from "./platformConfig";
 import {
   insertComplaintSchema,
@@ -3891,24 +3893,29 @@ For questions or support, contact: support@badblue.com
         // Device-based rate limiting (2 searches per device per 24 hours)
         const ipAddress = getClientIp(req);
         const userAgent = req.headers['user-agent'] || 'unknown';
+        const deviceId = getOrCreateDeviceId(req, res);
         const userId = req.user?.claims?.sub;
 
-        const rateLimit = await checkDeviceSearchLimit(ipAddress, userAgent);
+        // Check rate limit with fail-closed security
+        const rateLimit = await checkDeviceSearchLimit(ipAddress, userAgent, deviceId);
         
-        if (!rateLimit.allowed) {
+        // Strictly check allowed flag - return 429 if not allowed
+        if (rateLimit.allowed === false) {
+          const ipLog = ipAddress ? ipAddress.substring(0, 10) + '...' : 'no-ip';
           console.warn(
-            `[Officer Search] Rate limit exceeded for device IP=${ipAddress.substring(0, 10)}... | Remaining: ${rateLimit.remaining}`
+            `[Officer Search] Rate limit exceeded for device ${deviceId.substring(0, 8)}... IP=${ipLog} | Remaining: ${rateLimit.remaining}`
           );
           return res.status(429).json({
-            message: rateLimit.message,
+            message: rateLimit.message || 'Rate limit exceeded',
             code: "RATE_LIMIT_EXCEEDED",
             remaining: rateLimit.remaining,
             resetTime: rateLimit.resetTime,
+            error: rateLimit.error,
           });
         }
 
         // Record this search attempt for rate limiting
-        await recordDeviceSearch(ipAddress, userAgent, officerName.trim(), userId);
+        await recordDeviceSearch(ipAddress, userAgent, deviceId, officerName.trim(), userId);
 
         const location = [county, city, state].filter(Boolean).join(', ') || 'Federal/Unknown';
         console.log(

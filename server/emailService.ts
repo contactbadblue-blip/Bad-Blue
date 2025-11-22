@@ -778,7 +778,8 @@ export async function sendPetitionZipEmail(
 export async function sendUserEmail(
   toEmail: string,
   subject: string,
-  message: string
+  message: string,
+  attachments?: Array<{ filename: string; content: Buffer; contentType: string }>
 ): Promise<boolean> {
   try {
     const fromAddress = await getFromAddress();
@@ -791,6 +792,13 @@ export async function sendUserEmail(
         </div>
       </div>
     `;
+    
+    // Note: Resend API doesn't support attachments in the current implementation
+    // For now, we'll just send the email without attachments
+    // TODO: Implement attachment support with Resend API
+    if (attachments && attachments.length > 0) {
+      console.warn(`[EMAIL] Attachment support not yet implemented. ${attachments.length} attachments ignored.`);
+    }
     
     const success = await sendWithResend(toEmail, subject, html, undefined, fromAddress);
     return success;

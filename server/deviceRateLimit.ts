@@ -10,36 +10,95 @@ const DAILY_SEARCH_LIMIT = 2;
 const SEARCH_WINDOW_HOURS = 24;
 
 /**
- * Generate device fingerprint from IP address and user agent
+ * Generate device fingerprint from IP address, user agent, and device ID cookie
+ * Uses multiple factors for more reliable device identification
  */
-export function generateDeviceFingerprint(ipAddress: string, userAgent: string): string {
-  const data = `${ipAddress}|${userAgent}`;
+export function generateDeviceFingerprint(
+  ipAddress: string | null, 
+  userAgent: string, 
+  deviceId?: string
+): string {
+  // Use device ID cookie as primary identifier, IP as secondary
+  const data = `${deviceId || 'no-device-id'}|${ipAddress || 'no-ip'}|${userAgent || 'no-ua'}`;
   return createHash('sha256').update(data).digest('hex');
 }
 
 /**
- * Extract IP address from request (handles proxies and load balancers)
+ * Extract or generate device ID from cookies
+ * Device ID is a persistent identifier stored in a cookie
  */
-export function getClientIp(req: any): string {
-  return (
+export function getOrCreateDeviceId(req: any, res: any): string {
+  const existingDeviceId = req.cookies?.['badblue_device_id'];
+  
+  if (existingDeviceId && typeof existingDeviceId === 'string' && existingDeviceId.length === 36) {
+    return existingDeviceId;
+  }
+  
+  // Generate new device ID (UUID v4 format)
+  const newDeviceId = createHash('sha256')
+    .update(`${Date.now()}${Math.random()}${req.headers['user-agent'] || ''}`)
+    .digest('hex')
+    .substring(0, 36);
+  
+  // Set cookie with 1 year expiration
+  res.cookie('badblue_device_id', newDeviceId, {
+    maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  });
+  
+  return newDeviceId;
+}
+
+/**
+ * Extract IP address from request (handles proxies and load balancers)
+ * Returns null if IP cannot be reliably determined
+ */
+export function getClientIp(req: any): string | null {
+  const ip = 
     req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
     req.headers['x-real-ip'] ||
+    req.headers['cf-connecting-ip'] || // Cloudflare
+    req.headers['x-client-ip'] || // Generic proxy
     req.connection?.remoteAddress ||
     req.socket?.remoteAddress ||
-    'unknown'
-  );
+    null;
+  
+  // Filter out localhost/private IPs in production  
+  if (ip && (ip === '::1' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.'))) {
+    // In development, these are acceptable
+    if (process.env.NODE_ENV !== 'development') {
+      return null;
+    }
+  }
+  
+  return ip;
 }
 
 /**
  * Check if device has exceeded daily officer search limit
  * Returns { allowed: boolean, remaining: number, resetTime: Date }
+ * FAIL CLOSED: Returns allowed=false on database errors to prevent bypass
  */
 export async function checkDeviceSearchLimit(
-  ipAddress: string,
-  userAgent: string
-): Promise<{ allowed: boolean; remaining: number; resetTime: Date; message?: string }> {
+  ipAddress: string | null,
+  userAgent: string,
+  deviceId: string
+): Promise<{ allowed: boolean; remaining: number; resetTime: Date; message?: string; error?: string }> {
   try {
-    const fingerprint = generateDeviceFingerprint(ipAddress, userAgent);
+    // Reject if we can't reliably identify the device
+    if (!ipAddress && !deviceId) {
+      return {
+        allowed: false,
+        remaining: 0,
+        resetTime: new Date(Date.now() + SEARCH_WINDOW_HOURS * 60 * 60 * 1000),
+        message: 'Unable to verify device identity. Please enable cookies or check your network connection.',
+        error: 'NO_DEVICE_ID_OR_IP'
+      };
+    }
+    
+    const fingerprint = generateDeviceFingerprint(ipAddress, userAgent, deviceId);
     
     // Calculate 24-hour window
     const windowStart = new Date();
@@ -87,12 +146,14 @@ export async function checkDeviceSearchLimit(
     
     return { allowed, remaining, resetTime, message };
   } catch (error) {
-    console.error('[Device Rate Limit] Error checking limit:', error);
-    // Allow on error to avoid blocking legitimate users
+    console.error('[Device Rate Limit] Database error checking limit - FAIL CLOSED:', error);
+    // FAIL CLOSED: Block on database error to prevent bypass via DoS
     return {
-      allowed: true,
-      remaining: DAILY_SEARCH_LIMIT,
+      allowed: false,
+      remaining: 0,
       resetTime: new Date(Date.now() + SEARCH_WINDOW_HOURS * 60 * 60 * 1000),
+      message: 'Rate limit system temporarily unavailable. Please try again in a few moments.',
+      error: 'DATABASE_ERROR'
     };
   }
 }
@@ -101,17 +162,18 @@ export async function checkDeviceSearchLimit(
  * Record an officer search attempt for rate limiting
  */
 export async function recordDeviceSearch(
-  ipAddress: string,
+  ipAddress: string | null,
   userAgent: string,
+  deviceId: string,
   officerName: string,
   userId?: string
 ): Promise<void> {
   try {
-    const fingerprint = generateDeviceFingerprint(ipAddress, userAgent);
+    const fingerprint = generateDeviceFingerprint(ipAddress, userAgent, deviceId);
     
     await db.insert(officerSearchDeviceLimits).values({
       deviceFingerprint: fingerprint,
-      ipAddress,
+      ipAddress: ipAddress || 'unknown',
       userAgent,
       userId,
       officerName,
