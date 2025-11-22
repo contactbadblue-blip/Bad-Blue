@@ -59,6 +59,18 @@
   </url>
 
   <url>
+    <loc>https://bad-blue.com/1983</loc>
+    <lastmod>2025-11-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://bad-blue.com/preview.png</image:loc>
+      <image:title>Section 1983 Civil Rights Lawsuits | Sue Police Officers</image:title>
+      <image:caption>File Section 1983 lawsuits against police officers for constitutional violations, excessive force, false arrest, and civil rights violations under federal law.</image:caption>
+    </image:image>
+  </url>
+
+  <url>
     <loc>https://bad-blue.com/petition-form</loc>
     <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
