@@ -10,7 +10,7 @@ import { eq, and, gte, sql } from 'drizzle-orm';
 
 export interface UsageRecord {
   taskName?: string;
-  provider: 'gemini' | 'groq';
+  provider: 'gemini' | 'groq' | 'mistral' | 'claude';
   model?: string;
   tokensUsed: number;
   latencyMs?: number | null;
@@ -44,7 +44,7 @@ export async function recordUsage(record: UsageRecord): Promise<void> {
 }
 
 export async function getUsageInWindow(
-  provider: 'gemini' | 'groq',
+  provider: 'gemini' | 'groq' | 'mistral' | 'claude',
   windowMinutes: number
 ): Promise<{
   totalTokens: number;
@@ -83,7 +83,7 @@ export async function getUsageInWindow(
   }
 }
 
-export async function getTodayUsage(provider: 'gemini' | 'groq'): Promise<{
+export async function getTodayUsage(provider: 'gemini' | 'groq' | 'mistral' | 'claude'): Promise<{
   tokens: number;
   requests: number;
 }> {
@@ -175,10 +175,10 @@ export async function getUsageBySource(
 }
 
 /**
- * Get today's usage by source and provider (essential for 15% autonomous limit tracking)
+ * Get today's usage by source and provider (essential for autonomous limit tracking)
  */
 export async function getTodayUsageBySource(
-  provider: 'gemini' | 'groq',
+  provider: 'gemini' | 'groq' | 'mistral' | 'claude',
   source: 'user' | 'worker'
 ): Promise<{
   tokens: number;

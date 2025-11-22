@@ -735,13 +735,59 @@ Submitted: ${new Date().toLocaleString()}`;
   }
 }
 
-// Re-export all functions from resendService
-export {
-  sendPurchaseConfirmationEmail,
-  sendContactFormEmail,
-  sendComplaintToVenue,
-  sendTortNoticeToAgency,
-  sendPetitionZipEmail,
-  sendUserEmail,
-} from './resendService';
+/**
+ * Send petition signatures ZIP file via email
+ */
+export async function sendPetitionZipEmail(
+  email: string,
+  petitionTitle: string,
+  zipBuffer: Buffer,
+  zipFilename: string
+): Promise<boolean> {
+  try {
+    const fromAddress = await getFromAddress();
+    const subject = `Your Petition Signatures: ${petitionTitle}`;
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Petition Signatures Export</h2>
+        <p>Your petition "${petitionTitle}" signatures have been compiled and are attached to this email as a ZIP file.</p>
+        <p><strong>Note:</strong> This file contains sensitive personal information. Please handle it securely.</p>
+      </div>
+    `;
+    
+    const success = await sendWithResend(email, subject, html, undefined, fromAddress);
+    return success;
+  } catch (error) {
+    console.error("[EMAIL] Error in sendPetitionZipEmail:", error);
+    return false;
+  }
+}
 
+/**
+ * Send custom email to user (admin functionality)
+ */
+export async function sendUserEmail(
+  toEmail: string,
+  subject: string,
+  message: string
+): Promise<boolean> {
+  try {
+    const fromAddress = await getFromAddress();
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Message from BadBlue Admin</h2>
+        <div style="white-space: pre-wrap; padding: 20px; background-color: #f5f5f5; border-radius: 5px;">
+          ${message}
+        </div>
+      </div>
+    `;
+    
+    const success = await sendWithResend(toEmail, subject, html, undefined, fromAddress);
+    return success;
+  } catch (error) {
+    console.error("[EMAIL] Error in sendUserEmail:", error);
+    return false;
+  }
+}

@@ -31,8 +31,6 @@ import {
   sendComplaintToVenue,
   sendTortNoticeToAgency,
   sendAdminTestEmail,
-  sendPetitionZipEmail,
-  sendUserEmail,
 } from "./emailService";
 import { evidenceStorage, EvidenceNotFoundError, AccessDeniedError } from "./evidenceStorage";
 import { ObjectPermission } from "./objectAcl";
@@ -47,6 +45,8 @@ import {
   subAgentRateLimit,
   autosaveRateLimit,
 } from "./rateLimit";
+import { setupAuth, isAuthenticated, adminAuthMiddleware } from "./auth";
+import { asyncHandler, notFoundHandler, errorHandler } from "./errorHandler";
 import { getBaseURL } from "./platformConfig";
 import {
   insertComplaintSchema,
@@ -728,251 +728,6 @@ Submit to: ${venue}
 /**
  * Generates a formal complaint document with required template sections
  */
-function generateComplaintDocument(
-  state: string,
-  complaintType: string,
-  officerName: string,
-  officerBadge: string | null,
-  officerDepartment: string,
-  incidentDescription: string,
-  incidentDate: Date,
-  city: string,
-  county: string | null,
-  complainantName: string | null,
-  complainantAddress: string | null,
-): string {
-  const { statutes, description } = getStateStatutes(state, complaintType);
-  const venueInfo = determineEnhancedSubmissionVenue(
-    state,
-    city,
-    county,
-    complaintType,
-  );
-
-  const dateStr = incidentDate.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-  return `
-FORMAL COMPLAINT
-
-
-Name of Complainant: ${complainantName || "[Your Name]"}
-Address of Complainant: ${complainantAddress || "[Your Address]"}
-
-
-This is a formal complaint relating to the conduct of members of ${officerDepartment}.
-
-
-1.) FACTUAL BACKGROUND:
-
-Date of Incident: ${dateStr}
-Location: ${city}, ${county ? `${county} County, ` : ""}${state}
-
-Officer Information:
-• Name: ${officerName}
-${officerBadge ? `• Badge Number: ${officerBadge}` : ""}
-• Department: ${officerDepartment}
-
-Legal Framework:
-This complaint is filed in accordance with the following statutes and legal provisions:
-${statutes.map((s) => `• ${s}`).join("\n")}
-
-Legal Basis: ${description}
-
-
-2.) COMPLAINT:
-
-Incident Type: ${complaintType.replace(/-/g, " ").toUpperCase()}
-
-On ${dateStr}, the following incident occurred:
-
-${incidentDescription}
-
-The conduct described above constitutes a violation of department policies, professional standards, and potentially violates the following legal provisions:
-${statutes.map((s) => `• ${s}`).join("\n")}
-
-${description}
-
-
-3.) Please contact me if you require any further information.
-
-
-4.) SIGNATURE BLOCK
-
-Electronically Signed By: ${complainantName || "[Your Name]"}
-
-Date: ${new Date().toLocaleDateString("en-US")}
-
-Contact Information:
-${complainantAddress || "[Your Address]"}
-[Your Phone Number]
-[Your Email Address]
-
-
----
-
-SUBMISSION INFORMATION:
-
-This complaint should be submitted to the following authorities:
-${venueInfo.recipients.map((r) => `• ${r}`).join("\n")}
-
-Submission Details:
-• Email: ${venueInfo.email}
-• Physical Address: ${venueInfo.physicalAddress}
-• Primary Venue: ${venueInfo.venue}
-
----
-
-NOTICE: This complaint document has been automatically generated based on your submission. Please review carefully and ensure all information is accurate before submitting to the appropriate authorities. Add your phone number and email address to the contact information section above.
-`;
-}
-
-/**
- * AI-powered FOIA helper functions
- */
-interface FOIAGenerationResult {
-  departmentAddress: string;
-  generatedLetter: string;
-  stateStatute: string;
-  statutoryDeadline: string;
-}
-
-async function generateFOIALetter(
-  state: string,
-  agencyType: string,
-  departmentName: string,
-  officerName: string,
-  recordsDescription: string,
-  userFullName: string,
-  userEmail: string,
-  mailingAddress: string,
-  incidentDate?: string,
-  incidentTime?: string,
-  incidentLocation?: string
-): Promise<FOIAGenerationResult> {
-  const { GoogleGenAI } = await import("@google/genai");
-
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY not configured");
-  }
-
-  const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-  // Step 1: Search for department address using Gemini with web grounding
-  const addressSearchPrompt = `You are a legal research assistant. Using web search, find the official mailing address for the following law enforcement agency:
-
-State: ${state}
-Agency Type: ${agencyType}
-Department Name: ${departmentName}
-
-Search for the official mailing address where FOIA/public records requests should be sent. This is typically the main headquarters or records division address.
-
-Return ONLY the full mailing address in this exact format:
-[Department Name]
-[Street Address]
-[City, State ZIP]
-
-If you cannot find a specific address, provide the best available address based on the department name and state.`;
-
-  const addressResult = await genAI.models.generateContent({
-    model: "gemini-2.0-flash-exp",
-    contents: [{ role: "user", parts: [{ text: addressSearchPrompt }] }],
-    config: {
-      tools: [{ googleSearch: {} }],
-    },
-  });
-
-  const departmentAddress = (addressResult.text || "").trim();
-
-  // Step 2: Research state-specific FOIA statute
-  const statutePrompt = `You are a legal research expert. Research the open records law for ${state}.
-
-Provide the following information in JSON format:
-{
-  "statuteName": "official name of the open records/FOIA law",
-  "statuteCitation": "legal citation (e.g., 'Cal. Gov't Code § 6250 et seq.')",
-  "statutoryDeadline": "response deadline (e.g., '10 business days')"
-}
-
-Return ONLY valid JSON, no additional text.`;
-
-  const statuteResult = await genAI.models.generateContent({
-    model: "gemini-2.0-flash-exp",
-    contents: [{ role: "user", parts: [{ text: statutePrompt }] }],
-    config: {
-      tools: [{ googleSearch: {} }],
-    },
-  });
-
-  let statuteInfo;
-  try {
-    const jsonText = (statuteResult.text || "{}").trim().replace(/```json\n?/g, '').replace(/```/g, '').trim();
-    statuteInfo = JSON.parse(jsonText);
-  } catch (e) {
-    statuteInfo = {
-      statuteName: "State Open Records Act",
-      statuteCitation: "State Public Records Law",
-      statutoryDeadline: "within a reasonable time"
-    };
-  }
-
-  // Step 3: Generate compliant FOIA letter
-  const incidentInfo = incidentDate || incidentTime || incidentLocation
-    ? `\n\nIncident Details:
-${incidentDate ? `Date: ${incidentDate}` : ''}
-${incidentTime ? `Time: ${incidentTime}` : ''}
-${incidentLocation ? `Location: ${incidentLocation}` : ''}`
-    : '';
-
-  const letterPrompt = `You are a legal document drafting expert. Create a professional, legally compliant FOIA/Open Records request letter with the following details:
-
-Statute Information:
-- Statute Name: ${statuteInfo.statuteName}
-- Citation: ${statuteInfo.statuteCitation}
-- Response Deadline: ${statuteInfo.statutoryDeadline}
-
-Requester Information:
-- Name: ${userFullName}
-- Email: ${userEmail}
-- Mailing Address: ${mailingAddress}
-
-Agency Information:
-- Department: ${departmentName}
-- Department Address: ${departmentAddress}
-
-Request Details:
-- Officer Name: ${officerName}${incidentInfo}
-- Records Requested: ${recordsDescription}
-
-Generate a formal FOIA request letter that:
-1. Cites the ${statuteInfo.statuteName} (${statuteInfo.statuteCitation})
-2. Clearly identifies the requester
-3. Provides a precise description of requested records
-4. References the ${statuteInfo.statutoryDeadline} statutory deadline
-5. Includes requester contact information
-6. Is professionally formatted and legally compliant
-7. Requests fee waiver if applicable under state law
-8. Includes a statement preserving requester rights
-
-Return ONLY the letter text, properly formatted with appropriate spacing and professional business letter structure. Do not include any explanatory text or JSON formatting.`;
-
-  const letterResult = await genAI.models.generateContent({
-    model: "gemini-2.0-flash-exp",
-    contents: [{ role: "user", parts: [{ text: letterPrompt }] }],
-  });
-
-  const generatedLetter = (letterResult.text || "").trim();
-
-  return {
-    departmentAddress,
-    generatedLetter,
-    stateStatute: `${statuteInfo.statuteName} (${statuteInfo.statuteCitation})`,
-    statutoryDeadline: statuteInfo.statutoryDeadline,
-  };
-}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware setup
@@ -2274,6 +2029,56 @@ For questions or support, contact: support@badblue.com
     } catch (error: any) {
       console.error("Error compiling petition:", error);
       res.status(500).json({ message: "Error compiling petition" });
+    }
+  });
+
+  // ============================================
+  // ADMIN EMAIL ROUTE
+  // ============================================
+  
+  app.post('/api/admin/send-custom-email', adminAuthMiddleware, async (req, res) => {
+    try {
+      // Validate request body
+      const schema = z.object({
+        to: z.string().email(),
+        subject: z.string().min(1),
+        message: z.string().min(1),
+      });
+
+      const data = schema.parse(req.body);
+
+      // Send email using existing Resend integration
+      const success = await sendAdminEmail({
+        to: data.to,
+        subject: data.subject,
+        message: data.message,
+      });
+
+      if (success) {
+        res.json({ 
+          success: true, 
+          message: `Email sent successfully to ${data.to}` 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          message: 'Failed to send email. Please check Resend configuration.' 
+        });
+      }
+    } catch (error: any) {
+      console.error('[API] Error sending custom email:', error);
+      
+      if (error.name === 'ZodError') {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Invalid request data. Please check all fields.' 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          message: error.message || 'Failed to send email' 
+        });
+      }
     }
   });
 

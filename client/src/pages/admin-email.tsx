@@ -30,7 +30,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Mail, Save, Send, Loader2, Search, CheckCircle2, Paperclip, X, ArrowLeft } from "lucide-react";
+import { Mail, Save, Send, Loader2, Search, CheckCircle2, Paperclip, X, ArrowLeft, Settings } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { SEOHead } from "@/components/SEOHead";
 import { useToast } from "@/hooks/use-toast";
@@ -380,6 +380,18 @@ export default function AdminEmail() {
           </div>
         </div>
 
+        {/* Section A: Email Configuration Settings */}
+        <Card data-testid="card-email-settings">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Email Configuration Settings
+            </CardTitle>
+            <CardDescription>
+              Configure the sender information for support emails
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fromName">From Name</Label>

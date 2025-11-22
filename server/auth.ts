@@ -94,3 +94,17 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   // User is authenticated - continue
   return next();
 };
+
+export const adminAuthMiddleware: RequestHandler = async (req, res, next) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  // Check if user is admin
+  const user = req.user as any;
+  if (!user || !user.isAdmin) {
+    return res.status(403).json({ message: "Forbidden - Admin access required" });
+  }
+
+  return next();
+};

@@ -1,15 +1,23 @@
 /**
- * Unified AI Provider Module
- * Enforces token governance and provider selection rules
+ * Unified AI Provider Module - 4-Way Collaboration
+ * Enforces token governance and weighted provider distribution
+ * 
+ * DISTRIBUTION TARGETS:
+ * - Mistral: 50% of total AI usage
+ * - Groq: 30-35% of total AI usage (32.5% midpoint)
+ * - Gemini: 10% of total AI usage
+ * - Claude: 5-10% of total AI usage (7.5% midpoint)
  * 
  * RULES:
- * - Autonomous functions: Groq ONLY (up to 15% daily limit)
- * - User functions: Gemini FIRST, Groq as backup
+ * - Autonomous functions: Prefer Groq, fallback to Mistral/Claude (up to 35% daily limit)
+ * - User functions: Weighted distribution based on target percentages
  * - All usage tracked in database with proper context
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getGroqClient } from './groq';
+import { callMistral } from './mistral';
+import { callClaude } from './claude';
 import { 
   aiTokenGovernor, 
   AIProvider, 
@@ -49,10 +57,12 @@ export async function generateText(
   options: GenerateOptions = {}
 ): Promise<AIResponse> {
   const startTime = Date.now();
+  let selectedProvider: AIProvider | null = null;
   
   try {
     // Get budget from governor
     const budget = await aiTokenGovernor.getBudgetForTask(task);
+    selectedProvider = budget.provider;
     
     if (!budget.shouldProceed) {
       // If autonomous and over limit, throw specific error for rescheduling
@@ -69,14 +79,32 @@ export async function generateText(
     let content: string;
     let tokensUsed: number;
 
-    if (budget.provider === AIProvider.GEMINI) {
-      content = await callGemini(actualPrompt, options, maxTokens);
-      // Estimate tokens for Gemini (rough approximation)
-      tokensUsed = Math.floor((prompt.length + content.length) / 4);
-    } else {
-      content = await callGroq(actualPrompt, options, maxTokens);
-      // Estimate tokens for Groq
-      tokensUsed = Math.floor((prompt.length + content.length) / 4);
+    // Call the selected provider
+    switch (budget.provider) {
+      case AIProvider.GEMINI:
+        content = await callGemini(actualPrompt, options, maxTokens);
+        tokensUsed = Math.floor((prompt.length + content.length) / 4);
+        break;
+      
+      case AIProvider.GROQ:
+        content = await callGroq(actualPrompt, options, maxTokens);
+        tokensUsed = Math.floor((prompt.length + content.length) / 4);
+        break;
+      
+      case AIProvider.MISTRAL:
+        const mistralResult = await callMistral(actualPrompt, options, maxTokens);
+        content = mistralResult.content;
+        tokensUsed = mistralResult.tokensUsed;
+        break;
+      
+      case AIProvider.CLAUDE:
+        const claudeResult = await callClaude(actualPrompt, options, maxTokens);
+        content = claudeResult.content;
+        tokensUsed = claudeResult.tokensUsed;
+        break;
+      
+      default:
+        throw new Error(`Unsupported AI provider: ${budget.provider}`);
     }
 
     const latencyMs = Date.now() - startTime;
@@ -102,10 +130,11 @@ export async function generateText(
   } catch (error: any) {
     const latencyMs = Date.now() - startTime;
     
-    // Record failure
+    // Record failure against the actual provider that was attempted (if known)
+    const errorProvider = selectedProvider || AIProvider.GEMINI;
     await aiTokenGovernor.recordUsage(
       task.taskName,
-      AIProvider.GEMINI, // Default for error recording
+      errorProvider,
       0,
       task.context,
       latencyMs,
