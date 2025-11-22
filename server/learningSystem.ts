@@ -5,8 +5,9 @@
  * improve the quality, formatting, and effectiveness of generated legal documents.
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { storage } from './storage';
+import { generateUserText, TaskPriority } from './aiProvider';
+import { safeJsonParse } from './jsonParser';
 import type {
   ComplaintPattern,
   InsertComplaintPattern,
@@ -18,18 +19,6 @@ import type {
   InsertDocumentFormat,
 } from '@shared/schema';
 
-let gemini: GoogleGenerativeAI | null = null;
-
-function getGeminiClient(): GoogleGenerativeAI {
-  if (!gemini) {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
-    }
-    gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  }
-  return gemini;
-}
-
 /**
  * Searches for and analyzes top law firm complaints for similar cases
  * Uses web search with Google grounding to find real complaints filed by successful firms
@@ -39,8 +28,6 @@ export async function searchTopFirmComplaints(
   jurisdiction: string,
   factPattern: string
 ): Promise<ComplaintPattern[]> {
-  const client = getGeminiClient();
-
   const systemPrompt = `You are an ELITE legal researcher with access to PACER, CourtListener, and major law firm databases.
 
 Your task is to search for and analyze HIGH-QUALITY civil rights complaints filed by TOP-TIER law firms in similar cases.
@@ -153,48 +140,18 @@ Return a JSON array of complaint analyses:
 Search thoroughly and provide detailed analysis of at least 3-5 high-quality examples.`;
 
   try {
-    const response = await client.models.generateContent({
-      model: "gemini-2.0-flash-exp",
-      config: {
+    const response = await generateUserText(
+      'search-top-firm-complaints',
+      userPrompt,
+      {
+        systemPrompt,
         temperature: 0.2,
-        responseMimeType: "application/json",
-        systemInstruction: systemPrompt,
+        useJSON: true
       },
-      contents: userPrompt
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    // Try multiple ways to access the response text
-    let text = response.text;
-    
-    // If response.text is undefined, try alternative methods
-    if (!text) {
-      console.log('[Learning System] response.text undefined, trying alternatives...');
-      console.log('[Learning System] Response keys:', Object.keys(response));
-      
-      // Try accessing nested response
-      if (response.response?.text) {
-        text = response.response.text;
-        console.log('[Learning System] Found text in response.response.text');
-      } 
-      // Try accessing as function
-      else if (typeof response.text === 'function') {
-        text = await response.text();
-        console.log('[Learning System] Found text via response.text() function');
-      }
-      // Try accessing parts
-      else if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
-        text = response.candidates[0].content.parts[0].text;
-        console.log('[Learning System] Found text in candidates.content.parts');
-      }
-    }
-    
-    if (!text) {
-      console.error('[Learning System] Empty response from Gemini after all attempts');
-      console.error('[Learning System] Full response object:', JSON.stringify(response, null, 2));
-      return [];
-    }
-
-    const patterns = JSON.parse(text);
+    const patterns = safeJsonParse(response.content, 'searchTopFirmComplaints');
     
     // Store patterns in database
     const storedPatterns: ComplaintPattern[] = [];
@@ -248,7 +205,6 @@ export async function findSimilarCases(
     }
     
     // Use AI to score similarity
-    const client = getGeminiClient();
     const scoringPrompt = `Compare the following NEW case to EXISTING cases and rate similarity (0-100):
 
 NEW CASE:
@@ -271,21 +227,17 @@ Return JSON array with similarity scores:
   ...
 ]`;
 
-    const response = await client.models.generateContent({
-      model: "gemini-2.0-flash-exp",
-      config: {
+    const response = await generateUserText(
+      'find-similar-cases',
+      scoringPrompt,
+      {
         temperature: 0.1,
-        responseMimeType: "application/json",
+        useJSON: true
       },
-      contents: scoringPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    // Try multiple ways to access the response text
-    let text = response.text;
-    if (!text && response.candidates?.[0]?.content?.parts?.[0]?.text) {
-      text = response.candidates[0].content.parts[0].text;
-    }
-    const scores = JSON.parse(text || '[]');
+    const scores = safeJsonParse(response.content, 'findSimilarCases');
     
     // Sort by similarity and return top matches
     const sortedScores = scores.sort((a: any, b: any) => b.similarityScore - a.similarityScore);
@@ -303,8 +255,6 @@ Return JSON array with similarity scores:
  * Extracts and stores successful legal strategies from complaint patterns
  */
 export async function extractLegalStrategies(pattern: ComplaintPattern): Promise<LegalStrategy[]> {
-  const client = getGeminiClient();
-
   const prompt = `Analyze this successful complaint and extract REUSABLE legal strategies:
 
 SOURCE: ${pattern.sourceFirm}
@@ -335,21 +285,17 @@ RESPONSE FORMAT (JSON):
 ]`;
 
   try {
-    const response = await client.models.generateContent({
-      model: "gemini-2.0-flash-exp",
-      config: {
+    const response = await generateUserText(
+      'extract-legal-strategies',
+      prompt,
+      {
         temperature: 0.2,
-        responseMimeType: "application/json",
+        useJSON: true
       },
-      contents: prompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    // Try multiple ways to access the response text
-    let stratText = response.text;
-    if (!stratText && response.candidates?.[0]?.content?.parts?.[0]?.text) {
-      stratText = response.candidates[0].content.parts[0].text;
-    }
-    const strategies = JSON.parse(stratText || '[]');
+    const strategies = safeJsonParse(response.content, 'extractLegalStrategies');
     const storedStrategies: LegalStrategy[] = [];
 
     for (const strategy of strategies) {
@@ -392,8 +338,6 @@ export async function learnFromCase(
   documentText: string,
   generationData: any
 ): Promise<void> {
-  const client = getGeminiClient();
-
   // Use AI to analyze the case quality and extract patterns
   const analysisPrompt = `Analyze this generated ${caseType} and assess its quality:
 
@@ -427,21 +371,17 @@ RESPONSE FORMAT (JSON):
 }`;
 
   try {
-    const response = await client.models.generateContent({
-      model: "gemini-2.0-flash-exp",
-      config: {
+    const response = await generateUserText(
+      'learn-from-case',
+      analysisPrompt,
+      {
         temperature: 0.2,
-        responseMimeType: "application/json",
+        useJSON: true
       },
-      contents: analysisPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    // Try multiple ways to access the response text
-    let analysisText = response.text;
-    if (!analysisText && response.candidates?.[0]?.content?.parts?.[0]?.text) {
-      analysisText = response.candidates[0].content.parts[0].text;
-    }
-    const analysis = JSON.parse(analysisText || '{}');
+    const analysis = safeJsonParse(response.content, 'learnFromCase');
 
     // Store the case pattern
     await storage.storeCasePattern({
@@ -520,7 +460,6 @@ export async function enhanceLawsuitWithLearning(
   }
 
   // Generate enhancement guidance using AI
-  const client = getGeminiClient();
   const guidancePrompt = `Based on analysis of similar successful cases and top law firm complaints, provide specific guidance for enhancing this lawsuit:
 
 CURRENT CASE:
@@ -563,19 +502,16 @@ Be specific and actionable.`;
 
   let enhancementGuidance = '';
   try {
-    const response = await client.models.generateContent({
-      model: "gemini-2.0-flash-exp",
-      config: {
+    const response = await generateUserText(
+      'enhance-lawsuit-guidance',
+      guidancePrompt,
+      {
         temperature: 0.3,
+        useJSON: false
       },
-      contents: guidancePrompt,
-    });
-    // Try multiple ways to access the response text
-    enhancementGuidance = response.text;
-    if (!enhancementGuidance && response.candidates?.[0]?.content?.parts?.[0]?.text) {
-      enhancementGuidance = response.candidates[0].content.parts[0].text;
-    }
-    enhancementGuidance = enhancementGuidance || '';
+      TaskPriority.CRITICAL_USER
+    );
+    enhancementGuidance = response.content;
   } catch (error) {
     console.error('[Learning System] Error generating enhancement guidance:', error);
   }

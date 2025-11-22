@@ -1,29 +1,11 @@
 // Advanced Legal AI System - Sophisticated Legal Analysis Platform
-// Using unified AI provider with automatic Gemini-first, Groq-backup strategy
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// Using unified 4-way AI provider with automatic distribution
 import { 
-  generateLegalAnalysis,
   generateUserText,
-  createTaskMetadata,
-  UsageContext,
-  TaskPriority,
-  TaskComplexity
+  TaskPriority
 } from './aiProvider';
-import { rateLimitTracker } from "./rateLimitTracker";
-import { isGroqAvailable, generateGroqLegalConsultation, generateGroqLegalJSON } from "./groq";
-import { getOptimalGeminiTokens } from "./tokenOptimizer";
+import { safeJsonParse } from './jsonParser';
 
-let gemini: GoogleGenerativeAI | null = null;
-
-function getGeminiClient(): GoogleGenerativeAI {
-  if (!gemini) {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
-    }
-    gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  }
-  return gemini;
-}
 
 /**
  * Unified legal AI generation using the governor
@@ -55,50 +37,6 @@ async function generateLegalContent(
   }
 }
 
-/**
- * Safely parse JSON with auto-correction for common AI response issues
- * Handles:
- * - JSON wrapped in markdown code blocks
- * - Extra text before/after JSON
- * - Unterminated strings (attempts fix)
- */
-function safeJsonParse<T = any>(rawJson: string, errorContext: string): T {
-  if (!rawJson || !rawJson.trim()) {
-    throw new Error(`${errorContext}: Empty response`);
-  }
-
-  // Try direct parse first
-  try {
-    return JSON.parse(rawJson);
-  } catch (firstError: any) {
-    console.log(`[Legal AI] Direct JSON parse failed for ${errorContext}, attempting recovery...`);
-    
-    // Try to extract JSON from markdown code blocks
-    let cleanedJson = rawJson.replace(/```json\n?/g, '').replace(/```/g, '').trim();
-    
-    // Try to find JSON object boundaries
-    const firstBrace = cleanedJson.indexOf('{');
-    const lastBrace = cleanedJson.lastIndexOf('}');
-    
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      cleanedJson = cleanedJson.substring(firstBrace, lastBrace + 1);
-      
-      try {
-        return JSON.parse(cleanedJson);
-      } catch (secondError: any) {
-        // Last attempt: try to fix unterminated strings by closing them
-        const fixedJson = cleanedJson.replace(/"([^"]*?)$/gm, '"$1"');
-        try {
-          return JSON.parse(fixedJson);
-        } catch (finalError: any) {
-          throw new Error(`${errorContext}: ${firstError.message}`);
-        }
-      }
-    }
-    
-    throw new Error(`${errorContext}: ${firstError.message}`);
-  }
-}
 
 /**
  * Analyzes a legal issue based on provided description and context.
@@ -314,42 +252,23 @@ RESPONSE FORMAT:
   "confidenceLevel": "High (triple-verified) / Medium / Low"
 }`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Legal AI] Using Groq for statute research (Gemini near limit or experiencing errors)');
-      const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-        requiresLegalAnalysis: true,
-        requiresResearch: true
-      });
-      return result as StatuteResearchResult;
-    } catch (groqError: any) {
-      console.error('[Legal AI] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
-  // Try Gemini (primary) with two-pass research
+  // Two-pass research using unified AI provider
   try {
-    console.log('[Legal AI] Using Gemini for statute research');
-    const client = getGeminiClient();
-
+    console.log('[Legal AI] Starting statute research - Pass 1');
+    
     // First pass: comprehensive research
-    const response1 = await client.models.generateContent({
-      model: "gemini-2.0-flash-thinking-exp",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    const response1 = await generateUserText(
+      'legal-statute-research-pass1',
+      userPrompt,
+      {
+        systemPrompt,
         temperature: 0.1,
-        maxOutputTokens: 8192,
+        useJSON: true
       },
-      contents: userPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson1 = response1.text || '{}';
-    const firstPass = safeJsonParse(rawJson1, "Statute research failed");
+    const firstPass = safeJsonParse<StatuteResearchResult>(response1.content, "Statute research failed");
 
     // Second pass: verification and expansion
     const verificationPrompt = `You previously researched these statutes for a ${violationType} case in ${state}:
@@ -377,19 +296,19 @@ Now perform a VERIFICATION AND EXPANSION pass:
 
 Return the ENHANCED and VERIFIED research in the same JSON format.`;
 
-    const response2 = await client.models.generateContent({
-      model: "gemini-2.0-flash-thinking-exp",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    console.log('[Legal AI] Starting statute research - Pass 2');
+    const response2 = await generateUserText(
+      'legal-statute-research-pass2',
+      verificationPrompt,
+      {
+        systemPrompt,
         temperature: 0.1,
-        maxOutputTokens: 8192,
+        useJSON: true
       },
-      contents: verificationPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson2 = response2.text || '{}';
-    const secondPass = safeJsonParse(rawJson2, "Statute verification failed");
+    const secondPass = safeJsonParse<StatuteResearchResult>(response2.content, "Statute verification failed");
 
     // Merge and deduplicate results
     const mergedResult: StatuteResearchResult = {
@@ -413,28 +332,12 @@ Return the ENHANCED and VERIFIED research in the same JSON format.`;
       citationFormat: secondPass.citationFormat || firstPass.citationFormat
     };
 
-    rateLimitTracker.recordSuccess();
     return mergedResult;
-  } catch (geminiError: any) {
-    console.error('[Legal AI] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Legal AI] Falling back to Groq for statute research');
-        const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-          requiresLegalAnalysis: true,
-          requiresResearch: true
-        });
-        return result as StatuteResearchResult;
-      } catch (groqError: any) {
-        console.error('[Legal AI] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[Legal AI] Error in statute research:', error);
 
     // Final fallback: error handling
-    if (geminiError.message?.includes('quota') || geminiError.message?.includes('rate limit')) {
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       throw new Error('Service temporarily unavailable due to high demand. Please try again in a few moments.');
     }
     throw new Error('Unable to complete statute research at this time. Please try again later.');
@@ -575,66 +478,28 @@ RESPONSE FORMAT:
   "specialRequirements": ["Pro se litigants must...", "Civil rights cases require..."]
 }`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Legal AI] Using Groq for district rules analysis (Gemini near limit or experiencing errors)');
-      const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-        requiresLegalAnalysis: true,
-        requiresResearch: true
-      });
-      return result as DistrictRuleAnalysis;
-    } catch (groqError: any) {
-      console.error('[Legal AI] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
-  // Try Gemini (primary)
+  // Use unified AI provider with JSON parsing
   try {
-    console.log('[Legal AI] Using Gemini for district rules analysis');
-    const client = getGeminiClient();
-
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    console.log('[Legal AI] Starting district rules analysis');
+    
+    const response = await generateUserText(
+      'legal-district-rules',
+      userPrompt,
+      {
+        systemPrompt,
         temperature: 0.2,
+        useJSON: true
       },
-      contents: userPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson = response.text;
-    if (!rawJson) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    const result = JSON.parse(rawJson) as DistrictRuleAnalysis;
-    rateLimitTracker.recordSuccess();
+    const result = safeJsonParse<DistrictRuleAnalysis>(response.content, "District rules analysis failed");
     return result;
-  } catch (geminiError: any) {
-    console.error('[Legal AI] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Legal AI] Falling back to Groq for district rules analysis');
-        const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-          requiresLegalAnalysis: true,
-          requiresResearch: true
-        });
-        return result as DistrictRuleAnalysis;
-      } catch (groqError: any) {
-        console.error('[Legal AI] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[Legal AI] Error in district rules analysis:', error);
 
     // Final fallback: error handling
-    if (geminiError.message?.includes('quota') || geminiError.message?.includes('rate limit')) {
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       throw new Error('Service temporarily unavailable due to high demand. Please try again in a few moments.');
     }
     throw new Error('Unable to analyze district rules at this time. Please try again later.');
@@ -786,46 +651,23 @@ RESPONSE FORMAT:
   "strategicRecommendations": ["Focus on...", "Emphasize..."]
 }`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Legal AI] Using Groq for case law analysis (Gemini near limit or experiencing errors)');
-      const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-        requiresLegalAnalysis: true,
-        requiresResearch: true
-      });
-      return result as CaseLawAnalysis;
-    } catch (groqError: any) {
-      console.error('[Legal AI] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
-  // Try Gemini (primary) with two-pass research
+  // Two-pass research using unified AI provider
   try {
-    console.log('[Legal AI] Using Gemini for case law analysis');
-    const client = getGeminiClient();
-
+    console.log('[Legal AI] Starting case law analysis - Pass 1');
+    
     // First pass: comprehensive case law research
-    const response1 = await client.models.generateContent({
-      model: "gemini-2.0-flash-thinking-exp",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    const response1 = await generateUserText(
+      'legal-caselaw-pass1',
+      userPrompt,
+      {
+        systemPrompt,
         temperature: 0.2,
-        maxOutputTokens: 8192,
+        useJSON: true
       },
-      contents: userPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson1 = response1.text;
-    if (!rawJson1) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    const firstPass = JSON.parse(rawJson1);
+    const firstPass = safeJsonParse<CaseLawAnalysis>(response1.content, "Case law research failed");
 
     // Second pass: verification and shepardization
     const shepardizationPrompt = `You previously researched these cases for a ${violationType} case in ${state}:
@@ -860,19 +702,19 @@ Now perform CASE VERIFICATION AND SHEPARDIZATION:
 
 Return the ENHANCED and VERIFIED case law analysis in the same JSON format.`;
 
-    const response2 = await client.models.generateContent({
-      model: "gemini-2.0-flash-thinking-exp",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    console.log('[Legal AI] Starting case law analysis - Pass 2');
+    const response2 = await generateUserText(
+      'legal-caselaw-pass2',
+      shepardizationPrompt,
+      {
+        systemPrompt,
         temperature: 0.2,
-        maxOutputTokens: 8192,
+        useJSON: true
       },
-      contents: shepardizationPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson2 = response2.text || '{}';
-    const secondPass = safeJsonParse<CaseLawAnalysis>(rawJson2, "Case law verification failed");
+    const secondPass = safeJsonParse<CaseLawAnalysis>(response2.content, "Case law verification failed");
 
     // Merge and enhance results
     const mergedResult: CaseLawAnalysis = {
@@ -919,28 +761,12 @@ Return the ENHANCED and VERIFIED case law analysis in the same JSON format.`;
       ]))
     };
 
-    rateLimitTracker.recordSuccess();
     return mergedResult;
-  } catch (geminiError: any) {
-    console.error('[Legal AI] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Legal AI] Falling back to Groq for case law analysis');
-        const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-          requiresLegalAnalysis: true,
-          requiresResearch: true
-        });
-        return result as CaseLawAnalysis;
-      } catch (groqError: any) {
-        console.error('[Legal AI] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[Legal AI] Error in case law analysis:', error);
 
     // Final fallback: error handling
-    if (geminiError.message?.includes('quota') || geminiError.message?.includes('rate limit')) {
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       throw new Error('Service temporarily unavailable due to high demand. Please try again in a few moments.');
     }
     throw new Error('Unable to complete case law analysis at this time. Please try again later.');
@@ -1068,8 +894,6 @@ export async function generateLegalDocument(
   documentType: 'complaint' | 'lawsuit' | 'petition',
   data: Record<string, any>
 ): Promise<{ document: string; hasMonellClaim: boolean; monellIndicators: string[]; monellConfidence: string }> {
-  const client = getGeminiClient();
-
   // Build comprehensive prompt with all legal research
   let researchSection = '';
 
@@ -1210,75 +1034,35 @@ INSTRUCTIONS:
 
 Generate a complete, court-ready document that demonstrates sophisticated legal analysis using ONLY the provided information, elevated to the quality of top-tier civil rights law firms through learned patterns and proven strategies.`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log(`[Legal AI] Using Groq for ${documentType} generation (Gemini near limit or experiencing errors)`);
-      const text = await generateGroqLegalConsultation(userPrompt, systemPrompt);
-      return {
-        document: text,
-        hasMonellClaim: monellDetection.hasMonellClaim,
-        monellIndicators: monellDetection.monellIndicators,
-        monellConfidence: monellDetection.confidence
-      };
-    } catch (groqError: any) {
-      console.error('[Legal AI] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
-  // Try Gemini (primary)
+  // Use unified AI provider
   try {
-    console.log(`[Legal AI] Using Gemini for ${documentType} generation`);
-    const client = getGeminiClient();
-
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.3,
-        maxOutputTokens: 8192,
+    console.log(`[Legal AI] Generating ${documentType} document`);
+    
+    const response = await generateUserText(
+      `legal-${documentType}-generation`,
+      userPrompt,
+      {
+        systemPrompt,
+        temperature: 0.3
       },
-      contents: userPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const text = response.text;
-
-    if (!text) {
-      throw new Error('Empty response from Gemini');
+    if (!response.content || !response.content.trim()) {
+      throw new Error('Empty response from AI provider');
     }
 
-    rateLimitTracker.recordSuccess();
     return {
-      document: text,
+      document: response.content,
       hasMonellClaim: monellDetection.hasMonellClaim,
       monellIndicators: monellDetection.monellIndicators,
       monellConfidence: monellDetection.confidence
     };
-  } catch (geminiError: any) {
-    console.error(`[Legal AI] Gemini error generating ${documentType}:`, geminiError);
-    rateLimitTracker.recordError(geminiError);
-
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log(`[Legal AI] Falling back to Groq for ${documentType} generation`);
-        const text = await generateGroqLegalConsultation(userPrompt, systemPrompt);
-        return {
-          document: text,
-          hasMonellClaim: monellDetection.hasMonellClaim,
-          monellIndicators: monellDetection.monellIndicators,
-          monellConfidence: monellDetection.confidence
-        };
-      } catch (groqError: any) {
-        console.error('[Legal AI] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error(`[Legal AI] Error generating ${documentType}:`, error);
 
     // Final fallback: error handling
-    if (geminiError.message?.includes('quota') || geminiError.message?.includes('rate limit')) {
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       throw new Error('Service temporarily unavailable due to high demand. Please try again in a few moments.');
     }
     throw new Error(`Failed to generate ${documentType}. Please try again later.`);
@@ -1474,66 +1258,28 @@ RESPONSE FORMAT:
 
 NOTE: Generate realistic, plausible data based on typical patterns in ${city}, ${state}. Include comprehensive analysis showing your advanced search and synthesis capabilities.`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Legal AI] Using Groq for public records search (Gemini near limit or experiencing errors)');
-      const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-        requiresLegalAnalysis: true,
-        requiresResearch: true
-      });
-      return result as PublicRecordsResult;
-    } catch (groqError: any) {
-      console.error('[Legal AI] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
-  // Try Gemini (primary)
+  // Use unified AI provider with JSON parsing
   try {
-    console.log('[Legal AI] Using Gemini for public records search');
-    const client = getGeminiClient();
-
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    console.log('[Legal AI] Starting public records search');
+    
+    const response = await generateUserText(
+      'legal-public-records',
+      userPrompt,
+      {
+        systemPrompt,
         temperature: 0.7,
+        useJSON: true
       },
-      contents: userPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson = response.text;
-    if (!rawJson) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    const result = JSON.parse(rawJson);
-    rateLimitTracker.recordSuccess();
-    return result as PublicRecordsResult;
-  } catch (geminiError: any) {
-    console.error('[Legal AI] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Legal AI] Falling back to Groq for public records search');
-        const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-          requiresLegalAnalysis: true,
-          requiresResearch: true
-        });
-        return result as PublicRecordsResult;
-      } catch (groqError: any) {
-        console.error('[Legal AI] Groq fallback also failed:', groqError);
-      }
-    }
+    const result = safeJsonParse<PublicRecordsResult>(response.content, "Public records search failed");
+    return result;
+  } catch (error: any) {
+    console.error('[Legal AI] Error in public records search:', error);
 
     // Final fallback: error handling
-    if (geminiError.message?.includes('quota') || geminiError.message?.includes('rate limit')) {
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       throw new Error('Service temporarily unavailable due to high demand. Please try again in a few moments.');
     }
     throw new Error('Unable to search public records at this time. Please try again later.');
@@ -1600,66 +1346,28 @@ RESPONSE FORMAT:
   ]
 }`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Legal AI] Using Groq for pattern analysis (Gemini near limit or experiencing errors)');
-      const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-        requiresLegalAnalysis: true,
-        requiresResearch: true
-      });
-      return result.insights || [];
-    } catch (groqError: any) {
-      console.error('[Legal AI] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
-  // Try Gemini (primary)
+  // Use unified AI provider with JSON parsing
   try {
-    console.log('[Legal AI] Using Gemini for pattern analysis');
-    const client = getGeminiClient();
-
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    console.log('[Legal AI] Starting pattern analysis');
+    
+    const response = await generateUserText(
+      'legal-pattern-analysis',
+      userPrompt,
+      {
+        systemPrompt,
         temperature: 0.6,
+        useJSON: true
       },
-      contents: userPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson = response.text;
-    if (!rawJson) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    const result = JSON.parse(rawJson);
-    rateLimitTracker.recordSuccess();
+    const result = safeJsonParse<{ insights: LearningInsight[] }>(response.content, "Pattern analysis failed");
     return result.insights || [];
-  } catch (geminiError: any) {
-    console.error('[Legal AI] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Legal AI] Falling back to Groq for pattern analysis');
-        const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-          requiresLegalAnalysis: true,
-          requiresResearch: true
-        });
-        return result.insights || [];
-      } catch (groqError: any) {
-        console.error('[Legal AI] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[Legal AI] Error in pattern analysis:', error);
 
     // Final fallback: error handling
-    if (geminiError.message?.includes('quota') || geminiError.message?.includes('rate limit')) {
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       throw new Error('Service temporarily unavailable due to high demand. Please try again in a few moments.');
     }
     throw new Error('Unable to analyze patterns at this time. Please try again later.');
@@ -1853,48 +1561,23 @@ CLAIM STRENGTH RATING GUIDELINES (YOU MUST FOLLOW THIS EXACTLY):
 
 YOU MUST RETURN A RATING OF 1, 2, 3, or null BASED STRICTLY ON THE strengthAssessment VALUE.`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Legal AI] Using Groq for actionability analysis (Gemini near limit or experiencing errors)');
-      const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-        requiresLegalAnalysis: true,
-        requiresResearch: true
-      });
-      return {
-        ...result,
-        claimStrengthRating: normalizeClaimStrength(result.claimStrengthRating)
-      } as ActionabilityAnalysis;
-    } catch (groqError: any) {
-      console.error('[Legal AI] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
-  // Try Gemini (primary) with two-pass analysis
+  // Two-pass analysis using unified AI provider
   try {
-    console.log('[Legal AI] Using Gemini for actionability analysis');
-    const client = getGeminiClient();
-
+    console.log('[Legal AI] Starting actionability analysis - Pass 1');
+    
     // First pass: initial analysis
-    const response1 = await client.models.generateContent({
-      model: "gemini-2.0-flash-thinking-exp",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    const response1 = await generateUserText(
+      'legal-actionability-pass1',
+      userPrompt,
+      {
+        systemPrompt,
         temperature: 0.5,
+        useJSON: true
       },
-      contents: userPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson1 = response1.text;
-    if (!rawJson1) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    const firstPass = JSON.parse(rawJson1);
+    const firstPass = safeJsonParse<ActionabilityAnalysis>(response1.content, "Actionability analysis failed");
 
     // Second pass: legal verification and enhancement
     const verificationPrompt = `You previously analyzed this situation:
@@ -1940,18 +1623,19 @@ Now perform a COMPREHENSIVE LEGAL VERIFICATION AND ENHANCEMENT:
 
 Return the ENHANCED and VERIFIED analysis in the same JSON format.`;
 
-    const response2 = await client.models.generateContent({
-      model: "gemini-2.0-flash-thinking-exp",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    console.log('[Legal AI] Starting actionability analysis - Pass 2');
+    const response2 = await generateUserText(
+      'legal-actionability-pass2',
+      verificationPrompt,
+      {
+        systemPrompt,
         temperature: 0.5,
+        useJSON: true
       },
-      contents: verificationPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson2 = response2.text || '{}';
-    const secondPass = safeJsonParse(rawJson2, "Actionability verification failed");
+    const secondPass = safeJsonParse<ActionabilityAnalysis>(response2.content, "Actionability verification failed");
 
     // Merge results, preferring second pass for most fields (more accurate)
     const mergedResult = {
@@ -1985,31 +1669,12 @@ Return the ENHANCED and VERIFIED analysis in the same JSON format.`;
       }
     };
 
-    rateLimitTracker.recordSuccess();
     return mergedResult as ActionabilityAnalysis;
-  } catch (geminiError: any) {
-    console.error('[Legal AI] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Legal AI] Falling back to Groq for actionability analysis');
-        const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-          requiresLegalAnalysis: true,
-          requiresResearch: true
-        });
-        return {
-          ...result,
-          claimStrengthRating: normalizeClaimStrength(result.claimStrengthRating)
-        } as ActionabilityAnalysis;
-      } catch (groqError: any) {
-        console.error('[Legal AI] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[Legal AI] Error in actionability analysis:', error);
 
     // Final fallback: error handling
-    if (geminiError.message?.includes('quota') || geminiError.message?.includes('rate limit')) {
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       throw new Error('Service temporarily unavailable due to high demand. Please try again in a few moments.');
     }
     throw new Error('Unable to analyze actionability at this time. Please try again later.');
@@ -2124,66 +1789,28 @@ IMPORTANT NOTES:
 - Include specific legal references when appropriate
 - Make it compelling but not exaggerated`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Legal AI] Using Groq for content generation (Gemini near limit or experiencing errors)');
-      const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-        requiresLegalAnalysis: true,
-        requiresResearch: false
-      });
-      return result as GeneratedContent;
-    } catch (groqError: any) {
-      console.error('[Legal AI] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
-  // Try Gemini (primary)
+  // Use unified AI provider with JSON parsing
   try {
-    console.log('[Legal AI] Using Gemini for content generation');
-    const client = getGeminiClient();
-
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    console.log('[Legal AI] Starting persuasive content generation');
+    
+    const response = await generateUserText(
+      'legal-persuasive-content',
+      userPrompt,
+      {
+        systemPrompt,
         temperature: 0.7,
+        useJSON: true
       },
-      contents: userPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson = response.text;
-    if (!rawJson) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    const content: GeneratedContent = JSON.parse(rawJson);
-    rateLimitTracker.recordSuccess();
+    const content = safeJsonParse<GeneratedContent>(response.content, "Content generation failed");
     return content;
-  } catch (geminiError: any) {
-    console.error('[Legal AI] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Legal AI] Falling back to Groq for content generation');
-        const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-          requiresLegalAnalysis: true,
-          requiresResearch: false
-        });
-        return result as GeneratedContent;
-      } catch (groqError: any) {
-        console.error('[Legal AI] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[Legal AI] Error in content generation:', error);
 
     // Final fallback: error handling
-    if (geminiError.message?.includes('quota') || geminiError.message?.includes('rate limit')) {
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       throw new Error('Service temporarily unavailable due to high demand. Please try again in a few moments.');
     }
     throw new Error('Unable to generate content at this time. Please try again later.');
@@ -2380,66 +2007,28 @@ IMPORTANT NOTES:
 - Ensure compliance with ${state} civil procedure rules
 - Include both federal (42 U.S.C. § 1983) and state law claims`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Legal AI] Using Groq for form research (Gemini near limit or experiencing errors)');
-      const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-        requiresLegalAnalysis: true,
-        requiresResearch: true
-      });
-      return result as LawsuitFormResearch;
-    } catch (groqError: any) {
-      console.error('[Legal AI] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
-  // Try Gemini (primary)
+  // Use unified AI provider with JSON parsing
   try {
-    console.log('[Legal AI] Using Gemini for form research');
-    const client = getGeminiClient();
-
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    console.log('[Legal AI] Starting lawsuit form research');
+    
+    const response = await generateUserText(
+      'legal-form-research',
+      userPrompt,
+      {
+        systemPrompt,
         temperature: 0.6,
+        useJSON: true
       },
-      contents: userPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson = response.text;
-    if (!rawJson) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    const result: LawsuitFormResearch = JSON.parse(rawJson);
-    rateLimitTracker.recordSuccess();
+    const result = safeJsonParse<LawsuitFormResearch>(response.content, "Form research failed");
     return result;
-  } catch (geminiError: any) {
-    console.error('[Legal AI] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Legal AI] Falling back to Groq for form research');
-        const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-          requiresLegalAnalysis: true,
-          requiresResearch: true
-        });
-        return result as LawsuitFormResearch;
-      } catch (groqError: any) {
-        console.error('[Legal AI] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[Legal AI] Error in form research:', error);
 
     // Final fallback: error handling
-    if (geminiError.message?.includes('quota') || geminiError.message?.includes('rate limit')) {
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       throw new Error('Service temporarily unavailable due to high demand. Please try again in a few moments.');
     }
     throw new Error('Unable to search lawsuit forms at this time. Please try again later.');
@@ -2480,8 +2069,6 @@ export async function chatWithFormAssistant(
   conversationHistory: Array<{ role: string; content: string }>,
   userMessage: string
 ): Promise<FormAssistantResponse> {
-  const client = getGeminiClient();
-
   // Define comprehensive required fields checklist
   const requiredFieldsChecklist = formType === 'complaint' ? [
     'state', 'city', 'incidentDate', 'officerName', 'description', 'complaintType'
@@ -2705,89 +2292,35 @@ Analyze this response and:
 3. Ask the next most important question
 4. Return your response in the specified JSON format`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Legal AI] Using Groq for form assistant (Gemini near limit or experiencing errors)');
-      const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-        requiresLegalAnalysis: false,
-        requiresResearch: false
-      });
-      return result as FormAssistantResponse;
-    } catch (groqError: any) {
-      console.error('[Legal AI] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
-  // Try Gemini (primary)
+  // Use unified AI provider with JSON parsing
   try {
-    console.log('[Legal AI] Using Gemini for form assistant');
-    const client = getGeminiClient();
-
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
+    console.log('[Legal AI] Starting form assistant conversation');
+    
+    const response = await generateUserText(
+      'legal-form-assistant',
+      userPrompt,
+      {
+        systemPrompt,
         temperature: 0.7,
+        useJSON: true
       },
-      contents: userPrompt,
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const rawJson = response.text;
-    if (!rawJson) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    // Try to parse JSON, handling potential markdown/text prefixes
-    let result: FormAssistantResponse;
-    try {
-      result = JSON.parse(rawJson);
-    } catch (parseError) {
-      const jsonMatch = rawJson.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[1]);
-      } else {
-        const firstBrace = rawJson.indexOf('{');
-        const lastBrace = rawJson.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-          result = JSON.parse(rawJson.substring(firstBrace, lastBrace + 1));
-        } else {
-          throw new Error("Failed to extract valid JSON from response");
-        }
-      }
-    }
+    // Use safeJsonParse with try-catch for validation
+    const result = safeJsonParse<FormAssistantResponse>(response.content, "Form assistant response failed");
 
     // Validate the response has required fields
     if (!result.message || typeof result.message !== 'string') {
       throw new Error("Invalid response format: missing or invalid message field");
     }
 
-    rateLimitTracker.recordSuccess();
     return result;
-  } catch (geminiError: any) {
-    console.error('[Legal AI] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Legal AI] Falling back to Groq for form assistant');
-        const result = await generateGroqLegalJSON(userPrompt, systemPrompt, {
-          requiresLegalAnalysis: false,
-          requiresResearch: false
-        });
-        return result as FormAssistantResponse;
-      } catch (groqError: any) {
-        console.error('[Legal AI] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[Legal AI] Error in form assistant:', error);
 
     // Final fallback: user-friendly error messages
-    if (geminiError.message?.includes('quota') || geminiError.message?.includes('rate limit')) {
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       return {
         message: "I'm experiencing high demand right now. Please wait a moment and try again.",
         suggestedFields: {},
@@ -2795,7 +2328,7 @@ Analyze this response and:
       };
     }
 
-    if (geminiError.message?.includes('API key') || geminiError.message?.includes('authentication')) {
+    if (error.message?.includes('API key') || error.message?.includes('authentication')) {
       return {
         message: "I'm having trouble connecting to my AI service. Please contact support if this continues.",
         suggestedFields: {},
@@ -2830,8 +2363,6 @@ export async function redraftOffenseDescription(
   officerName: string,
   department: string
 ): Promise<string> {
-  const client = getGeminiClient();
-
   const systemPrompt = `You are a skilled legal writer tasked with redrafting incident descriptions for public petitions demanding police accountability.
 
 Your goals:
@@ -2864,27 +2395,24 @@ Provide a redrafted version that:
 Return ONLY the redrafted text, no explanations or meta-commentary.`;
 
   try {
-    const response = await client.models.generateContent({
-      model: "gemini-2.0-flash-exp",
-      config: {
-        temperature: 0.3,
-        systemInstruction: systemPrompt,
-      },
-      contents: userPrompt
-    });
-
-    // Try multiple ways to access the response text
-    let text = response.text;
-    if (!text && response.candidates?.[0]?.content?.parts?.[0]?.text) {
-      text = response.candidates[0].content.parts[0].text;
-    }
+    console.log('[Legal AI] Redrafting offense description');
     
-    if (!text) {
-      console.error('[AI Redraft] Empty response from Gemini');
+    const response = await generateUserText(
+      'legal-redraft-offense',
+      userPrompt,
+      {
+        systemPrompt,
+        temperature: 0.3
+      },
+      TaskPriority.CRITICAL_USER
+    );
+
+    if (!response.content || !response.content.trim()) {
+      console.error('[AI Redraft] Empty response from AI provider');
       return originalDescription; // Fallback to original if AI fails
     }
 
-    return text.trim();
+    return response.content.trim();
   } catch (error: any) {
     console.error('[AI Redraft] Error redrafting offense description:', error);
     return originalDescription; // Fallback to original if error occurs
