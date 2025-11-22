@@ -1,6 +1,7 @@
 import { generateText, createTaskMetadata, UsageContext, TaskPriority, TaskComplexity } from "./aiProvider";
 import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqStructuredResponse } from "./groq";
+import { safeJsonParse } from "./jsonParser";
 
 export interface LegalPrecedent {
   caseName: string;
@@ -114,7 +115,7 @@ Provide at least 8-12 highly relevant precedents.`;
     }
 
     console.log(`Precedent search first pass:`, response1.content);
-    const data1 = JSON.parse(response1.content);
+    const data1 = safeJsonParse(response1.content, `precedent search first pass for ${issueDescription}`);
     const firstPassPrecedents = data1.precedents || [];
 
     // Second pass: verification and expansion
@@ -157,7 +158,7 @@ Provide at least 12-15 highly relevant, verified precedents in the same JSON for
     }
 
     console.log(`Precedent search verification pass:`, response2.content);
-    const data2 = JSON.parse(response2.content);
+    const data2 = safeJsonParse(response2.content, `precedent search verification pass for ${issueDescription}`);
     const secondPassPrecedents = data2.precedents || [];
 
     // Merge and deduplicate precedents

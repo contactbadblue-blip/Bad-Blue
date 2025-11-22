@@ -1,6 +1,7 @@
 import { generateText, createTaskMetadata, UsageContext, TaskPriority, TaskComplexity } from "./aiProvider";
 import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqStructuredResponse } from "./groq";
+import { safeJsonParse } from "./jsonParser";
 
 export interface FilingInfo {
   filingFee: number; // in cents
@@ -58,7 +59,7 @@ Be thorough and accurate. Lives depend on this information being correct.`;
     }
 
     console.log(`Filing info search response for ${state}:`, response.content);
-    const data = JSON.parse(response.content);
+    const data = safeJsonParse(response.content, `filing info search for ${state}`);
     
     // Convert dollars to cents
     const filingFeeCents = Math.round((data.filingFeeDollars || 0) * 100);
