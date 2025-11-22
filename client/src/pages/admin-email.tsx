@@ -77,14 +77,6 @@ export default function AdminEmail() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   
-  // Custom email to any address
-  const [customToEmail, setCustomToEmail] = useState("");
-  const [customSubject, setCustomSubject] = useState("");
-  const [customMessage, setCustomMessage] = useState("");
-  // Check authentication and admin status
-  const { data: user, isLoading: isLoadingUser } = useQuery<User>({
-    queryKey: ['/api/auth/user'],
-  });
 
   // Redirect if not admin
   useEffect(() => {
@@ -204,30 +196,6 @@ export default function AdminEmail() {
     },
   });
 
-    // Send custom email mutation
-  const sendCustomEmailMutation = useMutation({
-    mutationFn: async (data: { to: string; subject: string; message: string }) => {
-      const res = await apiRequest('/api/admin/send-custom-email', 'POST', data);
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Email Sent",
-        description: `Email successfully sent to ${customToEmail}`,
-      });
-      setCustomToEmail("");
-      setCustomSubject("");
-      setCustomMessage("");
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Send Failed",
-        description: error.message || "Failed to send email",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleSaveSettings = async () => {
     if (!fromEmail || !fromName) {
       toast({
@@ -313,15 +281,6 @@ export default function AdminEmail() {
        queryClient.invalidateQueries({ queryKey: ['/api/admin/users/logins'] });
   };
 
-  const handleSendCustomEmail = () => {
-    if (!customToEmail || !customSubject || !customMessage) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all fields: To, Subject, and Message",
-        variant: "destructive",
-      });
-      return;
-    }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -333,21 +292,6 @@ export default function AdminEmail() {
       });
       return;
     }
-
-    sendCustomEmailMutation.mutate({
-      to: customToEmail,
-      subject: customSubject,
-      message: customMessage,
-      });
-    };
-  
-  if (isLoadingUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   if (!user || user.id !== 'admin-bypass') {
     return null;
@@ -459,10 +403,10 @@ export default function AdminEmail() {
                   {testEmailMutation.isSuccess && "Test email sent successfully"}
                 </p>
               </div>
-            )}
           </CardContent>
         </Card>
-
+       
+        
        {/* Section B: Send Email to Any Address */}
         <Card data-testid="card-send-custom-email">
           <CardHeader>
