@@ -8,7 +8,7 @@ import { Shield, FileText, DollarSign, CheckCircle2, ArrowLeft, Upload, Image, V
 import { useAuth } from "@/hooks/useAuth";
 import { useClientSession } from "@/contexts/ClientSessionContext";
 import { apiRequest } from "@/lib/queryClient";
-import { PRICING } from "@shared/schema";
+import { COMPLAINT_PRICING } from "@shared/schema";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import type { UploadResult } from "@uppy/core";
 import { FormAssistant } from "@/components/FormAssistant";
@@ -481,10 +481,10 @@ export default function ComplaintForm() {
                     <p className="font-medium">Police Complaint Filing Fee</p>
                     <p className="text-sm text-muted-foreground">Service payment</p>
                   </div>
-                  <div className="text-2xl font-bold">${PRICING.COMPLAINT.toFixed(2)}</div>
+                  <div className="text-2xl font-bold">${COMPLAINT_PRICING.toFixed(2)}</div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  By proceeding, you agree to file this complaint and authorize payment of ${PRICING.COMPLAINT.toFixed(2)} for document generation and processing. Your complaint will be automatically routed to the appropriate authority.
+                  By proceeding, you agree to file this complaint and authorize payment of ${COMPLAINT_PRICING.toFixed(2)} for document generation and processing. Your complaint will be automatically routed to the appropriate authority.
                 </p>
               </CardContent>
             </Card>
@@ -516,7 +516,7 @@ export default function ComplaintForm() {
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Confirm & Pay ${PRICING.COMPLAINT.toFixed(2)}
+                    Confirm & Pay ${COMPLAINT_PRICING.toFixed(2)}
                   </>
                 )}
               </Button>
