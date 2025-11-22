@@ -32,6 +32,7 @@ const ComplaintForm = lazy(() => import("@/pages/complaint-form"));
 const ComplaintDetail = lazy(() => import("@/pages/complaint-detail"));
 const LawsuitForm = lazy(() => import("@/pages/lawsuit-form"));
 const LawsuitDetail = lazy(() => import("@/pages/lawsuit-detail"));
+const Section1983 = lazy(() => import("@/pages/section-1983"));
 const PetitionForm = lazy(() => import("@/pages/petition-form"));
 const PetitionDetail = lazy(() => import("@/pages/petition-detail"));
 const Petitions = lazy(() => import("@/pages/petitions"));
@@ -91,6 +92,7 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/contact" component={Contact} />
         <Route path="/support" component={Contact} />
+        <Route path="/1983" component={Section1983} />
         
         {/* Public petition page - accessible without authentication */}
         <Route path="/petition/:slug" component={PetitionDetail} />
@@ -108,6 +110,7 @@ function Router() {
             <Route path="/complaint/:id" component={ComplaintDetail} />
             <Route path="/lawsuit-form" component={LawsuitForm} />
             <Route path="/lawsuit" component={LawsuitForm} />
+            <Route path="/1983" component={Section1983} />
             <Route path="/lawsuit/:id" component={LawsuitDetail} />
             <Route path="/petition-form" component={PetitionForm} />
             <Route path="/petition" component={PetitionForm} />
