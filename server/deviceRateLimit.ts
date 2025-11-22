@@ -26,12 +26,13 @@ export function generateDeviceFingerprint(
 /**
  * Extract or generate device ID from cookies
  * Device ID is a persistent identifier stored in a cookie
+ * Returns { deviceId: string, isNewDevice: boolean }
  */
-export function getOrCreateDeviceId(req: any, res: any): string {
+export function getOrCreateDeviceId(req: any, res: any): { deviceId: string; isNewDevice: boolean } {
   const existingDeviceId = req.cookies?.['badblue_device_id'];
   
   if (existingDeviceId && typeof existingDeviceId === 'string' && existingDeviceId.length === 36) {
-    return existingDeviceId;
+    return { deviceId: existingDeviceId, isNewDevice: false };
   }
   
   // Generate new device ID (UUID v4 format)
@@ -48,7 +49,7 @@ export function getOrCreateDeviceId(req: any, res: any): string {
     sameSite: 'lax',
   });
   
-  return newDeviceId;
+  return { deviceId: newDeviceId, isNewDevice: true };
 }
 
 /**
@@ -80,14 +81,28 @@ export function getClientIp(req: any): string | null {
  * Check if device has exceeded daily officer search limit
  * Returns { allowed: boolean, remaining: number, resetTime: Date }
  * FAIL CLOSED: Returns allowed=false on database errors to prevent bypass
+ * CRITICAL: Uses IP+UA fallback to prevent cookie-clearing bypass
  */
 export async function checkDeviceSearchLimit(
   ipAddress: string | null,
   userAgent: string,
-  deviceId: string
+  deviceId: string,
+  isNewDevice: boolean
 ): Promise<{ allowed: boolean; remaining: number; resetTime: Date; message?: string; error?: string }> {
   try {
-    // Reject if we can't reliably identify the device
+    // CRITICAL SECURITY: If this is a brand new device (no cookie) and no IP, block the request
+    // This prevents bypass by clearing cookies
+    if (isNewDevice && !ipAddress) {
+      return {
+        allowed: false,
+        remaining: 0,
+        resetTime: new Date(Date.now() + SEARCH_WINDOW_HOURS * 60 * 60 * 1000),
+        message: 'Unable to verify device identity. Please enable cookies and ensure your network connection provides identification.',
+        error: 'NEW_DEVICE_NO_IP'
+      };
+    }
+    
+    // If we have neither IP nor cookie, block
     if (!ipAddress && !deviceId) {
       return {
         allowed: false,
@@ -98,39 +113,85 @@ export async function checkDeviceSearchLimit(
       };
     }
     
+    // Generate primary fingerprint with device ID
     const fingerprint = generateDeviceFingerprint(ipAddress, userAgent, deviceId);
+    
+    // CRITICAL: For new devices, also check IP+UA fingerprint to prevent cookie-clearing bypass
+    // If someone clears cookies but has same IP+UA, enforce their existing quota
+    let ipFallbackFingerprint: string | null = null;
+    if (isNewDevice && ipAddress) {
+      ipFallbackFingerprint = generateDeviceFingerprint(ipAddress, userAgent, undefined);
+    }
     
     // Calculate 24-hour window
     const windowStart = new Date();
     windowStart.setHours(windowStart.getHours() - SEARCH_WINDOW_HOURS);
     
     // Count searches in last 24 hours for this device
-    const recentSearches = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(officerSearchDeviceLimits)
-      .where(
-        and(
-          sql`${officerSearchDeviceLimits.deviceFingerprint} = ${fingerprint}`,
-          gte(officerSearchDeviceLimits.searchedAt, windowStart)
-        )
-      );
-    
-    const searchCount = recentSearches[0]?.count || 0;
+    // CRITICAL: For new devices, also check IP+UA fallback to prevent cookie-clearing bypass
+    let searchCount = 0;
+    if (ipFallbackFingerprint) {
+      // Check both the new device fingerprint AND the IP+UA fallback
+      const combined = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(officerSearchDeviceLimits)
+        .where(
+          and(
+            sql`(${officerSearchDeviceLimits.deviceFingerprint} = ${fingerprint} OR ${officerSearchDeviceLimits.deviceFingerprint} = ${ipFallbackFingerprint})`,
+            gte(officerSearchDeviceLimits.searchedAt, windowStart)
+          )
+        );
+      searchCount = combined[0]?.count || 0;
+      
+      if (searchCount > 0) {
+        console.log(
+          `[Device Rate Limit] ⚠️ Cookie-clearing bypass detected! IP+UA fingerprint ${ipFallbackFingerprint.substring(0, 12)}... has ${searchCount} searches`
+        );
+      }
+    } else {
+      // Regular check for returning devices
+      const recentSearches = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(officerSearchDeviceLimits)
+        .where(
+          and(
+            sql`${officerSearchDeviceLimits.deviceFingerprint} = ${fingerprint}`,
+            gte(officerSearchDeviceLimits.searchedAt, windowStart)
+          )
+        );
+      searchCount = recentSearches[0]?.count || 0;
+    }
     const remaining = Math.max(0, DAILY_SEARCH_LIMIT - searchCount);
     const allowed = searchCount < DAILY_SEARCH_LIMIT;
     
     // Reset time is 24 hours from the earliest search in the window
-    const earliestSearch = await db
-      .select({ searchedAt: officerSearchDeviceLimits.searchedAt })
-      .from(officerSearchDeviceLimits)
-      .where(
-        and(
-          sql`${officerSearchDeviceLimits.deviceFingerprint} = ${fingerprint}`,
-          gte(officerSearchDeviceLimits.searchedAt, windowStart)
+    // CRITICAL: For new devices, check both fingerprints to get accurate reset time
+    let earliestSearch;
+    if (ipFallbackFingerprint) {
+      earliestSearch = await db
+        .select({ searchedAt: officerSearchDeviceLimits.searchedAt })
+        .from(officerSearchDeviceLimits)
+        .where(
+          and(
+            sql`(${officerSearchDeviceLimits.deviceFingerprint} = ${fingerprint} OR ${officerSearchDeviceLimits.deviceFingerprint} = ${ipFallbackFingerprint})`,
+            gte(officerSearchDeviceLimits.searchedAt, windowStart)
+          )
         )
-      )
-      .orderBy(officerSearchDeviceLimits.searchedAt)
-      .limit(1);
+        .orderBy(officerSearchDeviceLimits.searchedAt)
+        .limit(1);
+    } else {
+      earliestSearch = await db
+        .select({ searchedAt: officerSearchDeviceLimits.searchedAt })
+        .from(officerSearchDeviceLimits)
+        .where(
+          and(
+            sql`${officerSearchDeviceLimits.deviceFingerprint} = ${fingerprint}`,
+            gte(officerSearchDeviceLimits.searchedAt, windowStart)
+          )
+        )
+        .orderBy(officerSearchDeviceLimits.searchedAt)
+        .limit(1);
+    }
     
     const resetTime = earliestSearch[0]?.searchedAt
       ? new Date(earliestSearch[0].searchedAt.getTime() + SEARCH_WINDOW_HOURS * 60 * 60 * 1000)
@@ -165,6 +226,7 @@ export async function recordDeviceSearch(
   ipAddress: string | null,
   userAgent: string,
   deviceId: string,
+  isNewDevice: boolean,
   officerName: string,
   userId?: string
 ): Promise<void> {

@@ -3893,17 +3893,19 @@ For questions or support, contact: support@badblue.com
         // Device-based rate limiting (2 searches per device per 24 hours)
         const ipAddress = getClientIp(req);
         const userAgent = req.headers['user-agent'] || 'unknown';
-        const deviceId = getOrCreateDeviceId(req, res);
+        const { deviceId, isNewDevice } = getOrCreateDeviceId(req, res);
         const userId = req.user?.claims?.sub;
 
         // Check rate limit with fail-closed security
-        const rateLimit = await checkDeviceSearchLimit(ipAddress, userAgent, deviceId);
+        // CRITICAL: isNewDevice flag prevents cookie-clearing bypass
+        const rateLimit = await checkDeviceSearchLimit(ipAddress, userAgent, deviceId, isNewDevice);
         
         // Strictly check allowed flag - return 429 if not allowed
         if (rateLimit.allowed === false) {
           const ipLog = ipAddress ? ipAddress.substring(0, 10) + '...' : 'no-ip';
+          const deviceLog = isNewDevice ? '(new device)' : '(returning device)';
           console.warn(
-            `[Officer Search] Rate limit exceeded for device ${deviceId.substring(0, 8)}... IP=${ipLog} | Remaining: ${rateLimit.remaining}`
+            `[Officer Search] Rate limit exceeded for device ${deviceId.substring(0, 8)}... ${deviceLog} IP=${ipLog} | Error: ${rateLimit.error}`
           );
           return res.status(429).json({
             message: rateLimit.message || 'Rate limit exceeded',
@@ -3915,7 +3917,7 @@ For questions or support, contact: support@badblue.com
         }
 
         // Record this search attempt for rate limiting
-        await recordDeviceSearch(ipAddress, userAgent, deviceId, officerName.trim(), userId);
+        await recordDeviceSearch(ipAddress, userAgent, deviceId, isNewDevice, officerName.trim(), userId);
 
         const location = [county, city, state].filter(Boolean).join(', ') || 'Federal/Unknown';
         console.log(
