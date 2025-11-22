@@ -1501,6 +1501,32 @@ export type WorkerHealthMetric = typeof workerHealthMetrics.$inferSelect;
 export type InsertWorkerHealthMetric = z.infer<typeof insertWorkerHealthMetricSchema>;
 
 // ============================================
+// OFFICER SEARCH DEVICE LIMITS TABLE
+// ============================================
+// Tracks officer search attempts per device (IP + user agent) to enforce rate limits
+// Limit: 2 searches per device per day
+export const officerSearchDeviceLimits = pgTable("officer_search_device_limits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  deviceFingerprint: varchar("device_fingerprint", { length: 64 }).notNull(), // SHA-256 hash of IP + user agent
+  searchedAt: timestamp("searched_at").defaultNow().notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }), // For debugging (IPv6 max length)
+  userAgent: text("user_agent"), // For debugging
+  userId: varchar("user_id"), // Optional - if user is logged in
+  officerName: varchar("officer_name"), // Officer searched (for admin review)
+}, (table) => [
+  index("idx_device_fingerprint_date").on(table.deviceFingerprint, table.searchedAt),
+  index("idx_searched_at").on(table.searchedAt), // For cleanup of old records
+]);
+
+export const insertOfficerSearchDeviceLimitSchema = createInsertSchema(officerSearchDeviceLimits).omit({
+  id: true,
+  searchedAt: true,
+});
+
+export type OfficerSearchDeviceLimit = typeof officerSearchDeviceLimits.$inferSelect;
+export type InsertOfficerSearchDeviceLimit = z.infer<typeof insertOfficerSearchDeviceLimitSchema>;
+
+// ============================================
 // WORKER DEFERRED JOBS TABLE
 // ============================================
 // Stores worker operations deferred due to budget exhaustion

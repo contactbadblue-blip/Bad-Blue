@@ -25,6 +25,7 @@ import {
   redraftOffenseDescription,
 } from "./legalAI";
 import { searchOfficer, searchOfficerInformation, searchProgressEmitter, type SearchProgress } from "./officerSearch";
+import { checkDeviceSearchLimit, recordDeviceSearch, getClientIp } from "./deviceRateLimit";
 import {
   sendPurchaseConfirmationEmail,
   sendContactFormEmail,
@@ -3886,6 +3887,28 @@ For questions or support, contact: support@badblue.com
             code: "INVALID_LOCATION",
           });
         }
+
+        // Device-based rate limiting (2 searches per device per 24 hours)
+        const ipAddress = getClientIp(req);
+        const userAgent = req.headers['user-agent'] || 'unknown';
+        const userId = req.user?.claims?.sub;
+
+        const rateLimit = await checkDeviceSearchLimit(ipAddress, userAgent);
+        
+        if (!rateLimit.allowed) {
+          console.warn(
+            `[Officer Search] Rate limit exceeded for device IP=${ipAddress.substring(0, 10)}... | Remaining: ${rateLimit.remaining}`
+          );
+          return res.status(429).json({
+            message: rateLimit.message,
+            code: "RATE_LIMIT_EXCEEDED",
+            remaining: rateLimit.remaining,
+            resetTime: rateLimit.resetTime,
+          });
+        }
+
+        // Record this search attempt for rate limiting
+        await recordDeviceSearch(ipAddress, userAgent, officerName.trim(), userId);
 
         const location = [county, city, state].filter(Boolean).join(', ') || 'Federal/Unknown';
         console.log(

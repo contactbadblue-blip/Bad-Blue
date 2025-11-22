@@ -18,6 +18,7 @@ import {
   aiSubAgentLogs,
   adminSettingsAudit,
 } from '@shared/schema';
+import { cleanupOldSearchRecords } from './deviceRateLimit';
 
 // ============================================
 // CLEANUP LOG TRACKING
@@ -385,5 +386,38 @@ export function getErrorLogCleanupStats() {
     totalLogsDeleted,
     last30DaysRuns: recentRuns.length,
     lastRun: errorLogCleanupHistory.length > 0 ? errorLogCleanupHistory[errorLogCleanupHistory.length - 1] : null,
+  };
+}
+
+// ============================================
+// COMPREHENSIVE CLEANUP (ALL SYSTEMS)
+// ============================================
+
+/**
+ * Run all cleanup operations (user data, error logs, officer search records)
+ */
+export async function runComprehensiveCleanup(): Promise<{
+  userDataCleanup: Awaited<ReturnType<typeof runAutomatedCleanup>>;
+  errorLogCleanup: ErrorLogCleanupResult;
+  deviceSearchCleanup: number;
+}> {
+  console.log('[COMPREHENSIVE CLEANUP] Starting comprehensive cleanup...');
+  
+  // Run all cleanup operations in parallel
+  const [userDataResult, errorLogResult, deviceSearchDeleted] = await Promise.all([
+    runAutomatedCleanup(),
+    deleteOldErrorLogs(),
+    cleanupOldSearchRecords(),
+  ]);
+  
+  console.log('[COMPREHENSIVE CLEANUP] Complete:');
+  console.log(`  - User data: ${userDataResult.successCount}/${userDataResult.totalProcessed} users processed`);
+  console.log(`  - Error logs: ${errorLogResult.totalDeleted} records deleted`);
+  console.log(`  - Device search: ${deviceSearchDeleted} records deleted`);
+  
+  return {
+    userDataCleanup: userDataResult,
+    errorLogCleanup: errorLogResult,
+    deviceSearchCleanup: deviceSearchDeleted,
   };
 }
