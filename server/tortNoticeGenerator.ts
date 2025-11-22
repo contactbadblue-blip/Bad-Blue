@@ -107,14 +107,14 @@ Generate a complete, legally-formatted tort claim notice document that meets ${d
       TaskComplexity.COMPREHENSIVE
     );
 
-    const text = await generateText(prompt, task);
+    const response = await generateText(task, prompt);
     
-    if (!text) {
+    if (!response.content) {
       throw new Error('Empty response from AI provider');
     }
 
     rateLimitTracker.recordSuccess();
-    return text;
+    return response.content;
   } catch (error: any) {
     console.error('[Tort Notice] AI generation error:', error);
     rateLimitTracker.recordError(error);

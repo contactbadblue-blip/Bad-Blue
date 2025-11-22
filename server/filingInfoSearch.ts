@@ -51,14 +51,14 @@ Be thorough and accurate. Lives depend on this information being correct.`;
       TaskComplexity.COMPREHENSIVE
     );
     
-    const text = await generateText(prompt, task);
+    const response = await generateText(task, prompt);
     
-    if (!text) {
+    if (!response.content) {
       throw new Error('Empty response from AI provider');
     }
 
-    console.log(`Filing info search response for ${state}:`, text);
-    const data = JSON.parse(text);
+    console.log(`Filing info search response for ${state}:`, response.content);
+    const data = JSON.parse(response.content);
     
     // Convert dollars to cents
     const filingFeeCents = Math.round((data.filingFeeDollars || 0) * 100);

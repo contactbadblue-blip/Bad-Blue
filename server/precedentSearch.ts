@@ -107,14 +107,14 @@ Provide at least 8-12 highly relevant precedents.`;
     );
     
     // First pass: comprehensive precedent search
-    const text1 = await generateText(prompt, task);
+    const response1 = await generateText(task, prompt);
     
-    if (!text1) {
+    if (!response1.content) {
       throw new Error('Empty response from AI provider');
     }
 
-    console.log(`Precedent search first pass:`, text1);
-    const data1 = JSON.parse(text1);
+    console.log(`Precedent search first pass:`, response1.content);
+    const data1 = JSON.parse(response1.content);
     const firstPassPrecedents = data1.precedents || [];
 
     // Second pass: verification and expansion
@@ -149,15 +149,15 @@ Now perform PRECEDENT VERIFICATION AND EXPANSION:
 Provide at least 12-15 highly relevant, verified precedents in the same JSON format.`;
 
     // Use same task metadata for verification pass
-    const text2 = await generateText(verificationPrompt, task);
+    const response2 = await generateText(task, verificationPrompt);
     
-    if (!text2) {
+    if (!response2.content) {
       console.warn('Empty response from verification pass, using first pass only');
       return firstPassPrecedents;
     }
 
-    console.log(`Precedent search verification pass:`, text2);
-    const data2 = JSON.parse(text2);
+    console.log(`Precedent search verification pass:`, response2.content);
+    const data2 = JSON.parse(response2.content);
     const secondPassPrecedents = data2.precedents || [];
 
     // Merge and deduplicate precedents
