@@ -151,73 +151,31 @@ Please provide (in plain, everyday language):
 
 IMPORTANT: Write your entire response in plain English, as if explaining to someone with no legal knowledge. Avoid legal jargon. When you must use a legal term, immediately explain it in simple words. This is not legal advice and the person should consult an attorney.`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Legal AI] Using Groq (Gemini near limit or experiencing errors)');
-      const result = await generateGroqLegalConsultation(prompt, systemPrompt);
-      return result;
-    } catch (groqError: any) {
-      console.error('[Legal AI] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
-  // Try Gemini (primary) with increased token limits
+  // Use unified 4-way AI provider system (Mistral 50%, Groq 30-35%, Gemini 10%, Claude 5-10%)
   try {
-    console.log('[Legal AI] Using Gemini');
-    const client = getGeminiClient();
-    
-    // Dynamically determine optimal token allocation
-    const optimalTokens = getOptimalGeminiTokens(description, {
-      requiresLegalAnalysis: true,
-      requiresResearch: true
-    });
-    
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: {
-        temperature: 0.3,
-        maxOutputTokens: optimalTokens, // Dynamic allocation
+    const response = await generateUserText(
+      'legal-issue-analysis',
+      prompt,
+      {
+        systemPrompt,
+        temperature: 0.3
       },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: `${systemPrompt}\n\n${prompt}` }],
-        },
-      ],
-    });
+      TaskPriority.CRITICAL_USER
+    );
 
-    const text = response.text;
-
-    if (!text || text.trim().length === 0) {
-      throw new Error('Empty response from Gemini');
+    if (!response.content || response.content.trim().length === 0) {
+      throw new Error('Empty response from AI provider');
     }
 
-    rateLimitTracker.recordSuccess();
-    return text;
-  } catch (geminiError: any) {
-    console.error('[Legal AI] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Legal AI] Falling back to Groq');
-        const result = await generateGroqLegalConsultation(prompt, systemPrompt);
-        return result;
-      } catch (groqError: any) {
-        console.error('[Legal AI] Groq fallback also failed:', groqError);
-      }
-    }
+    return response.content;
+  } catch (error: any) {
+    console.error('[Legal AI] AI generation error:', error);
 
     // Final fallback: error message
-    if (geminiError.message?.includes('quota') || geminiError.message?.includes('rate limit')) {
+    if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
       return 'Service temporarily unavailable due to high demand. Please try again in a few moments.';
     }
-    if (geminiError.message?.includes('API key') || geminiError.message?.includes('authentication')) {
+    if (error.message?.includes('API key') || error.message?.includes('authentication')) {
       return 'Service configuration error. Please contact support.';
     }
     return 'Unable to analyze legal issue at this time. Please consult with a qualified attorney for legal advice.';
