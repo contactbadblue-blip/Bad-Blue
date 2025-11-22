@@ -89,15 +89,23 @@ async function sendWithResend(
 
   const from = fromOverride || DEFAULT_FROM;
 
-  const result = await resend.emails.send({
+  const emailPayload: any = {
     from,
     to,
     subject,
-    ...(html ? { html } : {}),
-    ...(text ? { text } : {}),
-  });
+  };
 
-  return !!result?.id;
+  if (html) emailPayload.html = html;
+  if (text) emailPayload.text = text;
+
+  const { data, error } = await resend.emails.send(emailPayload);
+
+  if (error) {
+    console.error("[EMAIL] Resend API error:", error);
+    return false;
+  }
+
+  return !!data?.id;
 }
 
 // --- Public generic send ----------------------------------------------------
