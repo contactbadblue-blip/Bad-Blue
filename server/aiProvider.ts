@@ -8,7 +8,7 @@
  * - All usage tracked in database with proper context
  */
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getGroqClient } from './groq';
 import { 
   aiTokenGovernor, 
@@ -164,14 +164,14 @@ export async function getAutonomousRescheduleInfo(): Promise<{
 // Private helper functions
 
 // Lazy initialization of Gemini client
-let geminiClient: GoogleGenAI | null = null;
+let geminiClient: GoogleGenerativeAI | null = null;
 
-function getGeminiClient(): GoogleGenAI {
+function getGeminiClient(): GoogleGenerativeAI {
   if (!geminiClient) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    geminiClient = new GoogleGenAI(process.env.GEMINI_API_KEY);
+    geminiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   }
   return geminiClient;
 }
@@ -183,25 +183,27 @@ async function callGemini(
 ): Promise<string> {
   try {
     const gemini = getGeminiClient();
-    const model = gemini.getGenerativeModel({ 
-      model: options.model || 'gemini-1.5-flash',
-    });
 
-    const fullPrompt = options.systemPrompt 
+    const fullPrompt = options.systemPrompt
       ? `${options.systemPrompt}\n\n${prompt}`
       : prompt;
 
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+    const result = await gemini.models.generateContent({
+      model: options.model || "gemini-1.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: fullPrompt }],
+        },
+      ],
       generationConfig: {
-        temperature: options.temperature || 0.7,
+        temperature: options.temperature ?? 0.7,
         maxOutputTokens: maxTokens,
-        responseMimeType: options.useJSON ? 'application/json' : 'text/plain',
-      }
+        responseMimeType: options.useJSON ? "application/json" : "text/plain",
+      },
     });
 
-    const response = result.response;
-    const text = response.text();
+    const text = result.text ?? "";
     
     if (!text) {
       throw new Error('Empty response from Gemini');

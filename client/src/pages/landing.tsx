@@ -155,11 +155,11 @@ export default function Landing() {
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-white text-4xl md:text-5xl font-bold leading-tight mb-8" data-testid="text-landing-h1">
-            Police Accountability Platform for Filing Complaints and Section 1983 Lawsuits
+          <h1 className="text-white text-4xl md:text-5xl font-bold leading-tight mb-8">
+            Law Enforcement Accountability Service
           </h1>
           <p className="text-white/90 text-base md:text-lg mb-10 leading-relaxed max-w-3xl mx-auto">
-            Bad Blue is a comprehensive police accountability platform that empowers citizens to search officer records, file police misconduct complaints online, submit FOIA requests for body-cam footage and police records, create petitions for officer accountability, and build Section 1983 civil rights lawsuits against police officers. Our AI-powered tools simplify the process of holding law enforcement accountable for misconduct, excessive force, false arrests, and constitutional violations.
+            Convenient and affordable access to legal tools, including AI legal support, in-depth officer searches with detailed background reports, FOIA requests (auto submitted), circulation of persuasive petition for officer resignation, elaborate officer complaints (auto submitted) and efficient 1983 civil suits that include tort notice and cover sheet. All without the need to leave home.
           </p>
 
           {/* Three-Tier Pricing - Simplified */}
@@ -241,63 +241,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Comprehensive SEO Content Section */}
-      <section className="py-20 px-4 bg-background">
-        <div className="max-w-6xl mx-auto prose prose-lg max-w-none">
-          <h2 className="text-3xl font-bold mb-6" data-testid="text-landing-h2">
-            Complete Police Accountability Solutions: From Complaints to Civil Rights Lawsuits
-          </h2>
-          
-          <div className="mb-8">
-            <p className="mb-4">
-              Bad Blue revolutionizes how citizens hold law enforcement accountable for misconduct. Whether you've experienced police brutality, false arrest, excessive force, or other civil rights violations, our platform provides the tools and resources you need to seek justice effectively. We combine advanced AI technology with legal expertise to make the complex process of filing complaints and lawsuits accessible to everyone.
-            </p>
-            
-            <h3 className="text-2xl font-semibold mb-4">How to File a Police Complaint Online with Bad Blue</h3>
-            <p className="mb-4">
-              Filing a police complaint traditionally requires navigating complex bureaucratic systems, finding the right forms, determining the correct department to contact, and often facing intimidation or retaliation. Many victims of police misconduct give up before their complaint is ever filed, allowing problematic officers to continue their behavior unchecked.
-            </p>
-            <p className="mb-4">
-              Bad Blue simplifies this process dramatically. Our AI-powered complaint system guides you through documenting the incident, automatically determines the proper Internal Affairs division or oversight agency based on your location and the officer's department, generates professionally formatted complaint documents that meet all legal requirements, and submits them directly to the appropriate authorities. We track your complaint's progress and help you follow up if responses are delayed.
-            </p>
-            
-            <h3 className="text-2xl font-semibold mb-4">Officer Search and Background Investigation</h3>
-            <p className="mb-4">
-              Our comprehensive officer database allows you to search for law enforcement officers across all 50 states. Simply upload a photo of a badge or enter an officer's name and department, and our AI will search through millions of public records to compile a detailed background report. This includes complaint history, lawsuit settlements, disciplinary actions, employment history across different departments, and other public record information that helps establish patterns of misconduct.
-            </p>
-            <p className="mb-4">
-              This officer search capability is crucial for building strong cases. Many problem officers have histories of misconduct that span multiple departments and jurisdictions. By uncovering these patterns, you strengthen your complaint or lawsuit significantly, as courts and oversight agencies take repeated misconduct much more seriously than isolated incidents.
-            </p>
-            
-            <h3 className="text-2xl font-semibold mb-4">FOIA Requests for Police Records and Body-Cam Footage</h3>
-            <p className="mb-4">
-              Evidence is critical in police accountability cases, and much of that evidence is held by the police themselves. Body camera footage, dashcam videos, police reports, radio communications, and internal investigation files can make or break your case. However, obtaining these records through Freedom of Information Act (FOIA) requests is notoriously difficult.
-            </p>
-            <p className="mb-4">
-              Bad Blue's FOIA request generator creates legally compliant requests tailored to your state's specific laws and the type of records you need. We know exactly how to phrase requests to avoid common rejection reasons, what exemptions police departments might claim and how to counter them, and how to appeal denials effectively. Our system automatically tracks deadlines and sends follow-up requests when agencies fail to respond within legally mandated timeframes.
-            </p>
-            
-            <h3 className="text-2xl font-semibold mb-4">Building Section 1983 Civil Rights Lawsuits</h3>
-            <p className="mb-4">
-              Section 1983 of the United States Code provides a powerful legal tool for holding police officers accountable for constitutional violations. These federal civil rights lawsuits can result in both monetary compensation for victims and institutional changes that prevent future misconduct. However, Section 1983 litigation is complex, with strict pleading requirements, qualified immunity defenses, and intricate legal standards.
-            </p>
-            <p className="mb-4">
-              Bad Blue's lawsuit generator creates comprehensive federal complaints that properly allege constitutional violations, identify all appropriate defendants including officers, supervisors, and municipalities, address qualified immunity by citing relevant case law, include all necessary legal elements to survive motions to dismiss, and incorporate your evidence effectively to tell a compelling story. You can choose our DIY option for self-representation or our full-service option for attorney review and filing.
-            </p>
-            
-            <h3 className="text-2xl font-semibold mb-4">Petition Creation for Officer Accountability</h3>
-            <p className="mb-4">
-              Sometimes public pressure is the most effective tool for police accountability. When officers engage in egregious misconduct but face no consequences from their departments, community petitions demanding resignation, termination, or prosecution can create the political pressure needed for action.
-            </p>
-            <p className="mb-4">
-              Bad Blue helps you create professional, persuasive petitions that clearly articulate the misconduct and demanded actions, gather signatures from your community, automatically send updates to signers, deliver the petition to relevant officials including police chiefs, mayors, city councils, and prosecutors, and track the response and any resulting actions.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* Value Proposition - With more spacing */}
-      <section className="py-20 px-4 bg-card">
+      <section className="py-20 px-4 bg-card mt-16">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-bold mb-4">Transparency Through Technology</h2>

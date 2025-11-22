@@ -1,6 +1,6 @@
 // Advanced Legal AI System - Sophisticated Legal Analysis Platform
 // Using unified AI provider with automatic Gemini-first, Groq-backup strategy
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { 
   generateLegalAnalysis,
   generateUserText,
@@ -13,14 +13,14 @@ import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqLegalConsultation, generateGroqLegalJSON } from "./groq";
 import { getOptimalGeminiTokens } from "./tokenOptimizer";
 
-let gemini: GoogleGenAI | null = null;
+let gemini: GoogleGenerativeAI | null = null;
 
-function getGeminiClient(): GoogleGenAI {
+function getGeminiClient(): GoogleGenerativeAI {
   if (!gemini) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    gemini = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
   }
   return gemini;
 }

@@ -1,16 +1,16 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqLegalDocument } from "./groq";
 
-let gemini: GoogleGenAI | null = null;
+let gemini: GoogleGenerativeAI | null = null;
 
-function getGeminiClient(): GoogleGenAI {
+function getGeminiClient(): GoogleGenerativeAI {
   if (!gemini) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    gemini = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
   }
   return gemini;
 }

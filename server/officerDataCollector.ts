@@ -3,13 +3,13 @@ import {
   generateUserText,
   TaskPriority
 } from './aiProvider';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { EventEmitter } from "events";
 import type { OfficerProfile, InsertOfficerProfile } from "@shared/schema";
 import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqStructuredResponse } from "./groq";
 
-let gemini: GoogleGenAI | null = null;
+let gemini: GoogleGenerativeAI | null = null;
 
 // Event emitter for tracking collection progress
 export const collectionProgressEmitter = new EventEmitter();
@@ -28,12 +28,12 @@ const profileCache = new Map<string, { profile: OfficerProfile; timestamp: numbe
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 const MAX_CACHE_SIZE = 500;
 
-function getGeminiClient(): GoogleGenAI {
+function getGeminiClient(): GoogleGenerativeAI {
   if (!gemini) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    gemini = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
   }
   return gemini;
 }

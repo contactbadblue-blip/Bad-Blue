@@ -17,8 +17,11 @@ try {
   console.log('Instance type:', typeof genAI);
   console.log('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(genAI)));
   
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-  console.log('Model created successfully');
+  const response = await client.models.generateContent({
+  model: "gemini-2.5-flash",  // or whatever model you want
+  contents: prompt,
+});
+const text = response.text;
   
   const result = await model.generateContent('Respond with just "OK" if working');
   const response = await result.response;

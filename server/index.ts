@@ -14,10 +14,12 @@ if (!process.env.VITE_STRIPE_PUBLIC_KEY) {
   console.error('[ENV] ⚠️ VITE_STRIPE_PUBLIC_KEY not set in environment variables');
 }
 
+import { createClient } from "@supabase/supabase-js";
+import type { Request, Response } from "express";
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { prerenderMiddleware } from "./seo-prerender";
 
 const app = express();
 
@@ -105,9 +107,6 @@ app.use((req, res, next) => {
     res.type("application/xml");
     res.sendFile("sitemap.xml", { root: "public" });
   });
-
-  // Add pre-render middleware for SEO-critical pages (serves HTML for crawlers)
-  app.use(prerenderMiddleware);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

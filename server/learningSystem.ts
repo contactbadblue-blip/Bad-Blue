@@ -5,7 +5,7 @@
  * improve the quality, formatting, and effectiveness of generated legal documents.
  */
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { storage } from './storage';
 import type {
   ComplaintPattern,
@@ -18,14 +18,14 @@ import type {
   InsertDocumentFormat,
 } from '@shared/schema';
 
-let gemini: GoogleGenAI | null = null;
+let gemini: GoogleGenerativeAI | null = null;
 
-function getGeminiClient(): GoogleGenAI {
+function getGeminiClient(): GoogleGenerativeAI {
   if (!gemini) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    gemini = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
   }
   return gemini;
 }
