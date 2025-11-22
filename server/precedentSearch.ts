@@ -1,18 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateText, createTaskMetadata, UsageContext, TaskPriority, TaskComplexity } from "./aiProvider";
 import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqStructuredResponse } from "./groq";
-
-let gemini: GoogleGenerativeAI | null = null;
-
-function getGeminiClient(): GoogleGenerativeAI {
-  if (!gemini) {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
-    }
-    gemini = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return gemini;
-}
 
 export interface LegalPrecedent {
   caseName: string;
@@ -107,45 +95,22 @@ PRIORITIZE:
 
 Provide at least 8-12 highly relevant precedents.`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Precedent Search] Using Groq (Gemini near limit or experiencing errors)');
-      const systemPrompt = "You are an expert legal researcher with comprehensive knowledge of case law. Provide detailed, accurate precedent research in JSON format.";
-      const result = await generateGroqStructuredResponse(prompt, systemPrompt);
-      const data = JSON.parse(result);
-      return data.precedents || [];
-    } catch (groqError) {
-      console.error('[Precedent Search] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
   try {
-    console.log('[Precedent Search] Using Gemini');
-    const client = getGeminiClient();
+    console.log('[Precedent Search] Using 4-way AI collaboration with 2-pass verification');
+    
+    // Create task metadata for legal precedent research (user-triggered, critical, comprehensive)
+    const task = createTaskMetadata(
+      'precedent-search',
+      UsageContext.USER,
+      TaskPriority.CRITICAL_USER,
+      TaskComplexity.COMPREHENSIVE
+    );
     
     // First pass: comprehensive precedent search
-    const response1 = await client.models.generateContent({
-      model: "gemini-2.0-flash-thinking-exp",
-      config: {
-        temperature: 0.1, // Very low temperature for maximum factual accuracy
-        responseMimeType: "application/json",
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
-        },
-      ],
-    });
-
-    const text1 = response1.text;
+    const text1 = await generateText(prompt, task);
     
     if (!text1) {
-      throw new Error('Empty response from Gemini');
+      throw new Error('Empty response from AI provider');
     }
 
     console.log(`Precedent search first pass:`, text1);
@@ -183,21 +148,8 @@ Now perform PRECEDENT VERIFICATION AND EXPANSION:
 
 Provide at least 12-15 highly relevant, verified precedents in the same JSON format.`;
 
-    const response2 = await client.models.generateContent({
-      model: "gemini-2.0-flash-thinking-exp",
-      config: {
-        temperature: 0.1,
-        responseMimeType: "application/json",
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: verificationPrompt }],
-        },
-      ],
-    });
-
-    const text2 = response2.text;
+    // Use same task metadata for verification pass
+    const text2 = await generateText(verificationPrompt, task);
     
     if (!text2) {
       console.warn('Empty response from verification pass, using first pass only');
@@ -228,22 +180,9 @@ Provide at least 12-15 highly relevant, verified precedents in the same JSON for
     console.log(`Found ${uniquePrecedents.length} unique precedents after merge`);
     rateLimitTracker.recordSuccess();
     return uniquePrecedents;
-  } catch (geminiError: any) {
-    console.error('[Precedent Search] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-    
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Precedent Search] Falling back to Groq');
-        const systemPrompt = "You are an expert legal researcher with comprehensive knowledge of case law. Provide detailed, accurate precedent research in JSON format.";
-        const result = await generateGroqStructuredResponse(prompt, systemPrompt);
-        const data = JSON.parse(result);
-        return data.precedents || getDefaultPrecedents(issueDescription);
-      } catch (groqError) {
-        console.error('[Precedent Search] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[Precedent Search] AI generation error:', error);
+    rateLimitTracker.recordError(error);
     
     // Final fallback: Return enhanced default precedents
     return getDefaultPrecedents(issueDescription);

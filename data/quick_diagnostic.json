@@ -1,19 +1,21 @@
 {
-  "timestamp": "2025-11-08T06:11:24.404Z",
+  "timestamp": "2025-11-22T22:45:11.085Z",
   "findings": [
     "✓ Database: Connected and accessible",
     "✓ officer_profiles table: Exists",
-    "System Diagnostics: 86.7% pass rate (13/15)",
+    "System Diagnostics: 71.4% pass rate (10/14)",
     "⚠ ENVIRONMENT: Environment Variables failed",
-    "⚠ AI_SERVICES: OpenAI API Key failed",
+    "⚠ STRIPE_PAYMENT: Stripe Connection failed",
+    "⚠ STRIPE_PAYMENT: Stripe Products failed",
+    "⚠ EMAIL_SERVICE: SMTP Credentials failed",
     "AI Sub-Agent: undefined/undefined capabilities healthy",
     "✗ AI Sub-Agent: Diagnostic failed - Cannot read properties of undefined (reading 'length')",
     "✓ Officer Search: Functional (found 1 sources)"
   ],
   "summary": {
     "success": 3,
-    "warnings": 2,
+    "warnings": 4,
     "critical": 0,
-    "overallHealth": "✓ HEALTHY"
+    "overallHealth": "⚠ NEEDS ATTENTION"
   }
 }

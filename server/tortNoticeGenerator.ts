@@ -1,19 +1,7 @@
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateText, createTaskMetadata, UsageContext, TaskPriority, TaskComplexity } from "./aiProvider";
 import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqLegalDocument } from "./groq";
-
-let gemini: GoogleGenerativeAI | null = null;
-
-function getGeminiClient(): GoogleGenerativeAI {
-  if (!gemini) {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
-    }
-    gemini = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return gemini;
-}
 
 export interface TortNoticeData {
   state: string;
@@ -76,10 +64,10 @@ export async function generateTortNotice(data: TortNoticeData): Promise<string> 
     }
   }
 
-  // Try Gemini (primary)
+  // Use 4-way AI collaboration system for legal document generation
   try {
-    console.log('[Tort Notice] Using Gemini');
-    const client = getGeminiClient();
+    console.log('[Tort Notice] Using 4-way AI collaboration');
+    
     const prompt = `Generate a formal tort claim notice for filing with a government entity in ${data.state}.
 
 CLAIMANT INFORMATION:
@@ -111,41 +99,25 @@ REQUIREMENTS:
 
 Generate a complete, legally-formatted tort claim notice document that meets ${data.state} requirements.`;
 
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: {
-        temperature: 0.3,
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
-        },
-      ],
-    });
+    // Create task metadata for legal document generation (user-triggered, critical, comprehensive)
+    const task = createTaskMetadata(
+      'tort-notice-generation',
+      UsageContext.USER,
+      TaskPriority.CRITICAL_USER,
+      TaskComplexity.COMPREHENSIVE
+    );
 
-    const text = response.text;
+    const text = await generateText(prompt, task);
     
     if (!text) {
-      throw new Error('Empty response from Gemini');
+      throw new Error('Empty response from AI provider');
     }
 
     rateLimitTracker.recordSuccess();
     return text;
-  } catch (geminiError: any) {
-    console.error('[Tort Notice] Gemini error:', geminiError);
-    rateLimitTracker.recordError(geminiError);
-    
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Tort Notice] Falling back to Groq');
-        const result = await generateGroqLegalDocument('Tort Claim Notice', context, instructions);
-        return result;
-      } catch (groqError) {
-        console.error('[Tort Notice] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[Tort Notice] AI generation error:', error);
+    rateLimitTracker.recordError(error);
     
     // Final fallback: basic template
     return generateBasicTortNotice(data);

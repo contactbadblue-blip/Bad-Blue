@@ -1,18 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateText, createTaskMetadata, UsageContext, TaskPriority, TaskComplexity } from "./aiProvider";
 import { rateLimitTracker } from "./rateLimitTracker";
 import { isGroqAvailable, generateGroqStructuredResponse } from "./groq";
-
-let gemini: GoogleGenerativeAI | null = null;
-
-function getGeminiClient(): GoogleGenerativeAI {
-  if (!gemini) {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
-    }
-    gemini = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return gemini;
-}
 
 export interface FilingInfo {
   filingFee: number; // in cents
@@ -23,8 +11,6 @@ export interface FilingInfo {
 }
 
 export async function searchStateFilingInfo(state: string, city?: string): Promise<FilingInfo> {
-  const client = getGeminiClient();
-
   const locationInfo = city ? `${city}, ${state}` : state;
 
   const prompt = `You are a legal research assistant. Find the current, accurate information for filing a civil rights lawsuit (42 USC 1983) in ${state} state court${city ? ` for cases in ${city}` : ''}.
@@ -54,52 +40,21 @@ Return your findings in this EXACT JSON format:
 
 Be thorough and accurate. Lives depend on this information being correct.`;
 
-  // Smart provider selection: Use Groq if Gemini is near rate limit
-  const shouldUseGroq = rateLimitTracker.shouldUseGroq() && isGroqAvailable();
-
-  if (shouldUseGroq) {
-    try {
-      console.log('[Filing Info Search] Using Groq (Gemini near limit or experiencing errors)');
-      const systemPrompt = "You are a legal research assistant specializing in court filing procedures. Provide accurate, current information in JSON format.";
-      const result = await generateGroqStructuredResponse(prompt, systemPrompt);
-      const data = JSON.parse(result);
-      const filingFeeCents = Math.round((data.filingFeeDollars || 0) * 100);
-      
-      return {
-        filingFee: filingFeeCents,
-        eFilingPortalUrl: data.eFilingPortalUrl || '',
-        eFilingPortalName: data.eFilingPortalName || '',
-        filingInstructions: data.filingInstructions || 'Please consult with a local attorney for filing instructions.',
-        clerkOfCourtAddress: data.clerkOfCourtAddress || ''
-      };
-    } catch (groqError) {
-      console.error('[Filing Info Search] Groq error, falling back to Gemini:', groqError);
-      // Fall through to Gemini
-    }
-  }
-
   try {
-    console.log('[Filing Info Search] Using Gemini');
-    const client = getGeminiClient();
+    console.log('[Filing Info Search] Using 4-way AI collaboration');
     
-    const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: {
-        temperature: 0.0, // Deterministic for consistency
-        responseMimeType: "application/json",
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
-        },
-      ],
-    });
-
-    const text = response.text;
+    // Create task metadata for legal research (user-triggered, critical, comprehensive)
+    const task = createTaskMetadata(
+      'filing-info-search',
+      UsageContext.USER,
+      TaskPriority.CRITICAL_USER,
+      TaskComplexity.COMPREHENSIVE
+    );
+    
+    const text = await generateText(prompt, task);
     
     if (!text) {
-      throw new Error('Empty response from Gemini');
+      throw new Error('Empty response from AI provider');
     }
 
     console.log(`Filing info search response for ${state}:`, text);
@@ -116,30 +71,9 @@ Be thorough and accurate. Lives depend on this information being correct.`;
       filingInstructions: data.filingInstructions || 'Please consult with a local attorney for filing instructions.',
       clerkOfCourtAddress: data.clerkOfCourtAddress || ''
     };
-  } catch (geminiError: any) {
-    console.error(`[Filing Info Search] Gemini error:`, geminiError);
-    rateLimitTracker.recordError(geminiError);
-    
-    // Fallback to Groq if available
-    if (isGroqAvailable()) {
-      try {
-        console.log('[Filing Info Search] Falling back to Groq');
-        const systemPrompt = "You are a legal research assistant specializing in court filing procedures. Provide accurate, current information in JSON format.";
-        const result = await generateGroqStructuredResponse(prompt, systemPrompt);
-        const data = JSON.parse(result);
-        const filingFeeCents = Math.round((data.filingFeeDollars || 0) * 100);
-        
-        return {
-          filingFee: filingFeeCents,
-          eFilingPortalUrl: data.eFilingPortalUrl || '',
-          eFilingPortalName: data.eFilingPortalName || '',
-          filingInstructions: data.filingInstructions || 'Please consult with a local attorney for filing instructions.',
-          clerkOfCourtAddress: data.clerkOfCourtAddress || ''
-        };
-      } catch (groqError) {
-        console.error('[Filing Info Search] Groq fallback also failed:', groqError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[Filing Info Search] AI generation error:', error);
+    rateLimitTracker.recordError(error);
     
     // Final fallback: default information
     return {
