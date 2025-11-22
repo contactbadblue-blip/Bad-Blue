@@ -25,7 +25,7 @@ function getGeminiClient(): GoogleGenerativeAI {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    gemini = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+    gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   }
   return gemini;
 }
