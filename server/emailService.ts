@@ -71,7 +71,17 @@ export async function sendMail(
 }
 
 // Re-export specialized email functions
-export { sendWelcomeEmail, sendConfirmationEmail, sendAdminNotification };
+export {
+  sendWelcomeEmail,
+  sendConfirmationEmail,
+  sendAdminNotification,
+  sendPurchaseConfirmationEmail,
+  sendContactFormEmail,
+  sendComplaintToVenue,
+  sendTortNoticeToAgency,
+  sendPetitionZipEmail,
+  sendUserEmail,
+} from './resendService';
 
 // Verification function for checking email service status
 export async function verifyEmailService(): Promise<boolean> {
