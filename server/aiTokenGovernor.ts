@@ -114,8 +114,42 @@ class AITokenGovernorEnhanced {
   private readonly GEMINI_TARGET_PERCENT = 10;
   private readonly CLAUDE_TARGET_PERCENT = 7.5; // midpoint of 5-10%
 
+  // Provider availability cache
+  private providerAvailability: Map<AIProvider, boolean> = new Map();
+  private availabilityChecked = false;
+
   private constructor() {
     // No file loading - database is the source of truth
+    this.checkProviderAvailability();
+  }
+
+  /**
+   * Check which AI providers have their API keys configured
+   */
+  private checkProviderAvailability(): void {
+    this.providerAvailability.set(AIProvider.MISTRAL, !!process.env.MISTRAL_API_KEY);
+    this.providerAvailability.set(AIProvider.GROQ, !!process.env.GROQ_API_KEY);
+    this.providerAvailability.set(AIProvider.GEMINI, !!process.env.GEMINI_API_KEY);
+    this.providerAvailability.set(AIProvider.CLAUDE, !!process.env.CLAUDE_API_KEY || !!process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY);
+    
+    this.availabilityChecked = true;
+    
+    // Log provider status on startup
+    console.log('[AI Token Governor] Provider availability:');
+    console.log(`  - Mistral: ${this.providerAvailability.get(AIProvider.MISTRAL) ? '✓ Available' : '✗ Missing MISTRAL_API_KEY'}`);
+    console.log(`  - Groq: ${this.providerAvailability.get(AIProvider.GROQ) ? '✓ Available' : '✗ Missing GROQ_API_KEY'}`);
+    console.log(`  - Gemini: ${this.providerAvailability.get(AIProvider.GEMINI) ? '✓ Available' : '✗ Missing GEMINI_API_KEY'}`);
+    console.log(`  - Claude: ${this.providerAvailability.get(AIProvider.CLAUDE) ? '✓ Available' : '✗ Missing CLAUDE_API_KEY'}`);
+  }
+
+  /**
+   * Check if a provider is available
+   */
+  private isProviderAvailable(provider: AIProvider): boolean {
+    if (!this.availabilityChecked) {
+      this.checkProviderAvailability();
+    }
+    return this.providerAvailability.get(provider) || false;
   }
 
   static getInstance(): AITokenGovernorEnhanced {
@@ -270,53 +304,81 @@ class AITokenGovernorEnhanced {
     // RULE 1: Autonomous functions prefer Groq, fallback to Mistral/Claude
     if (task.context === UsageContext.AUTONOMOUS) {
       const canUseGroq = await this.canAutonomousUseGroq();
-      if (canUseGroq && quotaStatus.groq.percentUsed < 95) {
+      if (canUseGroq && quotaStatus.groq.percentUsed < 95 && this.isProviderAvailable(AIProvider.GROQ)) {
         return AIProvider.GROQ;
       }
       
       // Fallback to Mistral for autonomous if Groq unavailable (check API key)
-      if (quotaStatus.mistral.percentUsed < 95 && isMistralAvailable()) {
+      if (quotaStatus.mistral.percentUsed < 95 && this.isProviderAvailable(AIProvider.MISTRAL)) {
         return AIProvider.MISTRAL;
       }
       
       // Last resort: Claude for autonomous (check API key)
-      if (quotaStatus.claude.percentUsed < 95 && isClaudeAvailable()) {
+      if (quotaStatus.claude.percentUsed < 95 && this.isProviderAvailable(AIProvider.CLAUDE)) {
         return AIProvider.CLAUDE;
       }
       
       // Final fallback: Gemini if all autonomous options exhausted
-      console.warn('[AI Governor] All autonomous providers exhausted - falling back to Gemini');
-      return AIProvider.GEMINI;
-    }
-
-    // RULE 2: User functions use weighted distribution
-    // Calculate total usage across all providers
-    const totalUsage = 
-      quotaStatus.mistral.used + 
-      quotaStatus.groq.used + 
-      (quotaStatus.gemini.used * 1000) + // Approximate request to token conversion
-      quotaStatus.claude.used;
-    
-    if (totalUsage === 0) {
-      // No usage yet, start with Mistral (highest target)
-      if (quotaStatus.mistral.percentUsed < 95) return AIProvider.MISTRAL;
-      if (quotaStatus.groq.percentUsed < 95) return AIProvider.GROQ;
-      if (quotaStatus.gemini.percentUsed < 95) return AIProvider.GEMINI;
-      if (quotaStatus.claude.percentUsed < 95) return AIProvider.CLAUDE;
+      if (this.isProviderAvailable(AIProvider.GEMINI)) {
+        console.warn('[AI Governor] All autonomous providers exhausted - falling back to Gemini');
+        return AIProvider.GEMINI;
+      }
+      
+      console.error('[AI Governor] No AI providers available with API keys!');
       return null;
     }
 
+    // RULE 2: User functions use weighted distribution
+    // Only count usage for available providers
+    const availableProviders = {
+      mistral: this.isProviderAvailable(AIProvider.MISTRAL),
+      groq: this.isProviderAvailable(AIProvider.GROQ),
+      gemini: this.isProviderAvailable(AIProvider.GEMINI),
+      claude: this.isProviderAvailable(AIProvider.CLAUDE)
+    };
+    
+    // Calculate total usage across AVAILABLE providers
+    const totalUsage = 
+      (availableProviders.mistral ? quotaStatus.mistral.used : 0) + 
+      (availableProviders.groq ? quotaStatus.groq.used : 0) + 
+      (availableProviders.gemini ? (quotaStatus.gemini.used * 1000) : 0) + // Approximate request to token conversion
+      (availableProviders.claude ? quotaStatus.claude.used : 0);
+    
+    if (totalUsage === 0) {
+      // No usage yet, start with first available provider (prefer Mistral > Groq > Gemini > Claude)
+      if (quotaStatus.mistral.percentUsed < 95 && availableProviders.mistral) return AIProvider.MISTRAL;
+      if (quotaStatus.groq.percentUsed < 95 && availableProviders.groq) return AIProvider.GROQ;
+      if (quotaStatus.gemini.percentUsed < 95 && availableProviders.gemini) return AIProvider.GEMINI;
+      if (quotaStatus.claude.percentUsed < 95 && availableProviders.claude) return AIProvider.CLAUDE;
+      return null;
+    }
+
+    // Recalculate target percentages based on available providers
+    const totalTargetPercent = 
+      (availableProviders.mistral ? this.MISTRAL_TARGET_PERCENT : 0) +
+      (availableProviders.groq ? this.GROQ_TARGET_PERCENT : 0) +
+      (availableProviders.gemini ? this.GEMINI_TARGET_PERCENT : 0) +
+      (availableProviders.claude ? this.CLAUDE_TARGET_PERCENT : 0);
+    
+    // Normalize targets to 100% based on available providers
+    const adjustedTargets = {
+      mistral: availableProviders.mistral ? (this.MISTRAL_TARGET_PERCENT / totalTargetPercent) * 100 : 0,
+      groq: availableProviders.groq ? (this.GROQ_TARGET_PERCENT / totalTargetPercent) * 100 : 0,
+      gemini: availableProviders.gemini ? (this.GEMINI_TARGET_PERCENT / totalTargetPercent) * 100 : 0,
+      claude: availableProviders.claude ? (this.CLAUDE_TARGET_PERCENT / totalTargetPercent) * 100 : 0
+    };
+
     // Calculate actual distribution percentages
-    const mistralActualPercent = (quotaStatus.mistral.used / totalUsage) * 100;
-    const groqActualPercent = (quotaStatus.groq.used / totalUsage) * 100;
-    const geminiActualPercent = ((quotaStatus.gemini.used * 1000) / totalUsage) * 100;
-    const claudeActualPercent = (quotaStatus.claude.used / totalUsage) * 100;
+    const mistralActualPercent = availableProviders.mistral ? (quotaStatus.mistral.used / totalUsage) * 100 : 100;
+    const groqActualPercent = availableProviders.groq ? (quotaStatus.groq.used / totalUsage) * 100 : 100;
+    const geminiActualPercent = availableProviders.gemini ? ((quotaStatus.gemini.used * 1000) / totalUsage) * 100 : 100;
+    const claudeActualPercent = availableProviders.claude ? (quotaStatus.claude.used / totalUsage) * 100 : 100;
 
     // Calculate how far behind target each provider is (negative = behind, positive = ahead)
-    const mistralDelta = mistralActualPercent - this.MISTRAL_TARGET_PERCENT;
-    const groqDelta = groqActualPercent - this.GROQ_TARGET_PERCENT;
-    const geminiDelta = geminiActualPercent - this.GEMINI_TARGET_PERCENT;
-    const claudeDelta = claudeActualPercent - this.CLAUDE_TARGET_PERCENT;
+    const mistralDelta = mistralActualPercent - adjustedTargets.mistral;
+    const groqDelta = groqActualPercent - adjustedTargets.groq;
+    const geminiDelta = geminiActualPercent - adjustedTargets.gemini;
+    const claudeDelta = claudeActualPercent - adjustedTargets.claude;
 
     // Build array of providers with their deltas and availability
     // Check both quota AND API key availability
@@ -324,39 +386,39 @@ class AITokenGovernorEnhanced {
       { 
         provider: AIProvider.MISTRAL, 
         delta: mistralDelta, 
-        available: quotaStatus.mistral.percentUsed < 95 && isMistralAvailable()
+        available: quotaStatus.mistral.percentUsed < 95 && availableProviders.mistral
       },
       { 
         provider: AIProvider.GROQ, 
         delta: groqDelta, 
-        available: quotaStatus.groq.percentUsed < 95
+        available: quotaStatus.groq.percentUsed < 95 && availableProviders.groq
       },
       { 
         provider: AIProvider.GEMINI, 
         delta: geminiDelta, 
-        available: quotaStatus.gemini.percentUsed < 95
+        available: quotaStatus.gemini.percentUsed < 95 && availableProviders.gemini
       },
       { 
         provider: AIProvider.CLAUDE, 
         delta: claudeDelta, 
-        available: quotaStatus.claude.percentUsed < 95 && isClaudeAvailable()
+        available: quotaStatus.claude.percentUsed < 95 && availableProviders.claude
       },
     ];
 
     // Filter to only available providers (both quota and API key)
-    const availableProviders = providers.filter(p => p.available);
+    const availableList = providers.filter(p => p.available);
     
-    if (availableProviders.length === 0) {
+    if (availableList.length === 0) {
       // Fallback to Gemini if all providers are exhausted or unavailable
       console.warn('[AI Governor] All providers exhausted or unavailable - falling back to Gemini');
       return AIProvider.GEMINI;
     }
 
     // Sort by delta (most behind target first)
-    availableProviders.sort((a, b) => a.delta - b.delta);
+    availableList.sort((a, b) => a.delta - b.delta);
 
     // Select the provider that's most behind its target
-    const selected = availableProviders[0];
+    const selected = availableList[0];
     
     // Log selection reasoning for debugging
     if (selected.delta < -5) {
@@ -520,9 +582,9 @@ class AITokenGovernorEnhanced {
       // Update rate limit tracker for success/failure
       if (provider === AIProvider.GEMINI) {
         if (success) {
-          rateLimitTracker.recordGeminiSuccess();
+          rateLimitTracker.recordSuccess();
         } else if (errorMessage) {
-          rateLimitTracker.recordGeminiError(new Error(errorMessage));
+          rateLimitTracker.recordError(new Error(errorMessage));
         }
       } else if (provider === AIProvider.GROQ) {
         if (success) {
