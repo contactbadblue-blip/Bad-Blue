@@ -15,7 +15,6 @@ if (!process.env.VITE_STRIPE_PUBLIC_KEY) {
 }
 
 import { createClient } from "@supabase/supabase-js";
-import type { Request, Response } from "express";
 
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
