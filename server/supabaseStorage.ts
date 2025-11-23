@@ -129,7 +129,7 @@ class SupabaseStorageAdapter implements ISupabaseStorage {
       .replace(/^evidence\//, '');
     
     // Check access permissions
-    const hasAccess = await this.canAccess(filePath, userId, 'read');
+    const hasAccess = await this.canAccess(filePath, userId, ObjectPermission.READ);
     if (!hasAccess) {
       res.status(403).json({ error: 'Access denied' });
       return;
@@ -160,8 +160,8 @@ class SupabaseStorageAdapter implements ISupabaseStorage {
       .replace(/^\/evidence\//, '')
       .replace(/^evidence\//, '');
     
-    // Check if user has delete permission
-    const hasAccess = await this.canAccess(filePath, userId, 'delete');
+    // Check if user has delete permission (write permission allows deletion)
+    const hasAccess = await this.canAccess(filePath, userId, ObjectPermission.WRITE);
     if (!hasAccess) {
       throw new Error('Permission denied');
     }

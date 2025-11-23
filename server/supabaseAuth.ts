@@ -121,9 +121,9 @@ class SupabaseAuthAdapter {
       return {
         user: {
           id: dbUser.id,
-          email: dbUser.email,
-          firstName: dbUser.firstName,
-          lastName: dbUser.lastName
+          email: dbUser.email || email,
+          firstName: dbUser.firstName || firstName,
+          lastName: dbUser.lastName || lastName
         }
       };
     } catch (error: any) {
