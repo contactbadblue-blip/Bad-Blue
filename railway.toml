@@ -3,7 +3,7 @@
 
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install && npm run build"
+buildCommand = "npm install && ./railway-build.sh"
 
 [deploy]
 startCommand = "npm start"
