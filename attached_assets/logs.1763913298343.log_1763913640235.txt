@@ -1,0 +1,163 @@
+2025-11-23T15:48:31.431688590Z [inf]  [BadBlue Worker] Running 30-minute critical system monitoring...
+2025-11-23T15:48:31.431701542Z [inf]  [BadBlue Worker] Critical monitoring complete
+2025-11-23T15:52:54.000000000Z [inf]  Starting Container
+2025-11-23T15:52:54.344891375Z [err]  npm warn config production Use `--omit=dev` instead.
+2025-11-23T15:52:54.344895404Z [inf]  
+2025-11-23T15:52:54.344900772Z [inf]  > rest-express@1.0.0 start
+2025-11-23T15:52:54.344904500Z [inf]  > NODE_ENV=production node dist/index.js
+2025-11-23T15:52:54.344908654Z [inf]  
+2025-11-23T15:52:54.755344156Z [err]  ⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+2025-11-23T15:52:55.436063831Z [inf]  [DATABASE] Connection pool created - ready for queries (Railway mode)
+2025-11-23T15:52:55.436071353Z [inf]  [Supabase] Not configured, using legacy PostgreSQL
+2025-11-23T15:52:55.436077648Z [inf]  [AI Token Governor] Provider availability:
+2025-11-23T15:52:55.436083711Z [inf]    - Mistral: ✓ Available
+2025-11-23T15:52:55.436090488Z [inf]    - Groq: ✓ Available
+2025-11-23T15:52:55.436098684Z [inf]    - Gemini: ✓ Available
+2025-11-23T15:52:55.436099197Z [err]    code: 'ERR_INVALID_ARG_TYPE'
+2025-11-23T15:52:55.436106250Z [inf]    - Claude: ✗ Missing CLAUDE_API_KEY
+2025-11-23T15:52:55.436108857Z [err]  }
+2025-11-23T15:52:55.436114440Z [inf]  ✓ Using Filesystem Storage for evidence files (Platform-agnostic)
+2025-11-23T15:52:55.436116115Z [err]  
+2025-11-23T15:52:55.436122700Z [err]  Node.js v18.20.5
+2025-11-23T15:52:55.436124249Z [inf]  [Corrective Strategies] Initialized with 7 strategies (including 3 officer-search-specific)
+2025-11-23T15:52:55.436131403Z [inf]  [AI Sub-Agent] 🔍 Autonomous failure detection system initialized
+2025-11-23T15:52:55.436138093Z [inf]  [AI Sub-Agent] - Self-awareness: Active (monitors all operations)
+2025-11-23T15:52:55.436144533Z [inf]  [AI Sub-Agent] - Auto-correction: Enabled (implements fixes autonomously)
+2025-11-23T15:52:55.436150798Z [inf]  [AI Sub-Agent] - Pattern learning: Active (learns from repeated failures)
+2025-11-23T15:52:55.436156653Z [inf]  [AI Sub-Agent] Initializing automated diagnostics system...
+2025-11-23T15:52:55.436164118Z [inf]  [AI Sub-Agent] ✓ Automated diagnostics system active
+2025-11-23T15:52:55.436164412Z [err]      at validateString (node:internal/validators:162:11)
+2025-11-23T15:52:55.436168191Z [err]      at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+2025-11-23T15:52:55.436171991Z [err]      at Object.resolve (node:path:1097:7)
+2025-11-23T15:52:55.436174061Z [inf]  [AI Sub-Agent] - Quick diagnostic: Every 6 hours
+2025-11-23T15:52:55.436178504Z [err]      at file:///app/dist/index.js:29762:18
+2025-11-23T15:52:55.436179221Z [err]      at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+2025-11-23T15:52:55.436182734Z [inf]  [AI Sub-Agent] - Auto-repair: Daily at lowest usage time
+2025-11-23T15:52:55.436186063Z [err]      at async loadESM (node:internal/process/esm_loader:34:7)
+2025-11-23T15:52:55.436191917Z [err]  node:internal/errors:496
+2025-11-23T15:52:55.436192820Z [err]      at async handleMainPromise (node:internal/modules/run_main:106:12) {
+2025-11-23T15:52:55.436200215Z [err]      ErrorCaptureStackTrace(err);
+2025-11-23T15:52:55.436206539Z [err]      ^
+2025-11-23T15:52:55.436212527Z [err]  
+2025-11-23T15:52:55.436221963Z [err]  TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined
+2025-11-23T15:52:55.436222897Z [err]      at new NodeError (node:internal/errors:405:5)
+2025-11-23T15:52:56.847603107Z [err]  npm warn config production Use `--omit=dev` instead.
+2025-11-23T15:52:56.898824119Z [inf]  
+2025-11-23T15:52:56.898830824Z [inf]  > rest-express@1.0.0 start
+2025-11-23T15:52:56.898837235Z [inf]  > NODE_ENV=production node dist/index.js
+2025-11-23T15:52:56.898842763Z [inf]  
+2025-11-23T15:52:57.383754563Z [err]  ⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+2025-11-23T15:52:57.879196227Z [inf]  [DATABASE] Connection pool created - ready for queries (Railway mode)
+2025-11-23T15:52:57.888151880Z [inf]  [Supabase] Not configured, using legacy PostgreSQL
+2025-11-23T15:52:57.888158799Z [inf]  [AI Token Governor] Provider availability:
+2025-11-23T15:52:57.888163323Z [inf]    - Mistral: ✓ Available
+2025-11-23T15:52:57.888167326Z [inf]    - Groq: ✓ Available
+2025-11-23T15:52:57.888172994Z [inf]    - Gemini: ✓ Available
+2025-11-23T15:52:57.888177036Z [inf]    - Claude: ✗ Missing CLAUDE_API_KEY
+2025-11-23T15:52:57.888180664Z [inf]  ✓ Using Filesystem Storage for evidence files (Platform-agnostic)
+2025-11-23T15:52:57.888184253Z [inf]  [Corrective Strategies] Initialized with 7 strategies (including 3 officer-search-specific)
+2025-11-23T15:52:57.890626220Z [inf]  [AI Sub-Agent] 🔍 Autonomous failure detection system initialized
+2025-11-23T15:52:57.890663887Z [inf]  [AI Sub-Agent] - Self-awareness: Active (monitors all operations)
+2025-11-23T15:52:57.890668858Z [inf]  [AI Sub-Agent] - Auto-correction: Enabled (implements fixes autonomously)
+2025-11-23T15:52:57.890673379Z [inf]  [AI Sub-Agent] - Pattern learning: Active (learns from repeated failures)
+2025-11-23T15:52:57.890677469Z [inf]  [AI Sub-Agent] Initializing automated diagnostics system...
+2025-11-23T15:52:57.890681466Z [inf]  [AI Sub-Agent] ✓ Automated diagnostics system active
+2025-11-23T15:52:57.890685731Z [inf]  [AI Sub-Agent] - Quick diagnostic: Every 6 hours
+2025-11-23T15:52:57.890689777Z [inf]  [AI Sub-Agent] - Auto-repair: Daily at lowest usage time
+2025-11-23T15:52:57.899800698Z [err]  node:internal/errors:496
+2025-11-23T15:52:57.899810723Z [err]      ErrorCaptureStackTrace(err);
+2025-11-23T15:52:57.899817856Z [err]      ^
+2025-11-23T15:52:57.899825015Z [err]  
+2025-11-23T15:52:57.899831189Z [err]  TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined
+2025-11-23T15:52:57.899837717Z [err]      at new NodeError (node:internal/errors:405:5)
+2025-11-23T15:52:57.899844168Z [err]      at validateString (node:internal/validators:162:11)
+2025-11-23T15:52:57.899850520Z [err]      at Object.resolve (node:path:1097:7)
+2025-11-23T15:52:57.899856647Z [err]      at file:///app/dist/index.js:29762:18
+2025-11-23T15:52:57.899862906Z [err]      at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+2025-11-23T15:52:57.899869636Z [err]      at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+2025-11-23T15:52:57.899876225Z [err]      at async loadESM (node:internal/process/esm_loader:34:7)
+2025-11-23T15:52:57.899882715Z [err]      at async handleMainPromise (node:internal/modules/run_main:106:12) {
+2025-11-23T15:52:57.899888795Z [err]    code: 'ERR_INVALID_ARG_TYPE'
+2025-11-23T15:52:57.899896084Z [err]  }
+2025-11-23T15:52:57.899901831Z [err]  
+2025-11-23T15:52:57.899907129Z [err]  Node.js v18.20.5
+2025-11-23T15:52:59.460751521Z [inf]  
+2025-11-23T15:52:59.460790399Z [inf]  
+2025-11-23T15:52:59.460801464Z [inf]  > rest-express@1.0.0 start
+2025-11-23T15:52:59.460805036Z [err]  npm warn config production Use `--omit=dev` instead.
+2025-11-23T15:52:59.460808811Z [inf]  > NODE_ENV=production node dist/index.js
+2025-11-23T15:52:59.584037037Z [err]  ⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+2025-11-23T15:53:00.522481977Z [err]      ^
+2025-11-23T15:53:00.522492115Z [err]  
+2025-11-23T15:53:00.522501237Z [err]  TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined
+2025-11-23T15:53:00.522502959Z [inf]  [Corrective Strategies] Initialized with 7 strategies (including 3 officer-search-specific)
+2025-11-23T15:53:00.522510150Z [inf]  [Supabase] Not configured, using legacy PostgreSQL
+2025-11-23T15:53:00.522511346Z [inf]  [AI Sub-Agent] 🔍 Autonomous failure detection system initialized
+2025-11-23T15:53:00.522519275Z [inf]  [AI Sub-Agent] - Self-awareness: Active (monitors all operations)
+2025-11-23T15:53:00.522519573Z [inf]  [AI Token Governor] Provider availability:
+2025-11-23T15:53:00.522527618Z [inf]  [AI Sub-Agent] - Auto-correction: Enabled (implements fixes autonomously)
+2025-11-23T15:53:00.522531662Z [inf]  [AI Sub-Agent] - Pattern learning: Active (learns from repeated failures)
+2025-11-23T15:53:00.522531981Z [inf]    - Mistral: ✓ Available
+2025-11-23T15:53:00.522538053Z [inf]  [AI Sub-Agent] - Auto-repair: Daily at lowest usage time
+2025-11-23T15:53:00.522541327Z [inf]  [AI Sub-Agent] Initializing automated diagnostics system...
+2025-11-23T15:53:00.522541458Z [inf]    - Groq: ✓ Available
+2025-11-23T15:53:00.522549518Z [inf]  [AI Sub-Agent] ✓ Automated diagnostics system active
+2025-11-23T15:53:00.522549790Z [inf]    - Gemini: ✓ Available
+2025-11-23T15:53:00.522551736Z [err]  node:internal/errors:496
+2025-11-23T15:53:00.522559253Z [inf]    - Claude: ✗ Missing CLAUDE_API_KEY
+2025-11-23T15:53:00.522559549Z [inf]  [AI Sub-Agent] - Quick diagnostic: Every 6 hours
+2025-11-23T15:53:00.522561782Z [err]      ErrorCaptureStackTrace(err);
+2025-11-23T15:53:00.522566963Z [inf]  ✓ Using Filesystem Storage for evidence files (Platform-agnostic)
+2025-11-23T15:53:00.522596783Z [inf]  [DATABASE] Connection pool created - ready for queries (Railway mode)
+2025-11-23T15:53:00.527778127Z [err]      at new NodeError (node:internal/errors:405:5)
+2025-11-23T15:53:00.527787530Z [err]      at validateString (node:internal/validators:162:11)
+2025-11-23T15:53:00.527794225Z [err]      at Object.resolve (node:path:1097:7)
+2025-11-23T15:53:00.527800205Z [err]      at file:///app/dist/index.js:29762:18
+2025-11-23T15:53:00.527806315Z [err]      at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+2025-11-23T15:53:00.527812238Z [err]      at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+2025-11-23T15:53:00.527825353Z [err]      at async loadESM (node:internal/process/esm_loader:34:7)
+2025-11-23T15:53:00.527831459Z [err]      at async handleMainPromise (node:internal/modules/run_main:106:12) {
+2025-11-23T15:53:00.527837254Z [err]    code: 'ERR_INVALID_ARG_TYPE'
+2025-11-23T15:53:00.527843310Z [err]  }
+2025-11-23T15:53:00.527849752Z [err]  
+2025-11-23T15:53:00.527855702Z [err]  Node.js v18.20.5
+2025-11-23T15:53:01.501292366Z [err]  npm warn config production Use `--omit=dev` instead.
+2025-11-23T15:53:01.538510425Z [inf]  
+2025-11-23T15:53:01.538515435Z [inf]  > rest-express@1.0.0 start
+2025-11-23T15:53:01.538520041Z [inf]  > NODE_ENV=production node dist/index.js
+2025-11-23T15:53:01.538524520Z [inf]  
+2025-11-23T15:53:02.441951880Z [err]  ⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+2025-11-23T15:53:02.632799117Z [inf]  [DATABASE] Connection pool created - ready for queries (Railway mode)
+2025-11-23T15:53:02.632805344Z [inf]  [Supabase] Not configured, using legacy PostgreSQL
+2025-11-23T15:53:02.634486011Z [inf]  [AI Token Governor] Provider availability:
+2025-11-23T15:53:02.634492949Z [inf]    - Mistral: ✓ Available
+2025-11-23T15:53:02.634497654Z [inf]    - Groq: ✓ Available
+2025-11-23T15:53:02.634502033Z [inf]    - Gemini: ✓ Available
+2025-11-23T15:53:02.634506459Z [inf]    - Claude: ✗ Missing CLAUDE_API_KEY
+2025-11-23T15:53:02.636417470Z [inf]  ✓ Using Filesystem Storage for evidence files (Platform-agnostic)
+2025-11-23T15:53:02.638951061Z [inf]  [Corrective Strategies] Initialized with 7 strategies (including 3 officer-search-specific)
+2025-11-23T15:53:02.638962619Z [inf]  [AI Sub-Agent] 🔍 Autonomous failure detection system initialized
+2025-11-23T15:53:02.638970049Z [inf]  [AI Sub-Agent] - Self-awareness: Active (monitors all operations)
+2025-11-23T15:53:02.638977321Z [inf]  [AI Sub-Agent] - Auto-correction: Enabled (implements fixes autonomously)
+2025-11-23T15:53:02.638983238Z [inf]  [AI Sub-Agent] - Pattern learning: Active (learns from repeated failures)
+2025-11-23T15:53:02.638989467Z [inf]  [AI Sub-Agent] Initializing automated diagnostics system...
+2025-11-23T15:53:02.638995300Z [inf]  [AI Sub-Agent] ✓ Automated diagnostics system active
+2025-11-23T15:53:02.639002056Z [inf]  [AI Sub-Agent] - Quick diagnostic: Every 6 hours
+2025-11-23T15:53:02.639009136Z [inf]  [AI Sub-Agent] - Auto-repair: Daily at lowest usage time
+2025-11-23T15:53:02.646558441Z [err]  node:internal/errors:496
+2025-11-23T15:53:02.646566666Z [err]  
+2025-11-23T15:53:02.646570838Z [err]      ErrorCaptureStackTrace(err);
+2025-11-23T15:53:02.646578484Z [err]      ^
+2025-11-23T15:53:02.646580492Z [err]  Node.js v18.20.5
+2025-11-23T15:53:02.646585247Z [err]  
+2025-11-23T15:53:02.646590519Z [err]  TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined
+2025-11-23T15:53:02.646594789Z [err]      at new NodeError (node:internal/errors:405:5)
+2025-11-23T15:53:02.646598956Z [err]      at validateString (node:internal/validators:162:11)
+2025-11-23T15:53:02.646603289Z [err]      at Object.resolve (node:path:1097:7)
+2025-11-23T15:53:02.646608384Z [err]      at file:///app/dist/index.js:29762:18
+2025-11-23T15:53:02.646612325Z [err]      at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+2025-11-23T15:53:02.646616214Z [err]      at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+2025-11-23T15:53:02.646620268Z [err]      at async loadESM (node:internal/process/esm_loader:34:7)
+2025-11-23T15:53:02.646660597Z [err]      at async handleMainPromise (node:internal/modules/run_main:106:12) {
+2025-11-23T15:53:02.646664773Z [err]    code: 'ERR_INVALID_ARG_TYPE'
+2025-11-23T15:53:02.646671563Z [err]  }
