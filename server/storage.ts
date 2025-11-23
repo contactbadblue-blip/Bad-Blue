@@ -92,6 +92,7 @@ type InsertPublicEvidence = {
 };
 import { db } from "./db";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { supabaseAdapter, getSupabaseDb, dualWrite } from "./supabaseAdapter";
 
 // Validate database connection on module load
 if (!db) {
