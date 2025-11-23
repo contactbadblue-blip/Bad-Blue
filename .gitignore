@@ -4,6 +4,10 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+test-*.mjs
+test-*.js
+test-*.ts
+test_*.ts
 
 # Environment variables (contains sensitive secrets)
 .env
