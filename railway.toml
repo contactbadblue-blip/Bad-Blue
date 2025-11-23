@@ -1,3 +1,4 @@
+
 # Railway Configuration for BadBlue
 # Platform-independent deployment configuration
 
@@ -6,7 +7,6 @@ builder = "NIXPACKS"
 
 [build.env]
 NODE_VERSION = "20"
-buildCommand = "npm install && ./railway-build.sh"
 
 [deploy]
 startCommand = "npm start"
