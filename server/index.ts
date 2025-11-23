@@ -152,6 +152,14 @@ app.use((req, res, next) => {
     console.error('Failed to create Token Metrics tables:', error);
   }
 
+  // Run Device Rate Limit table migrations
+  try {
+    const { createDeviceRateLimitTables } = await import('./migrations/createDeviceRateLimitTables');
+    await createDeviceRateLimitTables();
+  } catch (error) {
+    console.error('Failed to create Device Rate Limit tables:', error);
+  }
+
   // Start BadBlue Worker
   const { badblueWorker } = await import('./badblueWorker');
   badblueWorker.initialize().catch((error) => {
