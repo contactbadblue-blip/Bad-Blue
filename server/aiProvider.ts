@@ -60,13 +60,11 @@ export async function generateText(
   let selectedProvider: AIProvider | null = null;
   let lastError: Error | null = null;
   
-  // Define fallback order for providers
-  const fallbackOrder = [
-    AIProvider.MISTRAL,
-    AIProvider.GROQ,
-    AIProvider.GEMINI,
-    AIProvider.CLAUDE
-  ];
+  // Define fallback order based on task context
+  // CRITICAL: Autonomous tasks must NEVER use Gemini
+  const fallbackOrder = task.context === UsageContext.AUTONOMOUS
+    ? [AIProvider.GROQ, AIProvider.MISTRAL, AIProvider.CLAUDE] // Autonomous: Groq → Mistral → Claude
+    : [AIProvider.MISTRAL, AIProvider.GROQ, AIProvider.GEMINI, AIProvider.CLAUDE]; // User: Weighted distribution
   
   // Try primary provider first, then fallbacks if it fails
   for (let attemptIndex = 0; attemptIndex < fallbackOrder.length; attemptIndex++) {
@@ -79,6 +77,13 @@ export async function generateText(
       if (attemptIndex > 0) {
         budget.provider = fallbackOrder[attemptIndex];
         console.log(`[AI Provider] Falling back to ${budget.provider} after primary provider failed`);
+      }
+      
+      // CRITICAL HARD BLOCK: Autonomous tasks must NEVER use Gemini
+      // If governor selected Gemini for autonomous task, force to first fallback provider
+      if (task.context === UsageContext.AUTONOMOUS && budget.provider === AIProvider.GEMINI) {
+        budget.provider = fallbackOrder[0]; // Force to Groq (first in autonomous fallback order)
+        console.log(`[AI Provider] ⛔ BLOCKED: Autonomous task cannot use Gemini. Forcing ${budget.provider}`);
       }
       
       selectedProvider = budget.provider;
