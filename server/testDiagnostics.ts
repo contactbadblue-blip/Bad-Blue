@@ -5,7 +5,7 @@ import { db } from './db';
 import { sql } from 'drizzle-orm';
 import Stripe from 'stripe';
 import nodemailer from 'nodemailer';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface TestResult {
   service: string;
