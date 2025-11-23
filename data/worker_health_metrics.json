@@ -3191,5 +3191,35 @@
     "error": "Connection terminated unexpectedly",
     "consecutiveFailures": 1,
     "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-23T02:46:37.054Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "read ECONNRESET",
+    "consecutiveFailures": 2,
+    "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-23T02:48:08.059Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot find package 'drizzle-orm' imported from /home/runner/workspace/server/badblueWorker.ts",
+    "consecutiveFailures": 2,
+    "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-23T03:01:37.018Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot find package 'drizzle-orm' imported from /home/runner/workspace/server/badblueWorker.ts",
+    "consecutiveFailures": 3,
+    "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-23T03:01:37.444Z",
+    "check": "database_repair",
+    "status": "success",
+    "repairAttempts": 0
   }
 ]
