@@ -37,7 +37,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
     const dbStart = Date.now();
     await db.execute(sql`SELECT 1 as test`);
     const dbTime = Date.now() - dbStart;
-    
+
     results.push({
       service: 'PostgreSQL Database',
       status: '✓',
@@ -71,7 +71,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
       const balance = await stripe.balance.retrieve();
       const stripeTime = Date.now() - stripeStart;
-      
+
       results.push({
         service: 'Stripe Payment API',
         status: '✓',
@@ -107,7 +107,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
   // 3. EMAIL SMTP TEST
   console.log('[DIAGNOSTICS] Testing SMTP email service...');
   // Check for GWSMTP_PASSWORD first (App Password format), then fall back to GWSMTP_PASS
-  const password = process.env.GWSMTP_PASSWORD 
+  const password = process.env.GWSMTP_PASSWORD
     ? process.env.GWSMTP_PASSWORD.replace(/\s/g, '') // Remove spaces from App Password
     : process.env.GWSMTP_PASS;
 
@@ -131,10 +131,10 @@ export async function runComprehensiveDiagnostics(): Promise<{
           pass: password,
         },
       });
-      
+
       await transporter.verify();
       const emailTime = Date.now() - emailStart;
-      
+
       results.push({
         service: 'Email Service (SMTP)',
         status: '✓',
@@ -169,8 +169,8 @@ export async function runComprehensiveDiagnostics(): Promise<{
   } else {
     try {
       const geminiStart = Date.now();
-      const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      
+      const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+
       const result = await genAI.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [
@@ -182,7 +182,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
       });
       const text = result.text;
       const geminiTime = Date.now() - geminiStart;
-      
+
       if (text && text.length > 0) {
         results.push({
           service: 'Google Gemini AI',
@@ -236,7 +236,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
   } else {
     try {
       const groqStart = Date.now();
-      
+
       // Use direct HTTP call to Groq API (OpenAI-compatible endpoint)
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -251,9 +251,9 @@ export async function runComprehensiveDiagnostics(): Promise<{
           max_tokens: 10,
         }),
       });
-      
+
       const groqTime = Date.now() - groqStart;
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         if (errorText.includes('rate limit')) {
@@ -275,7 +275,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
       } else {
         const data = await response.json();
         const responseText = data.choices?.[0]?.message?.content;
-        
+
         if (responseText) {
           results.push({
             service: 'Groq AI (Fallback)',
@@ -312,7 +312,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   const publicPaths = process.env.PUBLIC_OBJECT_SEARCH_PATHS;
   const privateDir = process.env.PRIVATE_OBJECT_DIR;
-  
+
   if (!bucketId || !publicPaths || !privateDir) {
     results.push({
       service: 'Object Storage',
@@ -343,25 +343,25 @@ export async function runComprehensiveDiagnostics(): Promise<{
   try {
     // Check if the bypass user exists
     const bypassUser = await db.execute(sql`
-      SELECT COUNT(*) as count 
-      FROM users 
+      SELECT COUNT(*) as count
+      FROM users
       WHERE id = 'payment-bypass'
     `);
-    
+
     const hasSession = process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 32;
-    
+
     results.push({
       service: 'Authentication System',
       status: hasSession ? '✓' : '⚠',
-      message: hasSession 
-        ? 'Authentication system configured' 
+      message: hasSession
+        ? 'Authentication system configured'
         : 'Session secret is short or missing',
       details: {
         sessionSecretConfigured: !!process.env.SESSION_SECRET,
         bypassUserExists: bypassUser.rows[0]?.count > 0
       }
     });
-    
+
     if (!hasSession) {
       recommendations.push('Ensure SESSION_SECRET is set and at least 32 characters long');
     }

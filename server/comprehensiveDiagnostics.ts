@@ -11,7 +11,7 @@ import { evidenceStorage } from './evidenceStorage';
 import { searchOfficer } from './officerSearch';
 import { analyzeLegalIssue } from './legalAI';
 import { getGroqClient } from './groq';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { canAutonomousProceed } from './aiProvider';
 import { aiTokenGovernor } from './aiTokenGovernor';
 import { createHash } from 'crypto';
@@ -176,7 +176,7 @@ class ComprehensiveDiagnostics {
           WHERE table_schema = 'public'
           ORDER BY table_name
         `);
-        
+
         const existingTables = tablesQuery.rows.map((r: any) => r.table_name);
         const missing = expectedTables.filter(t => !existingTables.includes(t));
 
@@ -248,11 +248,11 @@ class ComprehensiveDiagnostics {
         const accounts = await db.select({ count: sql<number>`count(*)` })
           .from(schema.authAccounts)
           .where(eq(schema.authAccounts.authType, 'local'));
-        
+
         if (accounts[0].count === 0) {
           return { status: 'WARN', message: 'No local auth accounts found' };
         }
-        
+
         return { 
           status: 'PASS', 
           message: `Found ${accounts[0].count} local auth accounts`,
@@ -288,7 +288,7 @@ class ComprehensiveDiagnostics {
       try {
         // Clean expired sessions
         await db.execute(sql`DELETE FROM sessions WHERE expire < NOW()`);
-        
+
         const activeSessions = await db.execute(sql`
           SELECT count(*) as count,
                  max(expire) as latest_expiry,
@@ -325,7 +325,7 @@ class ComprehensiveDiagnostics {
       try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
         const balance = await stripe.balance.retrieve();
-        
+
         return { 
           status: 'PASS', 
           message: 'Stripe API connected',
@@ -367,7 +367,7 @@ class ComprehensiveDiagnostics {
 
         // Verify connection without sending
         await transporter.verify();
-        
+
         return { 
           status: 'PASS', 
           message: 'SMTP service configured and reachable',
@@ -388,8 +388,8 @@ class ComprehensiveDiagnostics {
       }
 
       try {
-        const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        
+        const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+
         // Simple test prompt
         const result = await genAI.models.generateContent({
           model: 'gemini-2.5-flash',
@@ -465,7 +465,7 @@ class ComprehensiveDiagnostics {
         const evidenceDir = path.join(process.cwd(), 'evidence_files');
         await fs.access(evidenceDir);
         const stats = await fs.stat(evidenceDir);
-        
+
         if (!stats.isDirectory()) {
           return { status: 'FAIL', message: 'Evidence directory is not a directory' };
         }
@@ -522,7 +522,7 @@ class ComprehensiveDiagnostics {
         const testData = Buffer.from('Test file content');
         const testMimetype = 'text/plain';
         const testUserId = 'test-user-diagnostic';
-        
+
         // Note: We're just testing the module exists and loads
         // Not actually uploading to avoid side effects
         if (evidenceStorage && typeof evidenceStorage.store === 'function') {
@@ -549,8 +549,8 @@ class ComprehensiveDiagnostics {
       }
 
       try {
-        const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        
+        const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+
         const startTime = Date.now();
         const result = await genAI.models.generateContent({
           model: 'gemini-2.5-flash',
@@ -628,7 +628,7 @@ class ComprehensiveDiagnostics {
     await this.runTest(category, 'Token Governor', async () => {
       try {
         const quotaStatus = await aiTokenGovernor.getQuotaStatus();
-        
+
         const geminiPercent = (quotaStatus.gemini.percentUsed || 0);
         const groqPercent = (quotaStatus.groq.percentUsed || 0);
         const autonomousPercent = (quotaStatus.groq.autonomousPercentUsed || 0);
@@ -656,7 +656,7 @@ class ComprehensiveDiagnostics {
       try {
         // Check if autonomous operations can proceed
         const canProceed = await canAutonomousProceed();
-        
+
         if (canProceed) {
           return { status: 'PASS', message: 'Rate limiting active - autonomous operations allowed' };
         } else {
@@ -816,7 +816,7 @@ class ComprehensiveDiagnostics {
 
       try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-        
+
         // Check for payment methods
         const paymentMethods = await stripe.paymentMethods.list({ 
           type: 'card', 
@@ -921,7 +921,7 @@ class ComprehensiveDiagnostics {
           skipped: 0,
         };
       }
-      
+
       if (result.status === 'PASS') categorySummary[result.category].passed++;
       else if (result.status === 'FAIL') categorySummary[result.category].failed++;
       else if (result.status === 'WARN') categorySummary[result.category].warnings++;
