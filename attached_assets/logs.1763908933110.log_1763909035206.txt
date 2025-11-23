@@ -1,0 +1,126 @@
+2025-11-23T09:39:43.354495208Z [err]  [AI Sub-Agent] ⚠️ 1 CRITICAL ISSUES DETECTED
+2025-11-23T10:06:47.369637959Z [err]  Railway rate limit of 500 logs/sec reached for replica, update your application to reduce the logging rate. Messages dropped: 160
+2025-11-23T10:07:17.134423561Z [err]  [Token Metrics] Error recording usage (degrading gracefully): error: column "latency_ms" of relation "ai_usage_metrics" does not exist
+2025-11-23T10:07:17.134431324Z [err]      at /app/node_modules/pg-pool/index.js:45:11
+2025-11-23T10:07:17.134440331Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-11-23T10:07:17.134449207Z [err]      at async recordUsage (file:///app/dist/index.js:3350:5)
+2025-11-23T10:07:17.134456756Z [err]      at async _AITokenGovernorEnhanced.recordUsage (file:///app/dist/index.js:3872:11)
+2025-11-23T10:07:17.134464029Z [err]      at async generateText (file:///app/dist/index.js:4026:7)
+2025-11-23T10:07:17.134472125Z [err]      at async runCategorySearch (file:///app/dist/index.js:6870:21)
+2025-11-23T10:07:17.134480718Z [err]      at async searchOfficerInformation (file:///app/dist/index.js:7116:34)
+2025-11-23T10:07:17.134489117Z [err]      at async file:///app/dist/index.js:9843:22
+2025-11-23T10:07:17.134497076Z [err]      at async executeWithAutocorrection (file:///app/dist/index.js:10388:22)
+2025-11-23T10:07:17.134507987Z [err]      at async executeCommandHandler (file:///app/dist/index.js:9803:14) {
+2025-11-23T10:07:17.134516010Z [err]    length: 139,
+2025-11-23T10:07:17.134524089Z [err]    severity: 'ERROR',
+2025-11-23T10:07:17.134532274Z [err]    code: '42703',
+2025-11-23T10:07:17.134540094Z [err]    detail: undefined,
+2025-11-23T10:07:17.134548394Z [err]    hint: undefined,
+2025-11-23T10:07:17.134556362Z [err]    position: '92',
+2025-11-23T10:07:17.134563587Z [err]    internalPosition: undefined,
+2025-11-23T10:07:17.134572075Z [err]    internalQuery: undefined,
+2025-11-23T10:07:17.134579000Z [err]    where: undefined,
+2025-11-23T10:07:17.136079173Z [err]    schema: undefined,
+2025-11-23T10:07:17.136090068Z [err]    table: undefined,
+2025-11-23T10:07:17.136097338Z [err]    column: undefined,
+2025-11-23T10:07:17.136103842Z [err]    dataType: undefined,
+2025-11-23T10:07:17.136110338Z [err]    constraint: undefined,
+2025-11-23T10:07:17.136116341Z [err]    file: 'parse_target.c',
+2025-11-23T10:07:17.136121249Z [err]    line: '1065',
+2025-11-23T10:07:17.136125789Z [err]    routine: 'checkInsertTargets'
+2025-11-23T10:07:17.136135705Z [err]  }
+2025-11-23T10:07:37.137135332Z [err]    length: 139,
+2025-11-23T10:07:37.137152421Z [err]    severity: 'ERROR',
+2025-11-23T10:07:37.137164601Z [err]    code: '42703',
+2025-11-23T10:07:37.137173472Z [err]    detail: undefined,
+2025-11-23T10:07:37.137183299Z [err]    hint: undefined,
+2025-11-23T10:07:37.137192456Z [err]    position: '92',
+2025-11-23T10:07:37.137201206Z [err]    internalPosition: undefined,
+2025-11-23T10:07:37.137210711Z [err]    internalQuery: undefined,
+2025-11-23T10:07:37.137234064Z [err]    where: undefined,
+2025-11-23T10:07:37.137240413Z [err]  [Token Metrics] Error recording usage (degrading gracefully): error: column "latency_ms" of relation "ai_usage_metrics" does not exist
+2025-11-23T10:07:37.137250542Z [err]    schema: undefined,
+2025-11-23T10:07:37.137254595Z [err]      at /app/node_modules/pg-pool/index.js:45:11
+2025-11-23T10:07:37.137263050Z [err]    table: undefined,
+2025-11-23T10:07:37.137268212Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-11-23T10:07:37.137277581Z [err]    column: undefined,
+2025-11-23T10:07:37.137281454Z [err]      at async recordUsage (file:///app/dist/index.js:3350:5)
+2025-11-23T10:07:37.137294498Z [err]      at async _AITokenGovernorEnhanced.recordUsage (file:///app/dist/index.js:3872:11)
+2025-11-23T10:07:37.137300536Z [err]      at async generateText (file:///app/dist/index.js:4026:7)
+2025-11-23T10:07:37.137306524Z [err]      at async runCategorySearch (file:///app/dist/index.js:6885:21)
+2025-11-23T10:07:37.137312388Z [err]      at async searchOfficerInformation (file:///app/dist/index.js:7116:34)
+2025-11-23T10:07:37.137318839Z [err]      at async file:///app/dist/index.js:9843:22
+2025-11-23T10:07:37.137324438Z [err]      at async executeWithAutocorrection (file:///app/dist/index.js:10388:22)
+2025-11-23T10:07:37.137330703Z [err]      at async executeCommandHandler (file:///app/dist/index.js:9803:14) {
+2025-11-23T10:07:37.138397771Z [err]  }
+2025-11-23T10:07:37.138427631Z [err]  [DATABASE POOL] Unexpected error on idle client: {:shutdown, :db_termination}
+2025-11-23T10:07:37.138435710Z [err]    dataType: undefined,
+2025-11-23T10:07:37.138443378Z [err]  [DATABASE POOL] Error code: XX000
+2025-11-23T10:07:37.138447748Z [err]    constraint: undefined,
+2025-11-23T10:07:37.138456054Z [err]    file: 'parse_target.c',
+2025-11-23T10:07:37.138459114Z [err]  [DATABASE POOL] Error severity: FATAL
+2025-11-23T10:07:37.138466256Z [err]    line: '1065',
+2025-11-23T10:07:37.138477061Z [err]    routine: 'checkInsertTargets'
+2025-11-23T10:07:37.138484173Z [err]  [Token Metrics] Error recording usage (degrading gracefully): error: column "latency_ms" of relation "ai_usage_metrics" does not exist
+2025-11-23T10:07:37.138493116Z [err]      at /app/node_modules/pg-pool/index.js:45:11
+2025-11-23T10:07:37.138502313Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-11-23T10:07:37.138510962Z [err]      at async recordUsage (file:///app/dist/index.js:3350:5)
+2025-11-23T10:07:37.138518651Z [err]      at async _AITokenGovernorEnhanced.recordUsage (file:///app/dist/index.js:3872:11)
+2025-11-23T10:07:37.138530097Z [err]      at async generateText (file:///app/dist/index.js:4026:7)
+2025-11-23T10:07:37.138540623Z [err]      at async runCategorySearch (file:///app/dist/index.js:6870:21)
+2025-11-23T10:07:37.138551218Z [err]      at async searchOfficerInformation (file:///app/dist/index.js:7165:34)
+2025-11-23T10:07:37.138559992Z [err]      at async file:///app/dist/index.js:9843:22
+2025-11-23T10:07:37.138567680Z [err]      at async executeWithAutocorrection (file:///app/dist/index.js:10388:22)
+2025-11-23T10:07:37.139595260Z [err]      at async executeCommandHandler (file:///app/dist/index.js:9803:14) {
+2025-11-23T10:07:37.139605906Z [err]    length: 139,
+2025-11-23T10:07:37.139613933Z [err]    severity: 'ERROR',
+2025-11-23T10:07:37.139621495Z [err]    code: '42703',
+2025-11-23T10:07:37.139628502Z [err]    detail: undefined,
+2025-11-23T10:07:37.139638474Z [err]    hint: undefined,
+2025-11-23T10:07:37.139645123Z [err]    position: '92',
+2025-11-23T10:07:37.139652042Z [err]    internalPosition: undefined,
+2025-11-23T10:07:37.139659051Z [err]    internalQuery: undefined,
+2025-11-23T10:07:37.139665228Z [err]    where: undefined,
+2025-11-23T10:07:37.139671846Z [err]    schema: undefined,
+2025-11-23T10:07:37.139678403Z [err]    table: undefined,
+2025-11-23T10:07:37.139686835Z [err]    column: undefined,
+2025-11-23T10:07:37.139694589Z [err]    dataType: undefined,
+2025-11-23T10:07:37.139702709Z [err]    constraint: undefined,
+2025-11-23T10:07:37.139710335Z [err]    file: 'parse_target.c',
+2025-11-23T10:07:37.139717451Z [err]    line: '1065',
+2025-11-23T10:07:37.139724174Z [err]    routine: 'checkInsertTargets'
+2025-11-23T10:07:37.139731207Z [err]  }
+2025-11-23T10:07:37.139740737Z [err]  [DATABASE POOL] Unexpected error on idle client: {:shutdown, :db_termination}
+2025-11-23T10:07:37.139750264Z [err]  [DATABASE POOL] Error code: XX000
+2025-11-23T10:07:37.139761719Z [err]  [DATABASE POOL] Error severity: FATAL
+2025-11-23T10:07:46.719082962Z [err]    detail: undefined,
+2025-11-23T10:07:46.719095376Z [err]    hint: undefined,
+2025-11-23T10:07:46.719102621Z [err]    position: '92',
+2025-11-23T10:07:46.719106682Z [err]  [Token Metrics] Error recording usage (degrading gracefully): error: column "latency_ms" of relation "ai_usage_metrics" does not exist
+2025-11-23T10:07:46.719111592Z [err]    internalPosition: undefined,
+2025-11-23T10:07:46.719113046Z [err]      at /app/node_modules/pg-pool/index.js:45:11
+2025-11-23T10:07:46.719120150Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-11-23T10:07:46.719120808Z [err]    internalQuery: undefined,
+2025-11-23T10:07:46.719129009Z [err]      at async recordUsage (file:///app/dist/index.js:3350:5)
+2025-11-23T10:07:46.719129545Z [err]    where: undefined,
+2025-11-23T10:07:46.719137609Z [err]      at async _AITokenGovernorEnhanced.recordUsage (file:///app/dist/index.js:3872:11)
+2025-11-23T10:07:46.719139758Z [err]    schema: undefined,
+2025-11-23T10:07:46.719145121Z [err]      at async generateText (file:///app/dist/index.js:4026:7)
+2025-11-23T10:07:46.719147645Z [err]    table: undefined,
+2025-11-23T10:07:46.719151709Z [err]      at async runCategorySearch (file:///app/dist/index.js:6885:21)
+2025-11-23T10:07:46.719158140Z [err]    column: undefined,
+2025-11-23T10:07:46.719158505Z [err]      at async searchOfficerInformation (file:///app/dist/index.js:7165:34)
+2025-11-23T10:07:46.719164648Z [err]      at async file:///app/dist/index.js:9843:22
+2025-11-23T10:07:46.719169433Z [err]      at async executeWithAutocorrection (file:///app/dist/index.js:10388:22)
+2025-11-23T10:07:46.719174307Z [err]      at async executeCommandHandler (file:///app/dist/index.js:9803:14) {
+2025-11-23T10:07:46.719179406Z [err]    length: 139,
+2025-11-23T10:07:46.719186986Z [err]    severity: 'ERROR',
+2025-11-23T10:07:46.719191823Z [err]    code: '42703',
+2025-11-23T10:07:46.722337762Z [err]    dataType: undefined,
+2025-11-23T10:07:46.722348687Z [err]    constraint: undefined,
+2025-11-23T10:07:46.722355754Z [err]    file: 'parse_target.c',
+2025-11-23T10:07:46.722363371Z [err]    line: '1065',
+2025-11-23T10:07:46.722384281Z [err]    routine: 'checkInsertTargets'
+2025-11-23T10:07:46.722392493Z [err]  }
+2025-11-23T10:07:57.369040751Z [err]  Railway rate limit of 500 logs/sec reached for replica, update your application to reduce the logging rate. Messages dropped: 157
+2025-11-23T10:08:22.252756781Z [err]  [Officer Search] Rate limit exceeded for device b60e6f9c... (returning device) IP=108.161.50... | Error: undefined
