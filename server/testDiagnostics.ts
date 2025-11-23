@@ -172,7 +172,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
       const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
       const result = await genAI.models.generateContent({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-1.5-flash-latest',
         contents: [
           {
             role: 'user',
@@ -190,7 +190,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
           message: 'Gemini API working correctly',
           responseTime: geminiTime,
           details: {
-            model: 'gemini-2.5-flash',
+            model: 'gemini-1.5-flash-latest',
             responseLength: text.length
           }
         });

@@ -395,7 +395,7 @@ class ComprehensiveDiagnostics {
 
         // Simple test prompt
         const result = await genAI.models.generateContent({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-1.5-flash-latest',
           contents: [
             {
               role: 'user',
@@ -557,7 +557,7 @@ class ComprehensiveDiagnostics {
 
         const startTime = Date.now();
         const result = await genAI.models.generateContent({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-1.5-flash-latest',
           contents: [
             {
               role: 'user',
