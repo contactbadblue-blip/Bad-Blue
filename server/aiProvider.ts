@@ -111,13 +111,13 @@ export async function generateText(
           break;
         
         case AIProvider.MISTRAL:
-          const mistralResult = await callMistral(actualPrompt, options, maxTokens);
+          const mistralResult = await callMistral(actualPrompt, { ...options, maxTokens });
           content = mistralResult.content;
           tokensUsed = mistralResult.tokensUsed;
           break;
         
         case AIProvider.CLAUDE:
-          const claudeResult = await callClaude(actualPrompt, options, maxTokens);
+          const claudeResult = await callClaude(actualPrompt, { ...options, maxTokens });
           content = claudeResult.content;
           tokensUsed = claudeResult.tokensUsed;
           break;
@@ -258,14 +258,8 @@ async function callGemini(
       ? `${options.systemPrompt}\n\n${prompt}`
       : prompt;
 
-    const result = await gemini.models.generateContent({
+    const model = gemini.getGenerativeModel({
       model: options.model || "gemini-1.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: fullPrompt }],
-        },
-      ],
       generationConfig: {
         temperature: options.temperature ?? 0.7,
         maxOutputTokens: maxTokens,
@@ -273,7 +267,9 @@ async function callGemini(
       },
     });
 
-    const text = result.text ?? "";
+    const result = await model.generateContent(fullPrompt);
+
+    const text = result.response?.text() ?? "";
     
     if (!text) {
       throw new Error('Empty response from Gemini');

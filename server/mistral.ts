@@ -66,10 +66,19 @@ export async function callMistral(
       responseFormat: options.useJSON ? { type: 'json_object' } : undefined,
     });
 
-    const content = response.choices?.[0]?.message?.content;
-    if (!content) {
+    const rawContent = response.choices?.[0]?.message?.content;
+    if (!rawContent) {
       throw new Error('Empty response from Mistral');
     }
+
+    // Handle both string and ContentChunk[] response types
+    const content = typeof rawContent === 'string' 
+      ? rawContent 
+      : rawContent.map(chunk => {
+          if (typeof chunk === 'string') return chunk;
+          if ('text' in chunk) return chunk.text || '';
+          return '';
+        }).join('');
 
     const tokensUsed = response.usage?.totalTokens || 0;
 
