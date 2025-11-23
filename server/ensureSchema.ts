@@ -41,13 +41,49 @@ export async function ensureSchemaSync() {
       if (!existingColumns.has(column)) {
         console.log(`[Schema Sync] Adding missing column: ${column} to ai_usage_metrics`);
         
-        // Special handling for different column types
-        if (column === 'latency_ms') {
-          await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS latency_ms INTEGER`));
-        } else if (column === 'source') {
-          await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'user' NOT NULL`));
+        try {
+          // Add each missing column with proper type definition
+          switch (column) {
+            case 'id':
+              await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()`));
+              break;
+            case 'timestamp':
+              await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT NOW() NOT NULL`));
+              break;
+            case 'task_name':
+              await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS task_name VARCHAR(100) NOT NULL`));
+              break;
+            case 'provider':
+              await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS provider VARCHAR(20) NOT NULL`));
+              break;
+            case 'tokens_used':
+              await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS tokens_used INTEGER NOT NULL`));
+              break;
+            case 'latency_ms':
+              await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS latency_ms INTEGER`));
+              break;
+            case 'success':
+              await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS success BOOLEAN NOT NULL`));
+              break;
+            case 'verbosity':
+              await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS verbosity VARCHAR(20) NOT NULL`));
+              break;
+            case 'priority':
+              await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS priority INTEGER NOT NULL`));
+              break;
+            case 'error_message':
+              await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS error_message TEXT`));
+              break;
+            case 'source':
+              await db.execute(sql.raw(`ALTER TABLE ai_usage_metrics ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'user' NOT NULL`));
+              break;
+            default:
+              console.warn(`[Schema Sync] Unknown column type for: ${column}`);
+          }
+          console.log(`[Schema Sync] ✓ Successfully added column: ${column}`);
+        } catch (addError: any) {
+          console.error(`[Schema Sync] Failed to add column ${column}:`, addError.message);
         }
-        // Other columns would be handled here if needed
       }
     }
 
