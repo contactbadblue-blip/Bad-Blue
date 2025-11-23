@@ -84,8 +84,13 @@ export function setupLocalStrategy() {
       async (email, password, done) => {
         try {
           // Special case: Admin bypass (requires specific password)
-          const adminBypassId = process.env.ADMIN_BYPASS_ID || "$ADMIN85";
-          const adminBypassPassword = process.env.ADMIN_BYPASS_PASSWORD || "SARBEAR";
+          const adminBypassId = process.env.ADMIN_BYPASS_ID;
+          const adminBypassPassword = process.env.ADMIN_BYPASS_PASSWORD;
+          
+          if (!adminBypassId || !adminBypassPassword) {
+            console.error('[SECURITY] Admin bypass credentials not configured in environment');
+            return done(null, false, { message: "Admin authentication not configured" });
+          }
           
           // Allow both $ADMIN85 and admin (for login form compatibility)
           if (email === adminBypassId || email === "admin") {
