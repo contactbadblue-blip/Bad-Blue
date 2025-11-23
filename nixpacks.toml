@@ -1,6 +1,6 @@
 
 # Nixpacks configuration for Railway deployment
-# Using Node.js 18 for compatibility with our build scripts
+# Using Node.js 18 with tsx to avoid esbuild bundling issues
 
 [phases.setup]
 nixPkgs = ["nodejs-18_x"]
@@ -9,8 +9,9 @@ nixPkgs = ["nodejs-18_x"]
 cmds = ["npm ci"]
 
 [phases.build]
-# Use our custom build script that patches vite.config.ts for Node 18
-cmds = ["chmod +x railway-build.sh", "./railway-build.sh"]
+# Simple build: client only, server runs with tsx
+cmds = ["chmod +x railway-build-simple.sh", "./railway-build-simple.sh"]
 
 [start]
-cmd = "npm start"
+# Run server with tsx directly to avoid esbuild bundling issues
+cmd = "NODE_ENV=production npx tsx server/index.ts"

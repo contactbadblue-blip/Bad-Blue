@@ -3511,5 +3511,13 @@
     "status": "success",
     "consecutiveFailures": 0,
     "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-23T17:05:25.535Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Connection terminated unexpectedly",
+    "consecutiveFailures": 1,
+    "environment": "standard"
   }
 ]
