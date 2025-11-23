@@ -899,7 +899,7 @@ export async function generateFOIALetter(
   incidentTime?: string,
   incidentLocation?: string
 ): Promise<FOIAGenerationResult> {
-  const { GoogleGenAI } = await import("@google/genai");
+  const { GoogleGenerativeAI } = await import("@google/generative-ai");
 
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY not configured");
