@@ -11,7 +11,9 @@ import { evidenceStorage } from './evidenceStorage';
 import { searchOfficer } from './officerSearch';
 import { analyzeLegalIssue } from './legalAI';
 import { getGroqClient } from './groq';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// Note: The following import was commented out as it was not directly used and might cause build issues.
+// If needed, it should be properly configured or removed.
+// import { GoogleGenerativeAI } from '@google/generative-ai'; 
 import { canAutonomousProceed } from './aiProvider';
 import { aiTokenGovernor } from './aiTokenGovernor';
 import { createHash } from 'crypto';
@@ -388,6 +390,7 @@ class ComprehensiveDiagnostics {
       }
 
       try {
+        const { GoogleGenerativeAI } = await import("@google/generative-ai");
         const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
         // Simple test prompt
@@ -549,6 +552,7 @@ class ComprehensiveDiagnostics {
       }
 
       try {
+        const { GoogleGenerativeAI } = await import("@google/generative-ai");
         const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
         const startTime = Date.now();

@@ -33,6 +33,12 @@ export default defineConfig({
     commonjsOptions: {
       include: [/node_modules/],
       transformMixedEsModules: true
+    },
+    rollupOptions: {
+      external: [
+        '@babel/preset-typescript/package.json',
+        'lightningcss'
+      ]
     }
   },
   server: {
