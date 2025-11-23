@@ -1,5 +1,6 @@
 // From javascript_object_storage blueprint
-import { File } from "@google-cloud/storage";
+// Use type imports to avoid bundling
+import type { File } from "@google-cloud/storage";
 
 const ACL_POLICY_METADATA_KEY = "custom:aclPolicy";
 

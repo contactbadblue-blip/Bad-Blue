@@ -1,5 +1,4 @@
 // Platform-agnostic object storage with graceful degradation
-import { Storage, File } from "@google-cloud/storage";
 import { Response } from "express";
 import { randomUUID } from "crypto";
 import {
@@ -11,9 +10,21 @@ import {
 } from "./objectAcl";
 import { isObjectStorageAvailable } from "./platformConfig";
 
+// Type imports that won't be bundled
+import type { Storage, File } from "@google-cloud/storage";
+
 // The object storage client - only initialize if object storage is available
 // Supports Google Cloud Storage with standard authentication
-export const objectStorageClient: Storage | null = (() => {
+let _objectStorageClient: Storage | null = null;
+let _storageInitialized = false;
+
+async function initializeStorage(): Promise<Storage | null> {
+  if (_storageInitialized) {
+    return _objectStorageClient;
+  }
+  
+  _storageInitialized = true;
+  
   if (!isObjectStorageAvailable()) {
     console.log('[Object Storage] Environment variables not configured - object storage unavailable');
     console.log('[Object Storage] Application will use filesystem storage fallback');
@@ -21,23 +32,37 @@ export const objectStorageClient: Storage | null = (() => {
   }
 
   try {
+    // Dynamic import to prevent bundling when not needed
+    const { Storage: GoogleCloudStorage } = await import("@google-cloud/storage");
+    
     // Standard Google Cloud Storage initialization
     // Expects GOOGLE_APPLICATION_CREDENTIALS environment variable for auth
     // or other standard GCS auth methods
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GCS_PROJECT_ID) {
-      return new Storage({
+      _objectStorageClient = new GoogleCloudStorage({
         projectId: process.env.GCS_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT,
       });
+    } else {
+      // Fallback to no configuration (will use ADC - Application Default Credentials)
+      _objectStorageClient = new GoogleCloudStorage();
     }
     
-    // Fallback to no configuration (will use ADC - Application Default Credentials)
-    return new Storage();
+    return _objectStorageClient;
   } catch (error) {
     console.warn('[Object Storage] Failed to initialize client:', error);
     console.log('[Object Storage] Application will use filesystem storage fallback');
     return null;
   }
-})();
+}
+
+// Export a getter that lazily initializes storage
+export async function getObjectStorageClient(): Promise<Storage | null> {
+  return await initializeStorage();
+}
+
+// For backward compatibility, keep a synchronous client export
+// but it will always be null until getObjectStorageClient() is called
+export const objectStorageClient: Storage | null = null;
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -85,7 +110,8 @@ export class ObjectStorageService {
 
   // Search for a public object from the search paths.
   async searchPublicObject(filePath: string): Promise<File | null> {
-    if (!objectStorageClient) {
+    const client = await getObjectStorageClient();
+    if (!client) {
       throw new Error('Object storage not available - missing configuration');
     }
 
@@ -94,7 +120,7 @@ export class ObjectStorageService {
 
       // Full path format: /<bucket_name>/<object_name>
       const { bucketName, objectName } = parseObjectPath(fullPath);
-      const bucket = objectStorageClient.bucket(bucketName);
+      const bucket = client.bucket(bucketName);
       const file = bucket.file(objectName);
 
       // Check if file exists
@@ -169,7 +195,8 @@ export class ObjectStorageService {
 
   // Gets the object entity file from the object path.
   async getObjectEntityFile(objectPath: string): Promise<File> {
-    if (!objectStorageClient) {
+    const client = await getObjectStorageClient();
+    if (!client) {
       throw new Error('Object storage not available - missing configuration');
     }
 
@@ -189,7 +216,7 @@ export class ObjectStorageService {
     }
     const objectEntityPath = `${entityDir}${entityId}`;
     const { bucketName, objectName } = parseObjectPath(objectEntityPath);
-    const bucket = objectStorageClient.bucket(bucketName);
+    const bucket = client.bucket(bucketName);
     const objectFile = bucket.file(objectName);
     const [exists] = await objectFile.exists();
     if (!exists) {

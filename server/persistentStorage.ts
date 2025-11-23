@@ -1,6 +1,5 @@
 
-import { ObjectStorageService } from './objectStorage';
-import { objectStorageClient } from './objectStorage';
+import { ObjectStorageService, getObjectStorageClient } from './objectStorage';
 
 const objectStorage = new ObjectStorageService();
 
@@ -86,8 +85,13 @@ export class PersistentStorage implements IPersistentStorage {
    */
   async save(key: string, data: any): Promise<void> {
     try {
+      const client = await getObjectStorageClient();
+      if (!client) {
+        throw new Error('Object storage client not available');
+      }
+      
       const filePath = `${this.basePath}/${key}.json`;
-      const bucket = objectStorageClient.bucket(this.bucketName);
+      const bucket = client.bucket(this.bucketName);
       const file = bucket.file(filePath);
 
       const jsonData = JSON.stringify(data, null, 2);
@@ -110,8 +114,14 @@ export class PersistentStorage implements IPersistentStorage {
    */
   async load<T>(key: string): Promise<T | null> {
     try {
+      const client = await getObjectStorageClient();
+      if (!client) {
+        console.log(`Object storage not available - returning null for: ${key}`);
+        return null;
+      }
+      
       const filePath = `${this.basePath}/${key}.json`;
-      const bucket = objectStorageClient.bucket(this.bucketName);
+      const bucket = client.bucket(this.bucketName);
       const file = bucket.file(filePath);
 
       const [exists] = await file.exists();
@@ -135,8 +145,14 @@ export class PersistentStorage implements IPersistentStorage {
    */
   async delete(key: string): Promise<void> {
     try {
+      const client = await getObjectStorageClient();
+      if (!client) {
+        console.log(`Object storage not available - skipping delete for: ${key}`);
+        return;
+      }
+      
       const filePath = `${this.basePath}/${key}.json`;
-      const bucket = objectStorageClient.bucket(this.bucketName);
+      const bucket = client.bucket(this.bucketName);
       const file = bucket.file(filePath);
 
       await file.delete();
@@ -152,7 +168,13 @@ export class PersistentStorage implements IPersistentStorage {
    */
   async listKeys(): Promise<string[]> {
     try {
-      const bucket = objectStorageClient.bucket(this.bucketName);
+      const client = await getObjectStorageClient();
+      if (!client) {
+        console.log('Object storage not available - returning empty list');
+        return [];
+      }
+      
+      const bucket = client.bucket(this.bucketName);
       const [files] = await bucket.getFiles({
         prefix: `${this.basePath}/`,
       });
@@ -174,8 +196,13 @@ export class PersistentStorage implements IPersistentStorage {
    */
   async exists(key: string): Promise<boolean> {
     try {
+      const client = await getObjectStorageClient();
+      if (!client) {
+        return false;
+      }
+      
       const filePath = `${this.basePath}/${key}.json`;
-      const bucket = objectStorageClient.bucket(this.bucketName);
+      const bucket = client.bucket(this.bucketName);
       const file = bucket.file(filePath);
 
       const [exists] = await file.exists();

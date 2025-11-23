@@ -4,7 +4,8 @@ import { randomUUID } from "crypto";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { createReadStream, createWriteStream } from "fs";
-import { Storage, File } from "@google-cloud/storage";
+// Use type imports to avoid bundling
+import type { Storage, File } from "@google-cloud/storage";
 import {
   ObjectAclPolicy,
   ObjectPermission,
@@ -39,18 +40,29 @@ export interface IEvidenceStorage {
 // CLOUD OBJECT STORAGE IMPLEMENTATION
 // ============================================
 class CloudEvidenceStorage implements IEvidenceStorage {
-  private storageClient: Storage;
+  private storageClient: Storage | null = null;
+  private storageInitialized = false;
 
-  constructor() {
+  private async initializeStorage(): Promise<Storage> {
+    if (this.storageInitialized && this.storageClient) {
+      return this.storageClient;
+    }
+    
+    // Dynamic import to prevent bundling when not needed
+    const { Storage: GoogleCloudStorage } = await import("@google-cloud/storage");
+    
     // Standard Google Cloud Storage initialization
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GCS_PROJECT_ID) {
-      this.storageClient = new Storage({
+      this.storageClient = new GoogleCloudStorage({
         projectId: process.env.GCS_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT,
       });
     } else {
       // Use Application Default Credentials
-      this.storageClient = new Storage();
+      this.storageClient = new GoogleCloudStorage();
     }
+    
+    this.storageInitialized = true;
+    return this.storageClient;
   }
 
   private getPrivateObjectDir(): string {
@@ -70,34 +82,29 @@ class CloudEvidenceStorage implements IEvidenceStorage {
   }
 
   async getUploadURL(): Promise<string> {
+    const storageClient = await this.initializeStorage();
     const privateDir = this.getPrivateObjectDir();
     const objectPath = `${privateDir}/${randomUUID()}`;
+    const { bucketName, objectName } = this.parseObjectPath(objectPath);
     
-    const response = await fetch(
-      `${this.sidecarEndpoint}/object-storage/signed-object-url`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          bucket: this.parseObjectPath(objectPath).bucketName,
-          name: this.parseObjectPath(objectPath).objectName,
-          method: "PUT",
-        }),
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to get upload URL: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.url as string;
+    const bucket = storageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+    
+    // Generate a signed URL for PUT upload with 15-minute TTL
+    const [url] = await file.getSignedUrl({
+      version: 'v4',
+      action: 'write',
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+    });
+    
+    return url;
   }
 
   async saveFile(fileURL: string, userId: string, aclPolicy: ObjectAclPolicy): Promise<string> {
+    const storageClient = await this.initializeStorage();
     const objectPath = new URL(fileURL).pathname;
     const { bucketName, objectName } = this.parseObjectPath(objectPath);
-    const bucket = this.storageClient.bucket(bucketName);
+    const bucket = storageClient.bucket(bucketName);
     const file = bucket.file(objectName);
 
     await setObjectAclPolicy(file, aclPolicy);
@@ -105,8 +112,9 @@ class CloudEvidenceStorage implements IEvidenceStorage {
   }
 
   async downloadFile(filePath: string, userId: string, res: Response): Promise<void> {
+    const storageClient = await this.initializeStorage();
     const { bucketName, objectName } = this.parseObjectPath(filePath);
-    const bucket = this.storageClient.bucket(bucketName);
+    const bucket = storageClient.bucket(bucketName);
     const file = bucket.file(objectName);
 
     const [exists] = await file.exists();
@@ -142,8 +150,9 @@ class CloudEvidenceStorage implements IEvidenceStorage {
   }
 
   async deleteFile(filePath: string, userId: string): Promise<void> {
+    const storageClient = await this.initializeStorage();
     const { bucketName, objectName } = this.parseObjectPath(filePath);
-    const bucket = this.storageClient.bucket(bucketName);
+    const bucket = storageClient.bucket(bucketName);
     const file = bucket.file(objectName);
 
     const [exists] = await file.exists();
@@ -160,8 +169,9 @@ class CloudEvidenceStorage implements IEvidenceStorage {
   }
 
   async canAccess(filePath: string, userId: string, permission: ObjectPermission): Promise<boolean> {
+    const storageClient = await this.initializeStorage();
     const { bucketName, objectName } = this.parseObjectPath(filePath);
-    const bucket = this.storageClient.bucket(bucketName);
+    const bucket = storageClient.bucket(bucketName);
     const file = bucket.file(objectName);
 
     const [exists] = await file.exists();
