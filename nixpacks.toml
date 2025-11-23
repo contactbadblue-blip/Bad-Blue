@@ -3,7 +3,7 @@
 # Using Node.js 18 for compatibility with our build scripts
 
 [phases.setup]
-nixPkgs = ["nodejs_18"]
+nixPkgs = ["nodejs-18_x"]
 
 [phases.install]
 cmds = ["npm ci"]
