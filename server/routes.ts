@@ -50,6 +50,7 @@ import {
 } from "./rateLimit";
 import { setupAuth, isAuthenticated, adminAuthMiddleware } from "./auth";
 import { asyncHandler, notFoundHandler, errorHandler, ErrorTypes } from "./errorHandler";
+import { generateComplaintDocument, generateFOIALetter } from "./documentGenerators";
 import { getBaseURL } from "./platformConfig";
 import {
   insertComplaintSchema,
