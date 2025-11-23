@@ -3337,13 +3337,14 @@ For questions or support, contact: support@badblue.com
 
                     // Check if this is an admin test submission
                     if (user.id === "admin-bypass") {
-                      console.log(`[ADMIN TEST] Sending test email to brclink1985@gmail.com instead of actual venue`);
+                      const adminEmail = user.email || 'admin@badblue.internal';
+                      console.log(`[ADMIN TEST] Sending test email to ${adminEmail} instead of actual venue`);
 
-                      // Send admin test email to brclink1985@gmail.com
-                      sendAdminTestEmail('brclink1985@gmail.com')
+                      // Send admin test email to the admin's email address
+                      sendAdminTestEmail(adminEmail)
                         .then((sent) => {
                           if (sent) {
-                            console.log(`[ADMIN TEST] Test email sent to brclink1985@gmail.com. Venue would be: ${jurisdiction.contactEmail}`);
+                            console.log(`[ADMIN TEST] Test email sent to ${adminEmail}. Venue would be: ${jurisdiction.contactEmail}`);
                           }
                         })
                         .catch((error) => {

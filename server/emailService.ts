@@ -72,7 +72,8 @@ async function getEmailSettings() {
 
 async function getFromAddress(): Promise<string> {
   const settings = await getEmailSettings();
-  return `${settings.fromName} <${settings.fromEmail}>`;
+  // Always use static email address for consistency
+  return `${settings.fromName} <contact.badblue@gmail.com>`;
 }
 
 async function sendWithResend(

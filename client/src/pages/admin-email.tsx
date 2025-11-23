@@ -229,10 +229,10 @@ export default function AdminEmail() {
   });
 
   const handleSaveSettings = async () => {
-    if (!fromEmail || !fromName) {
+    if (!fromName) {
       toast({
         title: "Validation Error",
-        description: "Both From Name and From Email are required",
+        description: "From Name is required",
         variant: "destructive",
       });
       return;
@@ -243,7 +243,10 @@ export default function AdminEmail() {
       const response = await fetch('/api/admin/support-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fromEmail: fromEmail.trim(), fromName: fromName.trim() }),
+        body: JSON.stringify({ 
+          fromEmail: 'contact.badblue@gmail.com', // Always use static email
+          fromName: fromName.trim() 
+        }),
       });
 
       const result = await response.json();
@@ -414,12 +417,12 @@ export default function AdminEmail() {
                   id="fromEmail"
                   data-testid="input-from-email"
                   type="email"
-                  value={fromEmail}
-                  onChange={(e) => setFromEmail(e.target.value)}
-                  placeholder="no-reply@mail.badblue.app"
+                  value="contact.badblue@gmail.com"
+                  disabled
+                  className="bg-muted"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Email address configured in Google Workspace SMTP relay
+                  Static sender address configured in Resend API
                 </p>
               </div>
             </div>
@@ -428,7 +431,7 @@ export default function AdminEmail() {
               <Button
                 data-testid="button-save-settings"
                 onClick={handleSaveSettings}
-                disabled={saveSettingsMutation.isPending || !fromEmail || !fromName}
+                disabled={saveSettingsMutation.isPending || !fromName}
               >
                 {saveSettingsMutation.isPending ? (
                   <>
