@@ -263,14 +263,23 @@ export default function OfficerSearch({ onBack }: OfficerSearchProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {searchMutation.isPending && progress && (
-              <OfficerSearchProgress
-                stage={progress.stage}
-                totalStages={progress.totalStages}
-                stageName={progress.stageName}
-                message={progress.message}
-                percentage={progress.percentage}
-              />
+            {searchMutation.isPending && (
+              <>
+                <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Note:</strong> Comprehensive searches may take up to 2 minutes as we search multiple databases and sources...
+                  </p>
+                </div>
+                {progress && (
+                  <OfficerSearchProgress
+                    stage={progress.stage}
+                    totalStages={progress.totalStages}
+                    stageName={progress.stageName}
+                    message={progress.message}
+                    percentage={progress.percentage}
+                  />
+                )}
+              </>
             )}
             {!searchResults ? (
               <>
