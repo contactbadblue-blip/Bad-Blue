@@ -3975,11 +3975,18 @@ For questions or support, contact: support@badblue.com
         }
 
         // Extract the actual search result from the response
-        const officerResult = result.metadata?.result || result.response;
+        // executeStructuredCommand returns { success, result: { success, result: <officer data> } }
+        const wrappedResult = result.metadata?.result || result.response || result.result;
+        const officerResult = wrappedResult?.result || wrappedResult;
 
-        // Validate result structure
+        // Validate result structure - the actual officer data should have name and summary
         if (!officerResult || !officerResult.name || !officerResult.summary) {
-          console.warn('[Officer Search Route] Invalid result structure after auto-correction:', officerResult);
+          console.warn('[Officer Search Route] Invalid result structure after auto-correction:', {
+            wrappedResult,
+            officerResult,
+            hasName: officerResult?.name,
+            hasSummary: officerResult?.summary
+          });
           return res.status(500).json({
             message: "Search completed but returned incomplete data. Please try again.",
             code: "INCOMPLETE_RESULT",
