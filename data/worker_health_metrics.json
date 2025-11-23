@@ -3221,5 +3221,19 @@
     "check": "database_repair",
     "status": "success",
     "repairAttempts": 0
+  },
+  {
+    "timestamp": "2025-11-23T03:03:08.061Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Cannot find module '/home/runner/workspace/node_modules/drizzle-orm/index.js' imported from /home/runner/workspace/server/badblueWorker.ts",
+    "consecutiveFailures": 3,
+    "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-23T03:03:08.498Z",
+    "check": "database_repair",
+    "status": "success",
+    "repairAttempts": 0
   }
 ]
