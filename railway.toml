@@ -1,0 +1,55 @@
+# Railway Configuration for BadBlue
+# Platform-independent deployment configuration
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm install && npm run build"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+region = "us-west1"
+
+[services.web]
+name = "badblue-web"
+port = 5000
+
+# Environment variables should be configured in Railway dashboard
+# Required environment variables:
+# 
+# Database (Supabase):
+# - SUPABASE_URL
+# - SUPABASE_SERVICE_KEY
+# - SUPABASE_DB_URL
+# - DATABASE_URL (same as SUPABASE_DB_URL)
+#
+# Authentication:
+# - SUPABASE_ANON_KEY
+# - SESSION_SECRET (for legacy support)
+# - ADMIN_BYPASS_ID (default: $ADMIN85)
+# - ADMIN_BYPASS_PASSWORD (default: SARBEAR)
+#
+# AI Services:
+# - MISTRAL_API_KEY
+# - GROQ_API_KEY
+# - GEMINI_API_KEY
+# - ANTHROPIC_API_KEY
+#
+# Payment:
+# - STRIPE_SECRET_KEY
+# - VITE_STRIPE_PUBLIC_KEY
+#
+# Email:
+# - RESEND_API_KEY
+#
+# Feature Flags (for migration):
+# - USE_SUPABASE_DB (true/false)
+# - USE_SUPABASE_AUTH (true/false)
+# - USE_SUPABASE_STORAGE (true/false)
+#
+# Railway-specific:
+# - RAILWAY_ENVIRONMENT (auto-set by Railway)
+# - RAILWAY_PROJECT_ID (auto-set by Railway)
