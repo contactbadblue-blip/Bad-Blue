@@ -74,6 +74,10 @@ app.use((req, res, next) => {
     const { db } = await import('./db');
     await db.execute('SELECT 1');
     console.log('[STARTUP] ✓ Database connection verified');
+    
+    // Ensure database schema is properly synced (handles Railway deployments)
+    const { ensureSchemaSync } = await import('./ensureSchema');
+    await ensureSchemaSync();
   } catch (error: any) {
     console.error('[STARTUP] ❌ Database connection failed:', error.message);
     console.log('[STARTUP] Attempting to reset database pool...');
@@ -81,6 +85,10 @@ app.use((req, res, next) => {
       const { resetPool } = await import('./db');
       await resetPool();
       console.log('[STARTUP] ✓ Database pool reset successful');
+      
+      // Try schema sync after pool reset
+      const { ensureSchemaSync } = await import('./ensureSchema');
+      await ensureSchemaSync();
     } catch (resetError) {
       console.error('[STARTUP] ❌ Database pool reset failed:', resetError);
       console.error('[STARTUP] Server starting anyway - Worker will attempt repair');
