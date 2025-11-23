@@ -264,7 +264,7 @@ async function callGemini(
       : prompt;
 
     const model = gemini.getGenerativeModel({
-      model: options.model || "gemini-1.5-flash",
+      model: options.model || "gemini-1.5-flash-latest",
       generationConfig: {
         temperature: options.temperature ?? 0.7,
         maxOutputTokens: maxTokens,

@@ -172,7 +172,7 @@ export async function runComprehensiveDiagnostics(): Promise<{
       const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
       const result = await genAI.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-1.5-flash',
         contents: [
           {
             role: 'user',
