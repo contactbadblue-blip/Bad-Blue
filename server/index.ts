@@ -120,14 +120,28 @@ app.use((req, res, next) => {
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // Railway will provide PORT, default to 5000 for local development
   const port = parseInt(process.env.PORT || '5000', 10);
+  
+  // Handle port already in use error gracefully
+  server.on('error', (error: any) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`[STARTUP] ❌ Port ${port} is already in use. Attempting to use a different port...`);
+      const fallbackPort = port + 1;
+      server.listen({
+        port: fallbackPort,
+        host: "0.0.0.0",
+      }, () => {
+        log(`serving on fallback port ${fallbackPort}`);
+      });
+    } else {
+      throw error;
+    }
+  });
+  
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
   });
