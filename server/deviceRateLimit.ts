@@ -221,6 +221,7 @@ export async function checkDeviceSearchLimit(
 
 /**
  * Record an officer search attempt for rate limiting
+ * CRITICAL: Records BOTH device fingerprint AND IP+UA fallback to prevent cookie-clearing bypass
  */
 export async function recordDeviceSearch(
   ipAddress: string | null,
@@ -233,6 +234,7 @@ export async function recordDeviceSearch(
   try {
     const fingerprint = generateDeviceFingerprint(ipAddress, userAgent, deviceId);
     
+    // CRITICAL: Store primary fingerprint (with deviceId)
     await db.insert(officerSearchDeviceLimits).values({
       deviceFingerprint: fingerprint,
       ipAddress: ipAddress || 'unknown',
@@ -244,6 +246,48 @@ export async function recordDeviceSearch(
     console.log(
       `[Device Rate Limit] Recorded search for device ${fingerprint.substring(0, 12)}... | Officer: ${officerName}`
     );
+    
+    // CRITICAL: Also store IP+UA fallback fingerprint to prevent cookie-clearing bypass
+    // This ensures that if cookies are cleared, the quota is still enforced
+    if (ipAddress) {
+      const fallbackFingerprint = generateDeviceFingerprint(ipAddress, userAgent, undefined);
+      
+      // Only insert if it's different from primary fingerprint (avoids duplicate when no cookie)
+      if (fallbackFingerprint !== fingerprint) {
+        // Check if fallback record already exists (prevents duplicate inserts)
+        const windowStart = new Date();
+        windowStart.setHours(windowStart.getHours() - SEARCH_WINDOW_HOURS);
+        
+        const existing = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(officerSearchDeviceLimits)
+          .where(
+            and(
+              sql`${officerSearchDeviceLimits.deviceFingerprint} = ${fallbackFingerprint}`,
+              gte(officerSearchDeviceLimits.searchedAt, windowStart)
+            )
+          );
+        
+        // Only insert if no recent fallback record exists
+        if ((existing[0]?.count || 0) === 0) {
+          await db.insert(officerSearchDeviceLimits).values({
+            deviceFingerprint: fallbackFingerprint,
+            ipAddress,
+            userAgent,
+            userId,
+            officerName,
+          });
+          
+          console.log(
+            `[Device Rate Limit] Recorded IP+UA fallback ${fallbackFingerprint.substring(0, 12)}... for cookie-clearing protection`
+          );
+        } else {
+          console.log(
+            `[Device Rate Limit] IP+UA fallback ${fallbackFingerprint.substring(0, 12)}... already exists (skipping duplicate)`
+          );
+        }
+      }
+    }
   } catch (error) {
     console.error('[Device Rate Limit] Error recording search:', error);
     // Don't throw - logging the search is not critical
