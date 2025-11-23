@@ -1,12 +1,16 @@
 
+# Nixpacks configuration for Railway deployment
+# Using Node.js 18 for compatibility with our build scripts
+
 [phases.setup]
-nixPkgs = ["nodejs-20_x"]
+nixPkgs = ["nodejs_18"]
 
 [phases.install]
 cmds = ["npm ci"]
 
 [phases.build]
-cmds = ["npm run build"]
+# Use our custom build script that patches vite.config.ts for Node 18
+cmds = ["chmod +x railway-build.sh", "./railway-build.sh"]
 
 [start]
 cmd = "npm start"
