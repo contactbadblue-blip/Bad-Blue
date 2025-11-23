@@ -3,6 +3,9 @@
 
 [build]
 builder = "NIXPACKS"
+
+[build.env]
+NODE_VERSION = "20"
 buildCommand = "npm install && ./railway-build.sh"
 
 [deploy]
