@@ -82,26 +82,36 @@ class SupabaseStorageAdapter implements ISupabaseStorage {
     userId: string, 
     aclPolicy: ObjectAclPolicy
   ): Promise<string> {
+    if (!this.client || !supabaseAdapter.useSupabaseStorage()) {
+      throw new Error('Supabase Storage not configured');
+    }
+    
     // Extract file ID from URL
     const urlParts = fileURL.split('/');
     const fileId = urlParts[urlParts.length - 1].split('?')[0];
     
-    // Store metadata in database (using existing storage layer)
-    const { storage } = await import('./storage');
-    
-    // Create public evidence record if needed
+    // Store metadata directly in Supabase if public
     if (aclPolicy.visibility === 'public') {
-      await storage.createPublicEvidence({
-        userId,
-        fileUrl: `/evidence/${fileId}`,
-        fileName: fileId,
-        fileType: 'application/octet-stream',
-        description: null,
-        officerName: null,
-        department: null,
-        location: null,
-        incidentDate: null
-      });
+      const supabaseDb = supabaseAdapter.getDb();
+      if (supabaseDb) {
+        // Import schema for type safety
+        const { publicEvidence } = await import('@shared/schema');
+        
+        // Insert directly into Supabase database
+        await supabaseDb.insert(publicEvidence).values({
+          id: randomUUID(),
+          userId,
+          fileUrl: `/evidence/${fileId}`,
+          fileName: fileId,
+          fileType: 'application/octet-stream',
+          description: null,
+          officerName: null,
+          department: null,
+          location: null,
+          incidentDate: null,
+          uploadedAt: new Date()
+        });
+      }
     }
     
     return `/evidence/${fileId}`;

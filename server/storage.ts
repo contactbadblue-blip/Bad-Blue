@@ -281,6 +281,17 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await db.execute(query);
+    
+    // Dual-write to Supabase if enabled (async, non-blocking)
+    if (supabaseAdapter.useSupabaseDb()) {
+      const supabaseDb = getSupabaseDb();
+      if (supabaseDb) {
+        supabaseDb.execute(query).catch((error: any) => {
+          console.error('[DualWrite] Failed to upsert user to Supabase:', error);
+        });
+      }
+    }
+    
     return result.rows[0] as User;
   }
 
