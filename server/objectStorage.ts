@@ -22,9 +22,9 @@ async function initializeStorage(): Promise<Storage | null> {
   if (_storageInitialized) {
     return _objectStorageClient;
   }
-  
+
   _storageInitialized = true;
-  
+
   if (!isObjectStorageAvailable()) {
     console.log('[Object Storage] Environment variables not configured - object storage unavailable');
     console.log('[Object Storage] Application will use filesystem storage fallback');
@@ -34,7 +34,7 @@ async function initializeStorage(): Promise<Storage | null> {
   try {
     // Dynamic import to prevent bundling when not needed
     const { Storage: GoogleCloudStorage } = await import("@google-cloud/storage");
-    
+
     // Standard Google Cloud Storage initialization
     // Expects GOOGLE_APPLICATION_CREDENTIALS environment variable for auth
     // or other standard GCS auth methods
@@ -46,7 +46,7 @@ async function initializeStorage(): Promise<Storage | null> {
       // Fallback to no configuration (will use ADC - Application Default Credentials)
       _objectStorageClient = new GoogleCloudStorage();
     }
-    
+
     return _objectStorageClient;
   } catch (error) {
     console.warn('[Object Storage] Failed to initialize client:', error);
@@ -98,14 +98,12 @@ export class ObjectStorageService {
 
   // Gets the private object directory.
   getPrivateObjectDir(): string {
-    const dir = process.env.PRIVATE_OBJECT_DIR || "";
-    if (!dir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
+    // Get the private directory from environment (Google Cloud Storage)
+    const privateDir = process.env.PRIVATE_OBJECT_DIR || '';
+    if (!privateDir) {
+      throw new Error('PRIVATE_OBJECT_DIR not set - configure Google Cloud Storage');
     }
-    return dir;
+    return privateDir;
   }
 
   // Search for a public object from the search paths.
@@ -231,20 +229,20 @@ export class ObjectStorageService {
     if (!rawPath.startsWith("https://storage.googleapis.com/")) {
       return rawPath;
     }
-  
+
     // Extract the path from the URL by removing query parameters and domain
     const url = new URL(rawPath);
     const rawObjectPath = url.pathname;
-  
+
     let objectEntityDir = this.getPrivateObjectDir();
     if (!objectEntityDir.endsWith("/")) {
       objectEntityDir = `${objectEntityDir}/`;
     }
-  
+
     if (!rawObjectPath.startsWith(objectEntityDir)) {
       return rawObjectPath;
     }
-  
+
     // Extract the entity ID from the path
     const entityId = rawObjectPath.slice(objectEntityDir.length);
     return `/objects/${entityId}`;

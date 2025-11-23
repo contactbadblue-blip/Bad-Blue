@@ -7,7 +7,7 @@ import * as schema from "@shared/schema";
 
 // Detect deployment environment
 const isRailway = process.env.RAILWAY_ENVIRONMENT === 'production' || !!process.env.RAILWAY_PROJECT_ID;
-const isProduction = process.env.NODE_ENV === 'production' || isRailway;
+const isProduction = process.env.NODE_ENV === 'production';
 
 // Use Supabase database URL if available, otherwise fall back to DATABASE_URL
 const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
@@ -70,7 +70,7 @@ pool.on('error', (err, client) => {
   }
 });
 
-console.log(`[DATABASE] Connection pool created - ready for queries (${isRailway ? 'Railway' : 'Standard'} mode)`);
+console.log(`[DATABASE] Connection pool created - ready for queries (${isRailway ? 'Railway' : 'Production'} mode)`);
 
 export let db = drizzle(pool, { schema });
 

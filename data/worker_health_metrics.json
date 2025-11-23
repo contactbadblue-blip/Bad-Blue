@@ -3175,5 +3175,21 @@
     "status": "success",
     "consecutiveFailures": 0,
     "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-23T02:31:37.045Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Connection terminated unexpectedly",
+    "consecutiveFailures": 1,
+    "environment": "standard"
+  },
+  {
+    "timestamp": "2025-11-23T02:33:08.054Z",
+    "check": "database_heartbeat",
+    "status": "failed",
+    "error": "Connection terminated unexpectedly",
+    "consecutiveFailures": 1,
+    "environment": "standard"
   }
 ]

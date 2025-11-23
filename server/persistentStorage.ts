@@ -61,7 +61,7 @@ class NullPersistentStorage implements IPersistentStorage {
 
 /**
  * Persistent storage service that survives deployments and republishing
- * Uses Cloud Object Storage for durable data persistence
+ * Uses Google Cloud Storage for durable data persistence
  */
 export class PersistentStorage implements IPersistentStorage {
   private bucketName: string;
@@ -247,22 +247,23 @@ export class PersistentStorage implements IPersistentStorage {
 
 /**
  * Factory function to create appropriate persistent storage implementation
- * Returns real implementation when PRIVATE_OBJECT_DIR is set (Replit),
- * returns null implementation otherwise (Railway, other platforms)
+ * Returns real implementation when Google Cloud Storage is configured,
+ * returns null implementation otherwise (data stored in PostgreSQL only)
  */
 function createPersistentStorage(): IPersistentStorage {
   const privateDir = process.env.PRIVATE_OBJECT_DIR;
+  const hasGCSCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GCS_PROJECT_ID;
   
-  if (privateDir) {
+  if (privateDir && hasGCSCredentials) {
     try {
-      console.log('✓ Object storage configured - using persistent storage');
+      console.log('✓ Google Cloud Storage configured - using persistent storage');
       return new PersistentStorage();
     } catch (error) {
-      console.warn('⚠️ Failed to initialize object storage, using null implementation:', error);
+      console.warn('⚠️ Failed to initialize Google Cloud Storage, using null implementation:', error);
       return new NullPersistentStorage();
     }
   } else {
-    console.log('ℹ️ Object storage not configured - persistent storage disabled');
+    console.log('ℹ️ Google Cloud Storage not configured - persistent storage disabled');
     console.log('   (Data will be stored in PostgreSQL only)');
     return new NullPersistentStorage();
   }

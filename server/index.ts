@@ -120,30 +120,23 @@ app.use((req, res, next) => {
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Railway will provide PORT, default to 5000 for local development
+  // Railway and other platforms will provide PORT, default to 5000 for local development
   const port = parseInt(process.env.PORT || '5000', 10);
-  
-  // Handle port already in use error gracefully
-  server.on('error', (error: any) => {
-    if (error.code === 'EADDRINUSE') {
-      console.error(`[STARTUP] ❌ Port ${port} is already in use. Attempting to use a different port...`);
-      const fallbackPort = port + 1;
-      server.listen({
-        port: fallbackPort,
-        host: "0.0.0.0",
-      }, () => {
-        log(`serving on fallback port ${fallbackPort}`);
-      });
-    } else {
-      throw error;
-    }
-  });
   
   server.listen({
     port,
     host: "0.0.0.0",
   }, () => {
     log(`serving on port ${port}`);
+  }).on('error', (error: any) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`[STARTUP] ❌ CRITICAL: Port ${port} is already in use.`);
+      console.error(`[STARTUP] ❌ Deployment will fail. Please ensure no other process is using port ${port}.`);
+      process.exit(1);
+    } else {
+      console.error(`[STARTUP] ❌ Server error:`, error);
+      throw error;
+    }
   });
 
   // Initialize persistence manager on startup

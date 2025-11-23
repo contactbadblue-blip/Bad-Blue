@@ -4,40 +4,44 @@
  */
 
 /**
- * Get the base URL for the application
- * Supports multiple platforms:
- * - Custom BASE_URL environment variable (Railway, Heroku, AWS, etc.)
- * - Platform-specific domain variables
- * - Local development fallback
+ * Determine if running on Railway platform
+ */
+export function isRailwayPlatform(): boolean {
+  return !!(
+    process.env.RAILWAY_ENVIRONMENT ||
+    process.env.RAILWAY_PUBLIC_DOMAIN
+  );
+}
+
+/**
+ * Get the appropriate base URL based on the platform
  */
 export function getBaseURL(): string {
-  // Priority 1: Custom BASE_URL (Railway, Heroku, AWS, custom hosting)
+  // Use custom BASE_URL if set (for any platform)
   if (process.env.BASE_URL) {
     return process.env.BASE_URL;
   }
 
-  // Priority 2: Railway or other platforms
-  const port = process.env.PORT || 5000;
-  
-  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
-    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+  // Railway deployment
+  if (isRailwayPlatform()) {
+    if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+      return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+    }
   }
-  
-  if (process.env.HEROKU_APP_NAME) {
-    return `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`;
-  }
-  
-  // Priority 3: Local development fallback
-  return `http://localhost:${port}`;
+
+  // Default to localhost for development
+  return 'http://localhost:5000';
 }
 
 /**
- * Check if object storage is available
+ * Determine if object storage is available
+ * This is used for graceful degradation when object storage isn't configured
+ * Note: Object storage requires Google Cloud Storage credentials
  */
 export function isObjectStorageAvailable(): boolean {
-  return Boolean(
-    process.env.PRIVATE_OBJECT_DIR &&
-    process.env.PUBLIC_OBJECT_SEARCH_PATHS
+  return !!(
+    process.env.GOOGLE_APPLICATION_CREDENTIALS &&
+    process.env.PRIVATE_OBJECT_DIR
   );
 }
 
