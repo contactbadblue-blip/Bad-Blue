@@ -2,7 +2,7 @@
 // Provides intelligent command processing and EXECUTION for admin control panel
 // This agent has FULL ACCESS to database, file system, and all application operations
 
-// NOTE: Uses unified AI provider with AUTONOMOUS context - respects 15% Groq limit
+// NOTE: Uses unified AI provider with AUTONOMOUS context - respects 50% Groq limit
 // Autonomous functions will be rescheduled when limit is reached
 import { 
   generateAutonomousText, 
@@ -33,7 +33,7 @@ const execAsync = promisify(exec);
 
 /**
  * Helper function to make AI calls with proper governor enforcement
- * All sub-agent AI calls should use this to respect the 15% limit
+ * All sub-agent AI calls should use this to respect the 50% limit
  */
 async function callAIWithGovernor(
   taskName: string,
@@ -45,7 +45,7 @@ async function callAIWithGovernor(
     const canProceed = await canAutonomousProceed();
     if (!canProceed) {
       const rescheduleInfo = await getAutonomousRescheduleInfo();
-      console.error(`[AI Sub-Agent] ⛔ 15% Groq limit reached for autonomous operations`);
+      console.error(`[AI Sub-Agent] ⛔ 50% Groq limit reached for autonomous operations`);
       console.error(`[AI Sub-Agent] Will resume at: ${new Date(Date.now() + rescheduleInfo.delayMs).toISOString()}`);
       return {
         success: false,
@@ -539,7 +539,7 @@ Error: ${context.error.message}
 
 Provide ONLY the rephrased command as plain text, no explanation.`;
         
-        const result = await groqChat(genAI, rephrasePrompt, { temperature: 0.3, maxTokens: 200 });
+        const result = await groqChat(genAI, rephrasePrompt, { temperature: 0.3, maxTokens: 550 });
         const rephrased = result.text.trim();
         
         console.log(`[Corrective Strategy] Rephrased: "${rephrased}"`);
@@ -583,7 +583,7 @@ Provide ONLY the rephrased command as plain text, no explanation.`;
       }
       
       if ('maxRetries' in adjusted && (!adjusted.maxRetries || adjusted.maxRetries > 5)) {
-        adjusted.maxRetries = 3;
+        adjusted.maxRetries = 6;
       }
       
       if ('verbosity' in adjusted && !adjusted.verbosity) {
