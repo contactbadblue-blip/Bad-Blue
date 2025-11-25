@@ -1,12 +1,12 @@
 // Device-based rate limiting for officer searches
-// Limit: 2 searches per device per 24 hours
+// Limit: 5 searches per device per 24 hours
 
 import { createHash } from 'crypto';
 import { db } from './db';
 import { officerSearchDeviceLimits } from '@shared/schema';
 import { and, gte, sql } from 'drizzle-orm';
 
-const DAILY_SEARCH_LIMIT = 2;
+const DAILY_SEARCH_LIMIT = 5;
 const SEARCH_WINDOW_HOURS = 24;
 
 /**
