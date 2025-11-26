@@ -2,6 +2,12 @@
 // Using free Gemini API instead of OpenAI
 import { GoogleAI } from "@google/genai";
 
+const client = new GoogleAI({ apiKey: process.env.GEMINI_API_KEY });
+
+const model = client.getGenerativeModel({
+  model: "gemini-2.5-flash" // <-- Updated newest & free-tier
+});
+
 // Lazy initialization to avoid startup errors when API key is not configured
 let gemini: GoogleAI | null = null;
 
@@ -10,7 +16,7 @@ function getGeminiClient(): GoogleAI {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    // Note: Using Google Gemini - the newest model is gemini-1.5-flash
+    
     gemini = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
   }
   return gemini;
