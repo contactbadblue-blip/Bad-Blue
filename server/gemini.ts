@@ -1,11 +1,11 @@
 // Google Gemini AI service for badge analysis and form assistance
 // Using free Gemini API instead of OpenAI
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleAI } from "@google/genai";
 
 // Lazy initialization to avoid startup errors when API key is not configured
-let gemini: GoogleGenerativeAI | null = null;
+let gemini: GoogleAI | null = null;
 
-function getGeminiClient(): GoogleGenerativeAI {
+function getGeminiClient(): GoogleAI {
   if (!gemini) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
