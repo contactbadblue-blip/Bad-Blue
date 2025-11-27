@@ -24,7 +24,7 @@ import { createClient } from "@supabase/supabase-js";
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, log } from "./vite";
 
 // Extend Express Request type for rawBody
 declare global {
@@ -52,15 +52,44 @@ app.use((req, res, next) => {
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
     capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
+    return originalResJson.call(this, bodyJson, ...args);
+  };
+
+  const originalResSend = res.send;
+  res.send = function (body, ...args) {
+    // If it's already JSON, we capture it
+    try {
+      if (typeof body === "object") {
+        capturedJsonResponse = body;
+      } else if (typeof body === "string") {
+        capturedJsonResponse = JSON.parse(body);
+      }
+    } catch {
+      // Non-JSON response, ignore
+    }
+
+    return originalResSend.call(this, body, ...args);
   };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+
+    if (!path.startsWith("/health")) {
+      let logLine = `[${req.method}] ${path} - ${res.statusCode} in ${duration}ms`;
+
+      if (capturedJsonResponse && typeof capturedJsonResponse === "object") {
+        const sanitized = { ...capturedJsonResponse };
+
+        if (sanitized.apiKey) {
+          sanitized.apiKey = "***";
+        }
+
+        const jsonStr = JSON.stringify(sanitized);
+        const snippet = jsonStr.length > 180
+          ? jsonStr.slice(0, 177) + "..."
+          : jsonStr;
+
+        logLine += ` | response: ${snippet}`;
       }
 
       if (logLine.length > 80) {
@@ -102,6 +131,30 @@ app.use((req, res, next) => {
     }
   }
 
+  // Attach Supabase client to app locals
+  try {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('[STARTUP] ⚠️ Supabase environment variables missing. Some features may not work.');
+    } else {
+      console.log('[STARTUP] ✅ Supabase environment variables loaded');
+    }
+
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: false,
+        },
+      }
+    );
+
+    app.locals.supabase = supabase;
+  } catch (error) {
+    console.error('[STARTUP] ❌ Failed to initialize Supabase client:', error);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -113,7 +166,7 @@ app.use((req, res, next) => {
   });
 
   // Serve static SEO and public files before Vite middleware
-  app.use(express.static("public"));
+  app.use(express.static("public", { index: false }));
   
   app.get("/robots.txt", (_req, res) => {
     res.type("text/plain");
@@ -131,7 +184,28 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // Production: serve client SPA directly from /client
+    const clientDir = path.join(__dirname, "..", "client");
+
+    // Serve static assets from /client (JS, CSS, images, etc.)
+    app.use(express.static(clientDir));
+
+    // For any non-API, non-SEO route, send back index.html
+    app.get("*", (req: Request, res: Response, next: NextFunction) => {
+      const p = req.path;
+
+      // Let API and SEO endpoints through
+      if (
+        p.startsWith("/api") ||
+        p === "/robots.txt" ||
+        p === "/sitemap.xml" ||
+        p.startsWith("/health")
+      ) {
+        return next();
+      }
+
+      res.sendFile(path.join(clientDir, "index.html"));
+    });
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
