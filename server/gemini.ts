@@ -1,12 +1,13 @@
 // Google Gemini AI service for badge analysis and form assistance
 // Using free Gemini API instead of OpenAI
-import { GoogleAI } from "@google/genai";
+"@google/generative-ai": "^0.5.0"
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const client = new GoogleAI({ apiKey: process.env.GEMINI_API_KEY });
-
-const model = client.getGenerativeModel({
-  model: "gemini-2.5-flash" // <-- Updated newest & free-tier
+const client = new GoogleGenerativeAI({
+  apiKey: process.env.GEMINI_API_KEY!,
 });
+
+const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // Lazy initialization to avoid startup errors when API key is not configured
 let gemini: GoogleAI | null = null;
