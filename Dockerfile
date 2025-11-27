@@ -1,17 +1,17 @@
 FROM node:24
-
-# Create app directory
 WORKDIR /app
 
-# Install dependencies
+# 1. Copy package files first (for better caching)
 COPY package*.json ./
+
+# 2. Install dependencies
 RUN npm install
 
-# Copy the rest of the code
+# 3. Copy ALL source code BEFORE building
 COPY . .
 
-# Build step (if your app has "build" script; otherwise delete this line)
-RUN npm run build || echo "no build script, skipping"
+# 4. Run the build (this should NOT be cached)
+RUN npm run build
 
-# Start command – adjust if your package.json uses something else
-CMD ["npm", "run", "start"]
+# 5. Start the application
+CMD ["npm", "start"]
