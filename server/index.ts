@@ -11,16 +11,19 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-declare module 'http' {
+declare module "http" {
   interface IncomingMessage {
-    rawBody: unknown
+    rawBody: unknown;
   }
 }
-app.use(express.json({
-  verify: (req, _res, buf) => {
-    req.rawBody = buf;
-  }
-}));
+
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {
@@ -55,21 +58,23 @@ app.use((req, res, next) => {
 
 (async () => {
   // CRITICAL: Verify database connection FIRST before anything else
-  console.log('[STARTUP] Verifying database connection...');
+  console.log("[STARTUP] Verifying database connection...");
   try {
-    const { db } = await import('./db');
-    await db.execute('SELECT 1');
-    console.log('[STARTUP] ✓ Database connection verified');
+    const { db } = await import("./db");
+    await db.execute("SELECT 1");
+    console.log("[STARTUP] ✓ Database connection verified");
   } catch (error: any) {
-    console.error('[STARTUP] ❌ Database connection failed:', error.message);
-    console.log('[STARTUP] Attempting to reset database pool...');
+    console.error("[STARTUP] ❌ Database connection failed:", error.message);
+    console.log("[STARTUP] Attempting to reset database pool...");
     try {
-      const { resetPool } = await import('./db');
+      const { resetPool } = await import("./db");
       await resetPool();
-      console.log('[STARTUP] ✓ Database pool reset successful');
+      console.log("[STARTUP] ✓ Database pool reset successful");
     } catch (resetError) {
-      console.error('[STARTUP] ❌ Database pool reset failed:', resetError);
-      console.error('[STARTUP] Server starting anyway - Worker will attempt repair');
+      console.error("[STARTUP] ❌ Database pool reset failed:", resetError);
+      console.error(
+        "[STARTUP] Server starting anyway - Worker will attempt repair"
+      );
     }
   }
 
@@ -85,7 +90,7 @@ app.use((req, res, next) => {
 
   // Serve static SEO and public files before Vite middleware
   app.use(express.static("public"));
-  
+
   app.get("/robots.txt", (_req, res) => {
     res.type("text/plain");
     res.sendFile("robots.txt", { root: "public" });
@@ -96,41 +101,52 @@ app.use((req, res, next) => {
     res.sendFile("sitemap.xml", { root: "public" });
   });
 
-// Always use Vite middleware (Railway runs in production by default)
-  await setupVite(app, server);
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  const port = parseInt(process.env.PORT || "5000", 10);
+  server.listen(
+    {
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    },
+    () => {
+      log(`serving on port ${port}`);
+    }
+  );
 
   // Initialize persistence manager on startup
-  const { persistenceManager } = await import('./persistenceManager');
+  const { persistenceManager } = await import("./persistenceManager");
   await persistenceManager.start();
 
   // Run Sub-Agent table migrations
   try {
-    const { createSubAgentTables } = await import('./migrations/createSubAgentTables');
+    const { createSubAgentTables } = await import(
+      "./migrations/createSubAgentTables"
+    );
     await createSubAgentTables();
   } catch (error) {
-    console.error('Failed to create Sub-Agent tables:', error);
+    console.error("Failed to create Sub-Agent tables:", error);
   }
 
   // Start BadBlue Worker
-  const { badblueWorker } = await import('./badblueWorker');
+  const { badblueWorker } = await import("./badblueWorker");
   badblueWorker.initialize().catch((error) => {
-    console.error('Failed to start BadBlue Worker:', error);
+    console.error("Failed to start BadBlue Worker:", error);
   });
 
   // Initialize AI Sub-Agent autonomous improvements
-  const { initializeAutonomousImprovements } = await import('./aiSubAgent');
+  const { initializeAutonomousImprovements } = await import("./aiSubAgent");
   await initializeAutonomousImprovements();
 })();
