@@ -25,7 +25,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite";
-
+import path from "path";
+import { fileURLToPath } from "url";
 // Extend Express Request type for rawBody
 declare global {
   namespace Express {
