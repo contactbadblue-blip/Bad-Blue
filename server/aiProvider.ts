@@ -14,7 +14,7 @@
  * - All usage tracked in database with proper context
  */
 
-import { GoogleGenerativeAI } from "@google-generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getGroqClient } from './groq';
 import { callMistral } from './mistral';
 import { callClaude } from './claude';
