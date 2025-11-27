@@ -1,4 +1,11 @@
-import { GoogleGenAI } from '@google/genai';
+"@google/generative-ai": "^0.5.0"
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const client = new GoogleGenerativeAI({
+  apiKey: process.env.GEMINI_API_KEY!,
+});
+
+const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 console.log('Testing GoogleGenAI...');
 console.log('GoogleGenAI type:', typeof GoogleGenAI);
