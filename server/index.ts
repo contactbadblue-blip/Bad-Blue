@@ -1,24 +1,11 @@
-// Copyright (c) 2025 “RJDC”. All rights reserved.
+// Copyright (c) 2025 Robert “RJDC” Clinkenbeard. All rights reserved.
 // Unauthorized copying, modification, distribution, or use of this file,
 // via any medium, is strictly prohibited without express written permission.
-
-// Load environment variables from .env file
-import * as dotenv from 'dotenv';
-dotenv.config();
-
-// Verify Stripe keys are configured
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.error('[ENV] ⚠️ STRIPE_SECRET_KEY not set in environment variables');
-}
-if (!process.env.VITE_STRIPE_PUBLIC_KEY) {
-  console.error('[ENV] ⚠️ VITE_STRIPE_PUBLIC_KEY not set in environment variables');
-}
 
 import { createClient } from "@supabase/supabase-js";
 import type { Request, Response } from "express";
 
 import express, { type Request, Response, NextFunction } from "express";
-import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -35,7 +22,6 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -120,23 +106,16 @@ app.use((req, res, next) => {
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Railway and other platforms will provide PORT, default to 5000 for local development
+  // Other ports are firewalled. Default to 5000 if not specified.
+  // this serves both the API and the client.
+  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  
   server.listen({
     port,
     host: "0.0.0.0",
+    reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
-  }).on('error', (error: any) => {
-    if (error.code === 'EADDRINUSE') {
-      console.error(`[STARTUP] ❌ CRITICAL: Port ${port} is already in use.`);
-      console.error(`[STARTUP] ❌ Deployment will fail. Please ensure no other process is using port ${port}.`);
-      process.exit(1);
-    } else {
-      console.error(`[STARTUP] ❌ Server error:`, error);
-      throw error;
-    }
   });
 
   // Initialize persistence manager on startup
@@ -149,22 +128,6 @@ app.use((req, res, next) => {
     await createSubAgentTables();
   } catch (error) {
     console.error('Failed to create Sub-Agent tables:', error);
-  }
-
-  // Run Token Metrics table migrations
-  try {
-    const { createTokenMetricsTables } = await import('./migrations/createTokenMetrics');
-    await createTokenMetricsTables();
-  } catch (error) {
-    console.error('Failed to create Token Metrics tables:', error);
-  }
-
-  // Run Device Rate Limit table migrations
-  try {
-    const { createDeviceRateLimitTables } = await import('./migrations/createDeviceRateLimitTables');
-    await createDeviceRateLimitTables();
-  } catch (error) {
-    console.error('Failed to create Device Rate Limit tables:', error);
   }
 
   // Start BadBlue Worker
