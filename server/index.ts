@@ -6,6 +6,9 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 // Verify Stripe keys are configured
 if (!process.env.STRIPE_SECRET_KEY) {
   console.error('[ENV] ⚠️ STRIPE_SECRET_KEY not set in environment variables');
