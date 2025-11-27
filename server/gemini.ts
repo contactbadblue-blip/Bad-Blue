@@ -1,6 +1,5 @@
 // Google Gemini AI service for badge analysis and form assistance
 // Using free Gemini API instead of OpenAI
-"@google/generative-ai": "^0.5.0"
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const client = new GoogleGenerativeAI({
