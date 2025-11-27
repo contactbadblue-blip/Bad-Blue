@@ -6,12 +6,6 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 // Verify Stripe keys are configured
 if (!process.env.STRIPE_SECRET_KEY) {
   console.error('[ENV] ⚠️ STRIPE_SECRET_KEY not set in environment variables');
@@ -21,24 +15,22 @@ if (!process.env.VITE_STRIPE_PUBLIC_KEY) {
 }
 
 import { createClient } from "@supabase/supabase-js";
+import type { Request, Response } from "express";
+
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
-import { setupVite, log } from "./vite";
-import path from "path";
-import { fileURLToPath } from "url";
-// Extend Express Request type for rawBody
-declare global {
-  namespace Express {
-    interface Request {
-      rawBody?: Buffer;
-    }
-  }
-}
+import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+declare module 'http' {
+  interface IncomingMessage {
+    rawBody: unknown
+  }
+}
 app.use(express.json({
-  verify: (req: Request, _res: Response, buf: Buffer) => {
+  verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
@@ -53,44 +45,15 @@ app.use((req, res, next) => {
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
     capturedJsonResponse = bodyJson;
-    return originalResJson.call(this, bodyJson, ...args);
-  };
-
-  const originalResSend = res.send;
-  res.send = function (body, ...args) {
-    // If it's already JSON, we capture it
-    try {
-      if (typeof body === "object") {
-        capturedJsonResponse = body;
-      } else if (typeof body === "string") {
-        capturedJsonResponse = JSON.parse(body);
-      }
-    } catch {
-      // Non-JSON response, ignore
-    }
-
-    return originalResSend.call(this, body, ...args);
+    return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-
-    if (!path.startsWith("/health")) {
-      let logLine = `[${req.method}] ${path} - ${res.statusCode} in ${duration}ms`;
-
-      if (capturedJsonResponse && typeof capturedJsonResponse === "object") {
-        const sanitized = { ...capturedJsonResponse };
-
-        if (sanitized.apiKey) {
-          sanitized.apiKey = "***";
-        }
-
-        const jsonStr = JSON.stringify(sanitized);
-        const snippet = jsonStr.length > 180
-          ? jsonStr.slice(0, 177) + "..."
-          : jsonStr;
-
-        logLine += ` | response: ${snippet}`;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
       if (logLine.length > 80) {
@@ -111,10 +74,6 @@ app.use((req, res, next) => {
     const { db } = await import('./db');
     await db.execute('SELECT 1');
     console.log('[STARTUP] ✓ Database connection verified');
-    
-    // Ensure database schema is properly synced (handles Railway deployments)
-    const { ensureSchemaSync } = await import('./ensureSchema');
-    await ensureSchemaSync();
   } catch (error: any) {
     console.error('[STARTUP] ❌ Database connection failed:', error.message);
     console.log('[STARTUP] Attempting to reset database pool...');
@@ -122,38 +81,10 @@ app.use((req, res, next) => {
       const { resetPool } = await import('./db');
       await resetPool();
       console.log('[STARTUP] ✓ Database pool reset successful');
-      
-      // Try schema sync after pool reset
-      const { ensureSchemaSync } = await import('./ensureSchema');
-      await ensureSchemaSync();
     } catch (resetError) {
       console.error('[STARTUP] ❌ Database pool reset failed:', resetError);
       console.error('[STARTUP] Server starting anyway - Worker will attempt repair');
     }
-  }
-
-  // Attach Supabase client to app locals
-  try {
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error('[STARTUP] ⚠️ Supabase environment variables missing. Some features may not work.');
-    } else {
-      console.log('[STARTUP] ✅ Supabase environment variables loaded');
-    }
-
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: false,
-        },
-      }
-    );
-
-    app.locals.supabase = supabase;
-  } catch (error) {
-    console.error('[STARTUP] ❌ Failed to initialize Supabase client:', error);
   }
 
   const server = await registerRoutes(app);
@@ -167,7 +98,7 @@ app.use((req, res, next) => {
   });
 
   // Serve static SEO and public files before Vite middleware
-  app.use(express.static("public", { index: false }));
+  app.use(express.static("public"));
   
   app.get("/robots.txt", (_req, res) => {
     res.type("text/plain");
@@ -184,29 +115,8 @@ app.use((req, res, next) => {
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
-} else {
-    // Production: serve client SPA directly from built dist folder
-   const clientDir = path.join(__dirname, "..", "client", "dist");
-
-    // Serve static assets from compiled build
-   app.use(express.static(clientDir));
-
-    // For any non-API, non-SEO route, send back index.html
-    app.get("*", (req: Request, res: Response, next: NextFunction) => {
-      const p = req.path;
-
-      // Let API and SEO endpoints through
-      if (
-        p.startsWith("/api") ||
-        p === "/robots.txt" ||
-        p === "/sitemap.xml" ||
-        p.startsWith("/health")
-      ) {
-        return next();
-      }
-
-      res.sendFile(path.join(clientDir, "index.html"));
-    });
+  } else {
+    serveStatic(app);
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
