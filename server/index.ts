@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Robert “RJDC” Clinkenbeard. All rights reserved.
+// Copyright (c) 2025 “RJDC”. All rights reserved.
 // Unauthorized copying, modification, distribution, or use of this file,
 // via any medium, is strictly prohibited without express written permission.
 
@@ -15,14 +15,13 @@ if (!process.env.VITE_STRIPE_PUBLIC_KEY) {
 }
 
 import { createClient } from "@supabase/supabase-js";
-
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite;
+import { setupVite, serveStatic, log } from "./vite";
 
 // Extend Express Request type for rawBody
-  declare global {
+declare global {
   namespace Express {
     interface Request {
       rawBody?: Buffer;
@@ -32,7 +31,7 @@ import { setupVite, serveStatic, log } from "./vite;
 
 const app = express();
 app.use(express.json({
-  verify: (req, _res, buf) => {
+  verify: (req: Request, _res: Response, buf: Buffer) => {
     req.rawBody = buf;
   }
 }));
