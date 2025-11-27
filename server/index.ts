@@ -111,18 +111,23 @@ app.use((req, res, next) => {
 // setting up all the other routes so the
 // doesn't interfere with the other routes
 if (app.get("env") === "development") {
+  // Dev: Vite middleware, hot reloading, etc.
   await setupVite(app, server);
 } else {
-  // Production: serve built Vite app from dist/
-  app.use(express.static(__dirname));
+  // Prod: serve built Vite app from dist/
 
-  // SPA fallback: send index.html for any non-API route
-  app.get("*", (req, res, next) => {
-    if (req.path.startsWith("/api")) {
-      return next();
-    }
+  // __dirname will be dist/ at runtime because dist/index.js lives there
+  const staticDir = __dirname;
 
-    res.sendFile(path.join(__dirname, "index.html"));
+  // Serve all static assets (JS, CSS, images, etc.)
+  app.use(express.static(staticDir));
+
+  // SPA fallback: for any non-API route, send index.html
+  app.get("*", (req, res) => {
+    // If you ever add real /api routes, you can guard them here:
+    // if (req.path.startsWith("/api")) return res.status(404).end();
+
+    res.sendFile(path.join(staticDir, "index.html"));
   });
 }
 
