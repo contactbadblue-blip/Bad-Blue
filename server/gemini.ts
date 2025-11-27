@@ -2,16 +2,13 @@
 // Using free Gemini API instead of OpenAI
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const client = new GoogleGenerativeAI({
-  apiKey: process.env.GEMINI_API_KEY!,
-});
-
-const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const model = client.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 // Lazy initialization to avoid startup errors when API key is not configured
-let gemini: GoogleAI | null = null;
+let gemini: GoogleGenerativeAI | null = null;
 
-function getGeminiClient(): GoogleAI {
+function getGeminiClient(): GoogleGenerativeAI {
   if (!gemini) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
@@ -190,31 +187,32 @@ Results Format:
 
 Apply your expert analysis even if image quality is poor. Extract whatever information IS visible and clearly state what is NOT visible.`;
 
-    // Using Gemini 1.5 Flash for vision capabilities  
-    const response = await client.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: [
+    // Using Gemini 2.5 Flash for vision capabilities  
+    // Using Gemini 2.5 Flash for vision capabilities  
+const result = await model.generateContent({
+  contents: [
+    {
+      role: "user",
+      parts: [
         {
-          role: "user",
-          parts: [
-            {
-              inlineData: {
-                data: imageData,
-                mimeType: "image/jpeg",
-              },
-            },
-            {
-              text: `${systemPrompt}\n\n${userPrompt}`
-            }
-          ],
+          inlineData: {
+            data: imageData,
+            mimeType: "image/jpeg",
+          },
+        },
+        {
+          text: `${systemPrompt}\n\n${userPrompt}`,
         },
       ],
-      config: {
-        responseMimeType: "application/json",
-      }
-    });
+    },
+  ],
+  // For JSON responses, the JS SDK uses generationConfig
+  generationConfig: {
+    responseMimeType: "application/json",
+  },
+});
 
-    const rawJson = response.text;
+    const rawJson = result.response.text;
     if (!rawJson) {
       throw new Error("Empty response from Gemini");
     }
