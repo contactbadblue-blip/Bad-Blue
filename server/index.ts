@@ -19,16 +19,8 @@ import { createClient } from "@supabase/supabase-js";
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { setupVite, serveStatic, log } from "./vite'http'ort { GoogleGenerativeAI } from "@google/generative-ai";
 const app = express();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-declare module 'http' {
-  interface IncomingMessage {
-    rawBody: unknown
-  }
-}
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
