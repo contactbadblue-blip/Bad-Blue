@@ -189,7 +189,7 @@ Apply your expert analysis even if image quality is poor. Extract whatever infor
 
     // Using Gemini 2.5 Flash for vision capabilities  
     // Using Gemini 2.5 Flash for vision capabilities  
-const result = await model.generateContent({
+const geminiResponse = await model.generateContent({
   contents: [
     {
       role: "user",
@@ -212,7 +212,7 @@ const result = await model.generateContent({
   },
 });
 
-    const rawJson = result.response.text;
+    const rawJson = geminiResponse.response.text;
     if (!rawJson) {
       throw new Error("Empty response from Gemini");
     }
