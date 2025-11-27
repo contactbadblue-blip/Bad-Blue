@@ -1,6 +1,6 @@
 
 # Nixpacks configuration for Railway deployment
-# Using Node.js 18 with tsx to avoid esbuild bundling issues
+# Using Node.js 20 with tsx to avoid esbuild bundling issues
 
 [phases.setup]
 nixPkgs = ["nodejs-20"]
