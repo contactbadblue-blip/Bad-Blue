@@ -186,12 +186,10 @@ app.use((req, res, next) => {
     await setupVite(app, server);
 } else {
     // Production: serve client SPA directly from built dist folder
--   const clientDir = path.join(__dirname, "..", "client");
-+   const clientDir = path.join(__dirname, "..", "client", "dist");
+   const clientDir = path.join(__dirname, "..", "client", "dist");
 
     // Serve static assets from compiled build
--   app.use(express.static(clientDir));
-+   app.use(express.static(clientDir));
+   app.use(express.static(clientDir));
 
     // For any non-API, non-SEO route, send back index.html
     app.get("*", (req: Request, res: Response, next: NextFunction) => {
