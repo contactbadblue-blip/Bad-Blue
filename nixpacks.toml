@@ -3,7 +3,7 @@
 # Using Node.js 18 with tsx to avoid esbuild bundling issues
 
 [phases.setup]
-nixPkgs = ["nodejs-20"]
+nixPkgs = ["nodejs-24"]
 
 [phases.install]
 cmds = ["npm ci"]
